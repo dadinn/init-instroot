@@ -178,7 +178,7 @@ EOF
     fi
 }
 
-source debinst.defaults
+source debian-install.env
 
 install-deps $RELEASE
 init-parts $ROOT_DRIVE
