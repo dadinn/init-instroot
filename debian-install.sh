@@ -8,7 +8,7 @@ function partuuid {
 	sgdisk -i $2 $1|grep "Partition unique GUID:"|sed -e "s;^.*: \([[:alnum:]-]*\)$;\L\1;";
     else
 	echo "ERROR: called partuuid with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -18,7 +18,7 @@ function fsuuid {
 	blkid -s UUID -o value $1
     else
 	echo "ERROR: called fsuuid with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -33,7 +33,7 @@ function install-deps {
 	apt install -y -t $RELEASE-backport zfs-dkms
     else
 	echo "ERROR: called install-deps with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -44,7 +44,7 @@ function init-parts {
 	sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
     else
 	echo "ERROR: called init-parts with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -80,7 +80,7 @@ EOF
 	echo "Finished setting up LUKS device: $LUKS_LABEL"
     else
 	echo "ERROR: calling init-cryptroot with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -99,11 +99,11 @@ function init-zfsroot {
 	    mkswap /dev/zvol/$SYSTEMFS/swap
 	else
 	    echo "ERROR: no ZFS datasets available, or the system dataset already exist!" >&2
-	    return -1
+	    return 1
 	fi
     else
 	echo "ERROR: calling init-zfsroot with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
@@ -138,7 +138,7 @@ function init-instroot {
 	zfs set mountpoint=$INSTROOT $SYSTEMFS
     else
 	echo "ERROR: calling init-instroot with args: $@" >&2
-	return -1
+	return 1
     fi
 }
 
