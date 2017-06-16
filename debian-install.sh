@@ -1,6 +1,6 @@
 #!/bin/sh
 
-function partuuid {
+partuuid () {
     if [ $# -eq 2 -a -b $1 -a $2 -lt 3 ]
     then
 	sgdisk -i $2 $1|grep "Partition unique GUID:"|sed -e "s;^.*: \([[:alnum:]-]*\)$;\L\1;";
@@ -10,7 +10,7 @@ function partuuid {
     fi
 }
 
-function fsuuid {
+fsuuid () {
     if [ $# -eq 1 -a -b $1 ]
     then
 	blkid -s UUID -o value $1
@@ -20,7 +20,7 @@ function fsuuid {
     fi
 }
 
-function install-deps {
+install_deps () {
     if [ $# -eq 1 -a ! -z "$1" ]
     then
 	RELEASE=$1
@@ -35,7 +35,7 @@ function install-deps {
     fi
 }
 
-function init-parts {
+init_parts () {
     if [ $# -eq 1 -a -b $1 ]
     then
 	ROOT_DRIVE=$1
@@ -46,7 +46,7 @@ function init-parts {
     fi
 }
 
-function init-cryptroot {
+init_cryptroot () {
     if [ $# -eq 2 -a -b /dev/disk/by-partuuid/$1 -a ! -z $(echo $2|grep -E "^[[:alnum:]_]+$") ]
     then
 	LUKS_PARTUUID=$1
@@ -82,7 +82,7 @@ EOF
     fi
 }
 
-function init-zfsroot {
+init_zfsroot () {
     if [ $# -eq 2 -a ! -z $(echo $1|grep -E "^[[:alnum:]]+$") -a ! -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
     then
 	ZPOOL=$1
@@ -106,7 +106,7 @@ function init-zfsroot {
     fi
 }
 
-function init-instroot {
+init_instroot () {
     if [ $# -eq 5 -a $(echo $1|grep -E "^[[:alpha:]]+$") -a ! -e $2 -a -b /dev/mapper/$3 -a -b /dev/disk/by-partuuid/$4 -a $(zfs list -o name|grep -E "^$5$")] 
     then
 	RELEASE=$1
@@ -127,7 +127,7 @@ function init-instroot {
     fi
 }
 
-function configure-system {
+configure_system () {
     if [ $# -eq 1 ]
     then
 	INSTROOT=$1
@@ -256,8 +256,8 @@ install-deps $RELEASE
 init-parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
-init-cryptroot $LUKS_PARTUUID $LUKS_LABEL
-init-zfsroot $ZPOOL $SWAPSIZE
-init-instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $SYSTEMFS
+init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
+init_zfsroot $ZPOOL $SWAPSIZE
+init_instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $SYSTEMFS
 
 debootstrap $RELEASE $INSTROOT $MIRROR
