@@ -1,7 +1,5 @@
 #!/bin/sh
 
-function empty? { [ $# -eq 1 -a -z "$(ls -A $1)" ] }
-
 function partuuid {
     if [ $# -eq 2 -a -b $1 -a $2 -lt 3 ]
     then
@@ -105,20 +103,6 @@ function init-zfsroot {
     else
 	echo "ERROR: calling init-zfsroot with args: $@" >&2
 	return 1
-    fi
-}
-
-function valid-arch {
-    if [ $# -eq 1 ]
-    then
-	case $1 in
-	    amd64|arm64|armel|armhf|i386|mips|mipsel|powerpc|ppc64el|s390x)
-		true
-		;;
-	    *)
-		false
-		;;
-	esac
     fi
 }
 
