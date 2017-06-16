@@ -127,31 +127,7 @@ init_instroot () {
     fi
 }
 
-configure_system () {
-    if [ $# -eq 1 ]
-    then
-	INSTROOT=$1
-	ROOT_FSUUID=$3
-	BOOT_FSUUID=$2
-	LUKS_LABEL=$4
-	SYSTEMFS=$5
-	MIRROR_URL=$6
-	RELEASE=$7
-	
-	cat > $INSTROOT/etc/apt/apt.conf.d/norecommends <<EOF
-APT::Get::Install-Recommends "false";
-APT::Get::Install-Suggests "false";
-EOF
-	cat > /etc/apt/sources.list.d/backports.list <<EOF
-deb $MIRROR_URL $RELEASE-backports main contrib
-EOF
-	cat >> $INSTROOT/fstab <<EOF
-UUID=$ROOT_FSUUID / ext4 errors=remont-ro 0 1
-UUID=$BOOT_FSUUID /boot ext4 defaults 0 2
-/dev/zvol/$SYSTEMFS/swap none swap sw,x-systemd.after=zfs.target 0 0
-EOF
-	cat >> $INSTROOT/crypttab <<EOF
-function usage {
+usage () {
     cat <<EOF
 
 USAGE:
@@ -235,20 +211,7 @@ else
     echo "ERROR: Root device has to be specified!"
     usage
     exit -1
-    ;;
 fi
-
-# <luks label> <device> <key> <options>
-$LUKS_LABEL UUID=$LUKS_FSUUID none luks
-EOF
-	for i in dev proc sys
-	do
-	    mount --rbind /$i $INSTROOT/$i
-	done
-
-	chroot $INSTROOT /bin/bash --login
-    fi
-}
 
 source debian-install.env
 
