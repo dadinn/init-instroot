@@ -67,9 +67,9 @@ EOF
 		;;
 	    *)
 		echo "Shredding LUKS device..."
-		cryptsetup luksFormat /dev/disk/by-partuuid/crypt_shred
-		cryptsetup luksOpen /dev/disk/by-partuuid/crypt_shred
-		dd if=/dev/zero of=/dev/mapper/crypt_shred
+		cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
+		cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID crypt_shred
+		dd if=/dev/zero of=/dev/mapper/crypt_shred status=progress
 		cryptsetup luksClose crypt_shred
 		;;
 	esac
@@ -85,9 +85,10 @@ EOF
 }
 
 function init-zfsroot {
-    if [ $# -eq 2 -a ! -z $(echo $1|grep -E "^[[:alnum:]/]+$") -a ! -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
+    if [ $# -eq 2 -a ! -z $(echo $1|grep -E "^[[:alnum:]]+$") -a ! -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
     then
-	SYSTEMFS=$1
+	ZPOOL=$1
+	SYSTEMFS=$ZPOOL/system
 	SWAPSIZE=$2
 	if [ ! -z "$(zfs list -H)" -a -z $(zfs list -o name|grep -E "^$SYSTEMFS$")]
 	then
@@ -166,6 +167,93 @@ UUID=$BOOT_FSUUID /boot ext4 defaults 0 2
 /dev/zvol/$SYSTEMFS/swap none swap sw,x-systemd.after=zfs.target 0 0
 EOF
 	cat >> $INSTROOT/crypttab <<EOF
+function usage {
+    cat <<EOF
+
+USAGE:
+
+$0 OPTIONS... DEVICE
+
+Installs Debian on DEVICE with encrypted root filesystem.
+
+Valid options are:
+
+-r RELEASE
+Debian release to use (default $RELEASE)
+
+-m URL
+Debian mirror URL (default $MIRROR)
+
+-n HOSTNAME
+Hostname for new system
+
+-l LABEL
+LUKS encrypted device name
+
+-z ZPOOL
+ZFS pool name for system directories and swap device
+
+-s SWAPSIZE
+Size of swap device partition
+
+-i PATH
+Install root mountpoint (default $INSTROOT)
+
+-h
+This usage help...
+EOF
+}
+
+while getopts 'r:m:n:l:z:s:i:h' opt
+do
+    case $opt in
+	r)
+	    RELEASE=$OPTARG
+	    ;;
+	m)
+	    MIRROR=$OPTARG
+	    ;;
+	l)
+	    LUKS_LABEL=$OPTARG
+	    ;;
+	z)
+	    ZPOOL=$OPTARG
+	    ;;
+	s)
+	    SWAPSIZE=$OPTARG
+	    ;;
+	i)
+	    INSTROOT=$OPTARG
+	    ;;
+	h)
+            usage
+            exit 0
+	    ;;
+	:)
+	    echo "MISSING ARGUMENT FOR OPTION: $OPTARG" >&2
+	    exit -1
+	    ;;
+	?)
+	    echo "INVALID OPTION: $OPTARG" >&2
+	    exit -1
+	    ;;
+	*)
+	    usage
+	    exit -1
+	    ;;
+    esac
+done
+
+if [ $# -eq 1 ]
+then
+    ROOT_DRIVE=$1
+else
+    echo "ERROR: Root device has to be specified!"
+    usage
+    exit -1
+    ;;
+fi
+
 # <luks label> <device> <key> <options>
 $LUKS_LABEL UUID=$LUKS_FSUUID none luks
 EOF
@@ -184,9 +272,8 @@ install-deps $RELEASE
 init-parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
-init-boot $BOOT_PARTUUID
 init-cryptroot $LUKS_PARTUUID $LUKS_LABEL
-init-zfsroot $SYSTEMFS $SWAPSIZE
+init-zfsroot $ZPOOL $SWAPSIZE
 init-instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $SYSTEMFS
 
 debootstrap $RELEASE $INSTROOT $MIRROR
