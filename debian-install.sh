@@ -127,6 +127,8 @@ init_instroot () {
     fi
 }
 
+. ./debian-install.env
+
 usage () {
     cat <<EOF
 
@@ -213,7 +215,11 @@ else
     exit -1
 fi
 
-source debian-install.env
+if [ $(id -u) -ne 0 ]
+then
+    echo "This script must be run as root!" >&2
+    exit -1
+fi
 
 install-deps $RELEASE
 init-parts $ROOT_DRIVE
