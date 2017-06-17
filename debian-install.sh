@@ -26,9 +26,9 @@ install_deps () {
 	RELEASE=$1
 	echo "deb http://ftp.debian.org/debian $RELEASE-backports main contrib" > /etc/apt/sources.list.d/backports.list
 	apt update
-	apt upgrade
-	apt install -y gdisk cryptsetup lvm2 debootstrap linux-headers-$(uname -r)
-	apt install -y -t $RELEASE-backport zfs-dkms
+	apt upgrade -y
+	apt install -y gdisk cryptsetup lvm2 debootstrap linux-headers-$(uname -r) pv
+	apt install -y -t $RELEASE-backports zfs-dkms
     else
 	echo "ERROR: called install-deps with args: $@" >&2
 	return 1
