@@ -39,6 +39,7 @@ init_parts () {
     if [ $# -eq 1 -a -b $1 ]
     then
 	ROOT_DRIVE=$1
+	echo "Setting up partitions..."
 	sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
     else
 	echo "ERROR: called init-parts with args: $@" >&2
@@ -52,9 +53,14 @@ init_cryptroot () {
 	LUKS_PARTUUID=$1
 	LUKS_LABEL=$2
 
-	cat <<EOF
-It is recommended to overwrite LUKS device with random data. See more details at: https://gitlab.com/cryptsetup/cryptsetup/wikis/FrequentlyAskedQuestions#2-setup
+	echo "Formatting partition to be used as LUKS device..."
+	cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
+	echo "Opening LUKS device..."
+	cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
 
+	cat <<EOF
+
+It is recommended to overwrite the LUKS device with random data.
 WARNING: This can take quite a long time!
 EOF
 
@@ -65,16 +71,11 @@ EOF
 		;;
 	    *)
 		echo "Shredding LUKS device..."
-		cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
-		cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID crypt_shred
-		dd if=/dev/zero of=/dev/mapper/crypt_shred status=progress
-		cryptsetup luksClose crypt_shred
+		pv < /dev/zero > /dev/mapper/$LUKS_LABEL
+		echo "Finished shredding LUKS device..."
 		;;
 	esac
 
-	echo "Formatting partition $LUKS_PARTUUID to be used as LUKS device..."
-	cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
-	cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
 	echo "Finished setting up LUKS device: $LUKS_LABEL"
     else
 	echo "ERROR: calling init-cryptroot with args: $@" >&2
@@ -150,7 +151,7 @@ Debian mirror URL (default $MIRROR)
 Hostname for new system
 
 -l LABEL
-LUKS encrypted device name
+LUKS encrypted device name (default $LUKS_LABEL)
 
 -z ZPOOL
 ZFS pool name for system directories and swap device
