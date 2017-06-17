@@ -134,7 +134,7 @@ usage () {
 
 USAGE:
 
-$0 OPTIONS... DEVICE
+$0 [OPTIONS] DEVICE
 
 Installs Debian on DEVICE with encrypted root filesystem.
 
@@ -193,15 +193,15 @@ do
 	    ;;
 	:)
 	    echo "MISSING ARGUMENT FOR OPTION: $OPTARG" >&2
-	    exit -1
+	    exit 1
 	    ;;
 	?)
 	    echo "INVALID OPTION: $OPTARG" >&2
-	    exit -1
+	    exit 1
 	    ;;
 	*)
 	    usage
-	    exit -1
+	    exit 1
 	    ;;
     esac
 done
@@ -212,17 +212,17 @@ then
 else
     echo "ERROR: Root device has to be specified!"
     usage
-    exit -1
+    exit 1
 fi
 
 if [ $(id -u) -ne 0 ]
 then
     echo "This script must be run as root!" >&2
-    exit -1
+    exit 1
 fi
 
-install-deps $RELEASE
-init-parts $ROOT_DRIVE
+install_deps $RELEASE
+init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
