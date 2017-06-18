@@ -87,8 +87,8 @@ init_zfsroot () {
     if [ $# -eq 2 -a ! -z $(echo $1|grep -E "^[[:alnum:]]+$") -a ! -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
     then
 	ZPOOL=$1
-	SYSTEMFS=$ZPOOL/system
 	SWAPSIZE=$2
+	SYSTEMFS=$ZPOOL/system
 	if [ ! -z "$(zfs list -H)" -a -z $(zfs list -o name|grep -E "^$SYSTEMFS$")]
 	then
 	    # These steps assume that a ZFS pool has been already imported
@@ -108,20 +108,19 @@ init_zfsroot () {
 }
 
 init_instroot () {
-    if [ $# -eq 5 -a $(echo $1|grep -E "^[[:alpha:]]+$") -a ! -e $2 -a -b /dev/mapper/$3 -a -b /dev/disk/by-partuuid/$4 -a $(zfs list -o name|grep -E "^$5$")] 
+    if [ $# -eq 4 -a ! -e $1 -a -b /dev/mapper/$2 -a -b /dev/disk/by-partuuid/$3 -a ! -z $(zpool list -H -o name|grep -E "^$4$")]
     then
-	RELEASE=$1
-	INSTROOT=$2
-	LUKS_LABEL=$3
-	BOOT_PARTUUID=$4
-	SYSTEMFS=$5
+	INSTROOT=$1
+	LUKS_LABEL=$2
+	BOOT_PARTUUID=$3
+	ZPOOL=$4
 
 	mkdir -p $INSTROOT
 	mkfs.ext4 /dev/mapper/$LUKS_LABEL
 	mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
-	mount /dev/mapper/$LUKS_LABEL $INSTROOT &&  mkdir $INSTROOT/boot
+	mount /dev/mapper/$LUKS_LABEL $INSTROOT && mkdir $INSTROOT/boot
 	mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
-	zfs set mountpoint=$INSTROOT $SYSTEMFS
+	zfs set mountpoint=$INSTROOT $ZPOOL/system
     else
 	echo "ERROR: calling init-instroot with args: $@" >&2
 	return 1
@@ -140,7 +139,7 @@ USAGE:
 
 $0 [OPTIONS] DEVICE
 
-Installs Debian on DEVICE with encrypted root filesystem.
+Installs Debian on DEVICE with encrypted root filesystem, optionally using a ZFS pool for home, var, and swap filesystems.
 
 Valid options are:
 
@@ -160,7 +159,7 @@ LUKS encrypted device name (default $LUKS_LABEL)
 ZFS pool name for system directories and swap device
 
 -s SWAPSIZE
-Size of swap device partition
+Size of swap device partition (TGMK suffixes allowed)
 
 -i PATH
 Install root mountpoint (default $INSTROOT)
@@ -210,12 +209,13 @@ do
     esac
 done
 
-if [ $# -eq 1 ]
+shift $(($OPTIND - 1))
+
+if [ $# -eq 1 -a -b $1 ]
 then
     ROOT_DRIVE=$1
 else
-    echo "ERROR: Root device has to be specified!"
-    usage
+    echo "ERROR: Block device must be specified for root filesystem!" >&2
     exit 1
 fi
 
@@ -225,12 +225,24 @@ then
     exit 1
 fi
 
+if [ -z "$ZPOOL" -o -z $(zpool list -H -o name $ZPOOL | grep -E "^$ZPOOL$") ]
+then
+    echo "ZFS pool is required for swap space, home, var, and gnu directories" >&2
+    exit 1
+fi
+
+if [ -z "$SWAPSIZE" -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
+then
+    echo "Swap size has to be specified" >&2
+    exit 1
+fi
+
 install_deps $RELEASE
 init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 init_zfsroot $ZPOOL $SWAPSIZE
-init_instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $SYSTEMFS
+init_instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 
 debootstrap $RELEASE $INSTROOT $MIRROR
