@@ -1,13 +1,13 @@
 #!/bin/sh
 
 partuuid () {
-    if [ $# -eq 2 -a -b $1 -a $2 -lt 3 ]
+    if [ ! $# -eq 2 -o ! -b $1 -o ! $2 -lt 3 ]
     then
-	sgdisk -i $2 $1|grep "Partition unique GUID:"|sed -e "s;^.*: \([[:alnum:]-]*\)$;\L\1;";
-    else
 	echo "ERROR: called partuuid with args: $@" >&2
-	return 1
+	exit 1
     fi
+
+    sgdisk -i $2 $1|grep "Partition unique GUID:"|sed -e "s;^.*: \([[:alnum:]-]*\)$;\L\1;";
 }
 
 fsuuid () {
