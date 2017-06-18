@@ -11,13 +11,13 @@ partuuid () {
 }
 
 fsuuid () {
-    if [ $# -eq 1 -a -b $1 ]
+    if [ ! $# -eq 1 -o ! -b $1 ]
     then
-	blkid -s UUID -o value $1
-    else
 	echo "ERROR: called fsuuid with args: $@" >&2
-	return 1
+	exit 1
     fi
+
+    blkid -s UUID -o value $1
 }
 
 install_deps () {
