@@ -84,27 +84,28 @@ EOF
 }
 
 init_zfsroot () {
-    if [ $# -eq 2 -a ! -z $(echo $1|grep -E "^[[:alnum:]]+$") -a ! -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
+    if [ ! $# -eq 2 -o -z "$(zpool list $1)" -o -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
     then
-	ZPOOL=$1
-	SWAPSIZE=$2
-	SYSTEMFS=$ZPOOL/system
-	if [ ! -z "$(zfs list -H)" -a -z $(zfs list -o name|grep -E "^$SYSTEMFS$")]
-	then
-	    # These steps assume that a ZFS pool has been already imported
-	    zfs create -o compression=lz4 -o canmount=off $SYSTEMFS
-	    for i in home var gnu
-	    do zfs create $SYSTEMFS/$i; done
-	    zfs create -V $SWAPSIZE $SYSTEMFS/swap
-	    mkswap /dev/zvol/$SYSTEMFS/swap
-	else
-	    echo "ERROR: no ZFS datasets available, or the system dataset already exist!" >&2
-	    return 1
-	fi
-    else
-	echo "ERROR: calling init-zfsroot with args: $@" >&2
-	return 1
+	echo "ERROR: calling init_zfsroot with args: $@" >&2
+	exit 1
     fi
+
+    ZPOOL=$1
+    SWAPSIZE=$2
+    SYSTEMFS=$ZPOOL/system
+
+    if [ ! -z "$(zfs list $SYSTEMFS)" ]
+    then
+	echo "ERROR: $SYSTEMFS dataset already exist!" >&2
+	exit 1
+    fi
+
+    # system dataset should be used for mountpoint inheritance only, and never automount
+    zfs create -o canmount=off $SYSTEMFS
+    for i in home var gnu
+    do zfs create $SYSTEMFS/$i; done
+    zfs create -V $SWAPSIZE $SYSTEMFS/swap
+    mkswap /dev/zvol/$SYSTEMFS/swap
 }
 
 init_instroot () {
