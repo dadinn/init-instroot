@@ -84,14 +84,15 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! $# -eq 2 -o -z "$(zpool list $1)" -o -z $(echo $2 | grep -E "^[0-9]+[TGMK]$") ]
+    if [ ! $# -eq 3 -o -z "$(zpool list $1)" -o -z $2 -o -z $(echo $3 | grep -E "^[0-9]+[TGMK]$") ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
     fi
 
     ZPOOL=$1
-    SWAPSIZE=$2
+    DIRLIST=$2
+    SWAPSIZE=$3
     SYSTEMFS=$ZPOOL/system
 
     if [ ! -z "$(zfs list $SYSTEMFS)" ]
@@ -102,7 +103,7 @@ init_zfsroot () {
 
     # system dataset should be used for mountpoint inheritance only, and never automount
     zfs create -o compression=lz4 -o canmount=off $SYSTEMFS
-    for i in home var gnu
+    for i in $(echo $DIRLIST | tr "," "\n")
     do zfs create $SYSTEMFS/$i; done
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
     mkswap /dev/zvol/$SYSTEMFS/swap
@@ -131,6 +132,7 @@ init_instroot () {
 RELEASE=jessie
 MIRROR=http://ftp.uk.debian.org/debian
 LUKS_LABEL=crypt_root
+DIRLIST="home,var,gnu"
 INSTROOT=/mnt/inst_root
 
 usage () {
@@ -159,6 +161,9 @@ LUKS encrypted device name (default $LUKS_LABEL)
 -z ZPOOL
 ZFS pool name for system directories and swap device
 
+-d DIRLIST
+Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
+
 -s SWAPSIZE
 Size of swap device partition (TGMK suffixes allowed)
 
@@ -170,7 +175,7 @@ This usage help...
 EOF
 }
 
-while getopts 'r:m:n:l:z:s:i:h' opt
+while getopts 'r:m:n:l:z:d:s:i:h' opt
 do
     case $opt in
 	r)
@@ -184,6 +189,9 @@ do
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
+	    ;;
+	d)
+	    DIRLIST=$OPTARG
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
@@ -243,7 +251,7 @@ init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
-init_zfsroot $ZPOOL $SWAPSIZE
+init_zfsroot $ZPOOL $DIRLIST $SWAPSIZE
 init_instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 
 debootstrap $RELEASE $INSTROOT $MIRROR
