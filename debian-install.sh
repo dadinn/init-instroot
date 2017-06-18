@@ -101,7 +101,7 @@ init_zfsroot () {
     fi
 
     # system dataset should be used for mountpoint inheritance only, and never automount
-    zfs create -o canmount=off $SYSTEMFS
+    zfs create -o compression=lz4 -o canmount=off $SYSTEMFS
     for i in home var gnu
     do zfs create $SYSTEMFS/$i; done
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
@@ -109,23 +109,23 @@ init_zfsroot () {
 }
 
 init_instroot () {
-    if [ $# -eq 4 -a ! -e $1 -a -b /dev/mapper/$2 -a -b /dev/disk/by-partuuid/$3 -a ! -z $(zpool list -H -o name|grep -E "^$4$")]
+    if [ ! $# -eq 4 -o -e $1 -o ! -b /dev/mapper/$2 -o ! -b /dev/disk/by-partuuid/$3 -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
     then
-	INSTROOT=$1
-	LUKS_LABEL=$2
-	BOOT_PARTUUID=$3
-	ZPOOL=$4
-
-	mkdir -p $INSTROOT
-	mkfs.ext4 /dev/mapper/$LUKS_LABEL
-	mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
-	mount /dev/mapper/$LUKS_LABEL $INSTROOT && mkdir $INSTROOT/boot
-	mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
-	zfs set mountpoint=$INSTROOT $ZPOOL/system
-    else
-	echo "ERROR: calling init-instroot with args: $@" >&2
-	return 1
+	echo "ERROR: calling init_instroot with args: $@" >&2
+	exit 1
     fi
+
+    INSTROOT=$1
+    LUKS_LABEL=$2
+    BOOT_PARTUUID=$3
+    ZPOOL=$4
+
+    mkdir -p $INSTROOT
+    mkfs.ext4 /dev/mapper/$LUKS_LABEL
+    mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
+    mount /dev/mapper/$LUKS_LABEL $INSTROOT && mkdir $INSTROOT/boot
+    mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
+    zfs set mountpoint=$INSTROOT $ZPOOL/system
 }
 
 RELEASE=jessie
