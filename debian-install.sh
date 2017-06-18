@@ -36,15 +36,15 @@ install_deps () {
 }
 
 init_parts () {
-    if [ $# -eq 1 -a -b $1 ]
+    if [ ! $# -eq 1 -o ! -b $1 ]
     then
-	ROOT_DRIVE=$1
-	echo "Setting up partitions..."
-	sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
-    else
-	echo "ERROR: called init-parts with args: $@" >&2
-	return 1
+	echo "ERROR: called init_parts with args: $@" >&2
+	exit 1
     fi
+
+    ROOT_DRIVE=$1
+    echo "Setting up partitions..."
+    sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
 }
 
 init_cryptroot () {
