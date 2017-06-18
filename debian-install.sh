@@ -84,16 +84,17 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! $# -eq 3 -o -z "$(zpool list $1)" -o -z $2 -o -z $(echo $3 | grep -E "^[0-9]+[TGMK]$") ]
+    if [ ! $# -eq 4 -o -z "$(zpool list $1)" -o -z $(echo 2 | grep -E "^[:alnum:]+$") -o -z $3 -o -z $(echo $4 | grep -E "^[0-9]+[TGMK]*$") ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
     fi
 
     ZPOOL=$1
-    DIRLIST=$2
-    SWAPSIZE=$3
-    SYSTEMFS=$ZPOOL/system
+    FSNAME=$2
+    DIRLIST=$3
+    SWAPSIZE=$4
+    SYSTEMFS=$ZPOOL/$FSNAME
 
     if [ ! -z "$(zfs list $SYSTEMFS)" ]
     then
@@ -283,10 +284,10 @@ init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 if [ -z "$ZPOOL" ]
 then
     init_lvmroot $LUKS_LABEL $SWAPSIZE
-    ROOT_UUID=$(fsuuid /dev/mapper/${LUKS_LABEL}_vg-root
+    ROOT_UUID=$(fsuuid /dev/mapper/${LUKS_LABEL}_vg-root)
     init_instroot_lvm $INSTROOT $ROOT_UUID $BOOT_PARTUUID
 else
-    init_zfsroot $ZPOOL $DIRLIST $SWAPSIZE
+    init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 fi
 
