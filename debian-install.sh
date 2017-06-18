@@ -109,10 +109,44 @@ init_zfsroot () {
     mkswap /dev/zvol/$SYSTEMFS/swap
 }
 
-init_instroot () {
+init_lvmroot () {
+    if [ ! $# -eq 2 -o ! -b /dev/mapper/$1 -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
+    then
+	echo "ERROR: calling init_lvmroot with args: $@" >&2
+	exit 1
+    fi
+    LUKS_LABEL=$1
+    VG_NAME=${LUKS_LABEL}_vg
+    SWAP_SIZE=$2
+    pvcreate  /dev/mapper/$LUKS_LABEL
+    vgcreate $VG_NAME /dev/mapper/$LUKS_LABEL
+    lvcreate -L $SWAP_SIZE $VG_NAME -n swap
+    lvcreate -l 100%FREE $VG_NAME -n root
+}
+
+init_instroot_lvm () {
+    if [ ! $# -eq 3 -o -e $1 -o ! -b /dev/disk/by-uuid/$2 -o ! -b /dev/disk/by-partuuid/$3 ]
+    then
+	echo "ERROR: calling init_instroot_lvm with args: $@" >&2
+	exit1
+    fi
+
+    INSTROOT=$1
+    ROOT_DEV=/dev/disk/by-uuid/$2
+    BOOT_DEV=/dev/disk/by-partuuid/$3
+
+    mkdir -p $INSTROOT
+    mkfs.ext4 $ROOT_DEV
+    mkfs.ext4 -m 0 -j $BOOT_DEV
+    mount $ROOT_DEV $INSTROOT
+    mkdir $INSTROOT/boot
+    mount $BOOT_DEV /$INSTROOT/boot
+}
+
+init_instroot_zfs () {
     if [ ! $# -eq 4 -o -e $1 -o ! -b /dev/mapper/$2 -o ! -b /dev/disk/by-partuuid/$3 -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
     then
-	echo "ERROR: calling init_instroot with args: $@" >&2
+	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
     fi
 
@@ -234,15 +268,9 @@ then
     exit 1
 fi
 
-if [ -z "$ZPOOL" -o -z $(zpool list -H -o name $ZPOOL | grep -E "^$ZPOOL$") ]
-then
-    echo "ZFS pool is required for swap space, home, var, and gnu directories" >&2
-    exit 1
-fi
-
 if [ -z "$SWAPSIZE" -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
 then
-    echo "Swap size has to be specified" >&2
+    echo "Swap size has to be specified (TGMK suffixes allowed)" >&2
     exit 1
 fi
 
@@ -251,7 +279,15 @@ init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
-init_zfsroot $ZPOOL $DIRLIST $SWAPSIZE
-init_instroot $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
+
+if [ -z "$ZPOOL" ]
+then
+    init_lvmroot $LUKS_LABEL $SWAPSIZE
+    ROOT_UUID=$(fsuuid /dev/mapper/${LUKS_LABEL}_vg-root
+    init_instroot_lvm $INSTROOT $ROOT_UUID $BOOT_PARTUUID
+else
+    init_zfsroot $ZPOOL $DIRLIST $SWAPSIZE
+    init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
+fi
 
 debootstrap $RELEASE $INSTROOT $MIRROR
