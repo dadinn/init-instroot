@@ -21,18 +21,18 @@ fsuuid () {
 }
 
 install_deps () {
-    if [ $# -eq 1 -a ! -z "$1" ]
+    if [ ! $# -eq 1 -o -z $1 ]
     then
-	RELEASE=$1
-	echo "deb http://ftp.debian.org/debian $RELEASE-backports main contrib" > /etc/apt/sources.list.d/backports.list
-	apt update
-	apt upgrade -y
-	apt install -y gdisk cryptsetup lvm2 debootstrap linux-headers-$(uname -r) pv
-	apt install -y -t $RELEASE-backports zfs-dkms
-    else
-	echo "ERROR: called install-deps with args: $@" >&2
-	return 1
+	echo "ERROR: called install_deps with args: $@" >&2
+	exit 1
     fi
+
+    RELEASE=$1
+    echo "deb http://ftp.debian.org/debian $RELEASE-backports main contrib" > /etc/apt/sources.list.d/backports.list
+    apt update
+    apt upgrade -y
+    apt install -y gdisk cryptsetup lvm2 debootstrap linux-headers-$(uname -r) pv
+    apt install -y -t $RELEASE-backports zfs-dkms
 }
 
 init_parts () {
