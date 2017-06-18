@@ -128,7 +128,10 @@ init_instroot () {
     fi
 }
 
-. ./debian-install.env
+RELEASE=jessie
+MIRROR=http://ftp.uk.debian.org/debian
+LUKS_LABEL=crypt_root
+INSTROOT=/mnt/inst_root
 
 usage () {
     cat <<EOF
