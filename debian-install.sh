@@ -48,39 +48,39 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ $# -eq 2 -a -b /dev/disk/by-partuuid/$1 -a ! -z $(echo $2|grep -E "^[[:alnum:]_]+$") ]
+    if [ ! $# -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z $(echo $2|grep -E "^[[:alnum:]_]+$") ]
     then
-	LUKS_PARTUUID=$1
-	LUKS_LABEL=$2
+	echo "ERROR: calling init_cryptroot with args: $@" >&2
+	exit 1
+    fi
 
-	echo "Formatting partition to be used as LUKS device..."
-	cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
-	echo "Opening LUKS device..."
-	cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
+    LUKS_PARTUUID=$1
+    LUKS_LABEL=$2
 
-	cat <<EOF
+    echo "Formatting partition to be used as LUKS device..."
+    cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
+    echo "Opening LUKS device..."
+    cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
+
+    cat <<EOF
 
 It is recommended to overwrite the LUKS device with random data.
 WARNING: This can take quite a long time!
 EOF
 
-	read -p "Would you like to overwrite LUKS device with random data? [Y/n]" shred
-	case $shred in
-	    [nN])
-		echo "Skipping LUKS device shredding."
-		;;
-	    *)
-		echo "Shredding LUKS device..."
-		pv < /dev/zero > /dev/mapper/$LUKS_LABEL
-		echo "Finished shredding LUKS device..."
-		;;
-	esac
+    read -p "Would you like to overwrite LUKS device with random data? [Y/n]" shred
+    case $shred in
+	[nN])
+	    echo "Skipping LUKS device shredding."
+	    ;;
+	*)
+	    echo "Shredding LUKS device..."
+	    pv < /dev/zero > /dev/mapper/$LUKS_LABEL
+	    echo "Finished shredding LUKS device..."
+	    ;;
+    esac
 
-	echo "Finished setting up LUKS device: $LUKS_LABEL"
-    else
-	echo "ERROR: calling init-cryptroot with args: $@" >&2
-	return 1
-    fi
+    echo "Finished setting up LUKS device: $LUKS_LABEL"
 }
 
 init_zfsroot () {
