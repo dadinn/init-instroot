@@ -219,6 +219,9 @@ do
 	m)
 	    MIRROR=$OPTARG
 	    ;;
+	n)
+	    HOSTNAME=$OPTARG
+	    ;;
 	l)
 	    LUKS_LABEL=$OPTARG
 	    ;;
@@ -272,6 +275,12 @@ fi
 if [ -z "$SWAPSIZE" -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
 then
     echo "Swap size has to be specified (TGMK suffixes allowed)" >&2
+    exit 1
+fi
+
+if [ -z "$HOSTNAME" -o -z $(echo $HOSTNAME | grep -E '^[[:alpha:]][[:alnum:]-]+$' )]
+then
+    echo "Hostname has to be specified for the new system" >&2
     exit 1
 fi
 
