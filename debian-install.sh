@@ -20,19 +20,32 @@ fsuuid () {
     blkid -s UUID -o value $1
 }
 
-install_deps () {
+install_deps_base () {
+    echo "Installing necessary packages..."
+    apt update && apt install -y gdisk cryptsetup pv lvm2 debootstrap
+}
+
+install_deps_zfs () {
     if [ ! $# -eq 1 -o -z $1 ]
     then
-	echo "ERROR: called install_deps with args: $@" >&2
+	echo "ERROR: called install_deps_zfs with args: $@" >&2
 	exit 1
     fi
 
     RELEASE=$1
-    echo "deb http://ftp.debian.org/debian $RELEASE-backports main contrib" > /etc/apt/sources.list.d/backports.list
-    apt update
-    apt upgrade -y
-    apt install -y gdisk cryptsetup lvm2 debootstrap linux-headers-$(uname -r) pv
-    apt install -y -t $RELEASE-backports zfs-dkms
+
+    case $RELEASE in
+	"jessie")
+	    echo "deb http://ftp.debian.org/debian jessie-backports main contrib" > /etc/apt/sources.list.d/backports.list
+	    apt update
+	    apt install -y -t jessie-backports zfs-dkms
+	    ;;
+	"stretch")
+	    sed -i -e 's/^deb \(.*\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
+	    apt update
+	    apt install -y zfs-dkms
+	    ;;
+    esac
 }
 
 init_parts () {
@@ -284,7 +297,7 @@ then
     exit 1
 fi
 
-install_deps $RELEASE
+install_deps_base
 init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
@@ -296,6 +309,7 @@ then
     ROOT_UUID=$(fsuuid /dev/mapper/${LUKS_LABEL}_vg-root)
     init_instroot_lvm $INSTROOT $ROOT_UUID $BOOT_PARTUUID
 else
+    install_deps_zfs $RELEASE
     init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 fi
