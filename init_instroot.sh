@@ -22,7 +22,7 @@ fsuuid () {
 
 install_deps_base () {
     echo "Installing necessary packages..."
-    apt update && apt install -y gdisk cryptsetup pv lvm2 debootstrap
+    apt update && apt install -y gdisk cryptsetup pv lvm2
 }
 
 install_deps_zfs () {
@@ -192,18 +192,15 @@ USAGE:
 
 $0 [OPTIONS] DEVICE
 
-Installs Debian on DEVICE with encrypted root filesystem, optionally using a ZFS pool for home, var, and swap filesystems.
+Sets up encrypted root filesystem, using LVM, or optionally a ZFS pool for home and var, and swap filesystems.
 
 Valid options are:
 
 -r RELEASE
-Debian release to use (default $RELEASE)
+Debian release used as live host (default $RELEASE)
 
--m URL
-Debian mirror URL (default $MIRROR)
-
--n HOSTNAME
-Hostname for new system
+-m PATH
+Install root mountpoint (default $INSTROOT)
 
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
@@ -217,25 +214,19 @@ Coma separated list of root directories to mount as ZFS datasets (default $DIRLI
 -s SWAPSIZE
 Size of swap device partition (TGMK suffixes allowed)
 
--i PATH
-Install root mountpoint (default $INSTROOT)
-
 -h
 This usage help...
 EOF
 }
 
-while getopts 'r:m:n:l:z:d:s:i:h' opt
+while getopts 'r:m:l:z:d:s:h' opt
 do
     case $opt in
 	r)
 	    RELEASE=$OPTARG
 	    ;;
 	m)
-	    MIRROR=$OPTARG
-	    ;;
-	n)
-	    HOSTNAME=$OPTARG
+	    INSTROOT=$OPTARG
 	    ;;
 	l)
 	    LUKS_LABEL=$OPTARG
@@ -248,9 +239,6 @@ do
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
-	    ;;
-	i)
-	    INSTROOT=$OPTARG
 	    ;;
 	h)
             usage
@@ -281,21 +269,15 @@ else
     exit 1
 fi
 
-if [ $(id -u) -ne 0 ]
-then
-    echo "This script must be run as root!" >&2
-    exit 1
-fi
-
 if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$')" ]
 then
     echo "ERROR: Swap size has to be specified (TGMK suffixes allowed)" >&2
     exit 1
 fi
 
-if [ -z "$HOSTNAME" -o -z "$(echo $HOSTNAME | grep -E '^[[:alpha:]][[:alnum:]-]+$')" ]
+if [ $(id -u) -ne 0 ]
 then
-    echo "ERROR: Hostname has to be specified for the new system" >&2
+    echo "This script must be run as root!" >&2
     exit 1
 fi
 
@@ -315,5 +297,3 @@ else
     init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 fi
-
-debootstrap $RELEASE $INSTROOT $MIRROR
