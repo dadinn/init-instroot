@@ -61,7 +61,7 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ ! $# -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z $(echo $2|grep -E "^[[:alnum:]_]+$") ]
+    if [ ! $# -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z $(echo $2|grep -E '^[[:alnum:]_]+$') ]
     then
 	echo "ERROR: calling init_cryptroot with args: $@" >&2
 	exit 1
@@ -87,8 +87,9 @@ EOF
 	    echo "Skipping LUKS device shredding."
 	    ;;
 	*)
+	    LUKS_DEV=/dev/mapper/$LUKS_LABEL
 	    echo "Shredding LUKS device..."
-	    pv < /dev/zero > /dev/mapper/$LUKS_LABEL
+	    pv --size $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $LUKS_DEV
 	    echo "Finished shredding LUKS device..."
 	    ;;
     esac
@@ -139,14 +140,14 @@ init_lvmroot () {
 }
 
 init_instroot_lvm () {
-    if [ ! $# -eq 3 -o -e $1 -o ! -b /dev/disk/by-uuid/$2 -o ! -b /dev/disk/by-partuuid/$3 ]
+    if [ ! $# -eq 3 -o -e $1 -o ! -b /dev/mapper/$2 -o ! -b /dev/disk/by-partuuid/$3 ]
     then
 	echo "ERROR: calling init_instroot_lvm with args: $@" >&2
-	exit1
+	exit 1
     fi
 
     INSTROOT=$1
-    ROOT_DEV=/dev/disk/by-uuid/$2
+    ROOT_DEV=/dev/mapper/$2
     BOOT_DEV=/dev/disk/by-partuuid/$3
 
     mkdir -p $INSTROOT
@@ -306,8 +307,8 @@ init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 if [ -z "$ZPOOL" ]
 then
     init_lvmroot $LUKS_LABEL $SWAPSIZE
-    ROOT_UUID=$(fsuuid /dev/mapper/${LUKS_LABEL}_vg-root)
-    init_instroot_lvm $INSTROOT $ROOT_UUID $BOOT_PARTUUID
+    ROOT_LVNAME=${LUKS_LABEL}_vg-root
+    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
 else
     install_deps_zfs $RELEASE
     init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
