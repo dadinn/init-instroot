@@ -58,6 +58,7 @@ init_parts () {
     ROOT_DRIVE=$1
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
+    echo "Finished setting up partitions."
 }
 
 init_cryptroot () {
@@ -98,7 +99,7 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! $# -eq 4 -o -z "$(zpool list $1)" -o -z $(echo 2 | grep -E "^[:alnum:]+$") -o -z $3 -o -z $(echo $4 | grep -E "^[0-9]+[TGMK]*$") ]
+    if [ ! $# -eq 4 -o -z "$(zpool list $1)" -o -z $(echo 2 | grep -E '^[:alnum:]+$') -o -z $3 -o -z $(echo $4 | grep -E '^[0-9]+[TGMK]*$') ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
@@ -125,7 +126,7 @@ init_zfsroot () {
 }
 
 init_lvmroot () {
-    if [ ! $# -eq 2 -o ! -b /dev/mapper/$1 -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
+    if [ ! $# -eq 2 -o ! -b /dev/mapper/$1 -o -z $(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$') ]
     then
 	echo "ERROR: calling init_lvmroot with args: $@" >&2
 	exit 1
@@ -256,11 +257,11 @@ do
             exit 0
 	    ;;
 	:)
-	    echo "MISSING ARGUMENT FOR OPTION: $OPTARG" >&2
+	    echo "ERROR: Missing argument for potion: -$OPTARG" >&2
 	    exit 1
 	    ;;
-	?)
-	    echo "INVALID OPTION: $OPTARG" >&2
+	\?)
+	    echo "ERROR: Illegal option -$OPTARG" >&2
 	    exit 1
 	    ;;
 	*)
@@ -286,15 +287,15 @@ then
     exit 1
 fi
 
-if [ -z "$SWAPSIZE" -o -z $(echo $SWAPSIZE | grep -E "^[0-9]+[TGMK]$") ]
+if [ -z "$SWAPSIZE" -o -z $(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$') ]
 then
-    echo "Swap size has to be specified (TGMK suffixes allowed)" >&2
+    echo "ERROR: Swap size has to be specified (TGMK suffixes allowed)" >&2
     exit 1
 fi
 
 if [ -z "$HOSTNAME" -o -z $(echo $HOSTNAME | grep -E '^[[:alpha:]][[:alnum:]-]+$' )]
 then
-    echo "Hostname has to be specified for the new system" >&2
+    echo "ERROR: Hostname has to be specified for the new system" >&2
     exit 1
 fi
 
