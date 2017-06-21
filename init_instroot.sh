@@ -36,7 +36,7 @@ install_deps_zfs () {
 
     case $RELEASE in
 	"jessie")
-	    echo "deb http://ftp.debian.org/debian jessie-backports main contrib" > /etc/apt/sources.list.d/backports.list
+	    echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
 	    apt update
 	    apt install -y -t jessie-backports zfs-dkms
 	    ;;
@@ -180,10 +180,9 @@ init_instroot_zfs () {
 }
 
 RELEASE=jessie
-MIRROR=http://ftp.uk.debian.org/debian
 LUKS_LABEL=crypt_root
 DIRLIST="home,var,gnu"
-INSTROOT=/mnt/inst_root
+INSTROOT=/mnt/instroot
 
 usage () {
     cat <<EOF
@@ -192,12 +191,12 @@ USAGE:
 
 $0 [OPTIONS] DEVICE
 
-Sets up encrypted root filesystem, using LVM, or optionally a ZFS pool for home and var, and swap filesystems.
+General purpose encrypted root filesystem initializer using LVM, or optionally a ZFS pool for home, var, and swap space
 
 Valid options are:
 
 -r RELEASE
-Debian release used as live host (default $RELEASE)
+Debian release used as live host system (default $RELEASE)
 
 -m PATH
 Install root mountpoint (default $INSTROOT)
