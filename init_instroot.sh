@@ -1,7 +1,7 @@
 #!/bin/sh
 
 partuuid () {
-    if [ ! $# -eq 2 -o ! -b $1 -o ! $2 -lt 3 ]
+    if [ ! "$#" -eq 2 -o ! -b "$1" -o ! "$2" -lt 3 ]
     then
 	echo "ERROR: called partuuid with args: $@" >&2
 	exit 1
@@ -11,7 +11,7 @@ partuuid () {
 }
 
 fsuuid () {
-    if [ ! $# -eq 1 -o ! -b $1 ]
+    if [ ! "$#" -eq 1 -o ! -b "$1" ]
     then
 	echo "ERROR: called fsuuid with args: $@" >&2
 	exit 1
@@ -26,7 +26,7 @@ install_deps_base () {
 }
 
 install_deps_zfs () {
-    if [ ! $# -eq 1 -o -z $1 ]
+    if [ ! "$#" -eq 1 -o -z "$1" ]
     then
 	echo "ERROR: called install_deps_zfs with args: $@" >&2
 	exit 1
@@ -49,7 +49,7 @@ install_deps_zfs () {
 }
 
 init_parts () {
-    if [ ! $# -eq 1 -o ! -b $1 ]
+    if [ ! "$#" -eq 1 -o ! -b "$1" ]
     then
 	echo "ERROR: called init_parts with args: $@" >&2
 	exit 1
@@ -62,7 +62,7 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ ! $# -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
+    if [ ! "$#" -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
     then
 	echo "ERROR: calling init_cryptroot with args: $@" >&2
 	exit 1
@@ -99,7 +99,7 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! $# -eq 4 -o -z "$(zpool list $1)" -o -z $(echo 2 | grep -E '^[:alnum:]+$') -o -z $3 -o -z "$(echo $4 | grep -E '^[0-9]+[TGMK]*$')" ]
+    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$3" -o -z "$(echo $4 | grep -E '^[0-9]+[TGMK]*$')" ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
@@ -126,7 +126,7 @@ init_zfsroot () {
 }
 
 init_lvmroot () {
-    if [ ! $# -eq 2 -o ! -b /dev/mapper/$1 -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$')" ]
+    if [ ! "$#" -eq 2 -o ! -b "/dev/mapper/$1" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$')" ]
     then
 	echo "ERROR: calling init_lvmroot with args: $@" >&2
 	exit 1
@@ -141,7 +141,7 @@ init_lvmroot () {
 }
 
 init_instroot_lvm () {
-    if [ ! $# -eq 3 -o -e $1 -o ! -b /dev/mapper/$2 -o ! -b /dev/disk/by-partuuid/$3 ]
+    if [ ! "$#" -eq 3 -o -e "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" ]
     then
 	echo "ERROR: calling init_instroot_lvm with args: $@" >&2
 	exit 1
@@ -160,7 +160,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! $# -eq 4 -o -e $1 -o ! -b /dev/mapper/$2 -o ! -b /dev/disk/by-partuuid/$3 -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
+    if [ ! "$#" -eq 4 -o -e "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
     then
 	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
@@ -281,7 +281,7 @@ then
     exit 0
 fi
 
-if [ $# -eq 1 -a -b $1 ]
+if [ "$#" -eq 1 -a -b "$1" ]
 then
     ROOT_DRIVE=$1
 else
