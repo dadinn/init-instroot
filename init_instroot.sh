@@ -204,6 +204,9 @@ Install root mountpoint (default $INSTROOT)
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
 
+-Z
+Install and configure package dependencies only
+
 -z ZPOOL
 ZFS pool name for system directories and swap device
 
@@ -218,7 +221,13 @@ This usage help...
 EOF
 }
 
-while getopts 'r:m:l:z:d:s:h' opt
+if [ $(id -u) -ne 0 ]
+then
+    echo "This script must be run as root!" >&2
+    exit 1
+fi
+
+while getopts 'r:m:l:Zz:d:s:h' opt
 do
     case $opt in
 	r)
@@ -229,6 +238,9 @@ do
 	    ;;
 	l)
 	    LUKS_LABEL=$OPTARG
+	    ;;
+	Z)
+	    DEPSONLY=1
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -260,6 +272,15 @@ done
 
 shift $(($OPTIND - 1))
 
+if [ "$DEPSONLY" = 1 ]
+then
+    install_deps_base
+    install_deps_zfs $RELEASE
+    touch .depsready
+    "Finished installing all package dependencies!"
+    exit 0
+fi
+
 if [ $# -eq 1 -a -b $1 ]
 then
     ROOT_DRIVE=$1
@@ -274,13 +295,7 @@ then
     exit 1
 fi
 
-if [ $(id -u) -ne 0 ]
-then
-    echo "This script must be run as root!" >&2
-    exit 1
-fi
-
-install_deps_base
+[ -e .depsready ] || install_deps_base
 init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
@@ -292,7 +307,7 @@ then
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
     init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
 else
-    install_deps_zfs $RELEASE
+    [ -e .depsready ] || install_deps_zfs $RELEASE
     init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 fi
