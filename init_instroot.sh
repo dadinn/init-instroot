@@ -99,7 +99,7 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[TGMK]*$')" ]
+    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
@@ -127,7 +127,7 @@ init_zfsroot () {
 }
 
 init_lvmroot () {
-    if [ ! "$#" -eq 2 -o ! -b "/dev/mapper/$1" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$')" ]
+    if [ ! "$#" -eq 2 -o ! -b "/dev/mapper/$1" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
     then
 	echo "ERROR: calling init_lvmroot with args: $@" >&2
 	exit 1
@@ -215,7 +215,7 @@ ZFS pool name for system directories and swap device
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
 -s SWAPSIZE
-Size of swap device partition (TGMK suffixes allowed)
+Size of swap device partition (KMGT suffixes allowed)
 
 -h
 This usage help...
@@ -290,9 +290,9 @@ else
     exit 1
 fi
 
-if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[TGMK]$')" ]
+if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 then
-    echo "ERROR: Swap size has to be specified (TGMK suffixes allowed)" >&2
+    echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
     exit 1
 fi
 
