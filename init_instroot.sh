@@ -99,7 +99,7 @@ EOF
 }
 
 init_zfsroot () {
-    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$3" -o -z "$(echo $4 | grep -E '^[0-9]+[TGMK]*$')" ]
+    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[TGMK]*$')" ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
@@ -107,8 +107,9 @@ init_zfsroot () {
 
     ZPOOL=$1
     FSNAME=$2
-    DIRLIST=$3
-    SWAPSIZE=$4
+    SWAPSIZE=$3
+    DIRLIST=$4
+
     SYSTEMFS=$ZPOOL/$FSNAME
 
     if [ ! -z "$(zfs list $SYSTEMFS)" ]
@@ -160,7 +161,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! "$#" -eq 4 -o -e "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
+    if [ ! "$#" -eq 4 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
     then
 	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
