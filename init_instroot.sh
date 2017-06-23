@@ -241,7 +241,11 @@ do
 	    LUKS_LABEL=$OPTARG
 	    ;;
 	Z)
-	    DEPSONLY=1
+	    install_deps_base
+	    install_deps_zfs $RELEASE
+	    touch .depsready
+	    "Finished installing all package dependencies!"
+	    exit 0
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -272,15 +276,6 @@ do
 done
 
 shift $(($OPTIND - 1))
-
-if [ "$DEPSONLY" = 1 ]
-then
-    install_deps_base
-    install_deps_zfs $RELEASE
-    touch .depsready
-    "Finished installing all package dependencies!"
-    exit 0
-fi
 
 if [ "$#" -eq 1 -a -b "$1" ]
 then
