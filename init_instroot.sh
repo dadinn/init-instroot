@@ -304,6 +304,6 @@ then
     init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
 else
     [ -e .depsready ] || install_deps_zfs $RELEASE
-    init_zfsroot $ZPOOL "system" $DIRLIST $SWAPSIZE
+    init_zfsroot $ZPOOL "system"  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 fi
