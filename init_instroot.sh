@@ -189,7 +189,7 @@ USAGE:
 
 $0 [OPTIONS] DEVICE
 
-General purpose encrypted root filesystem initializer using LVM, or optionally a ZFS pool for home, var, and swap space
+General purpose encrypted root filesystem initializer, using LVM or optionally a ZFS pool, for home, var, and swap space
 
 Valid options are:
 
@@ -213,6 +213,7 @@ Size of swap device partition (KMGT suffixes allowed)
 
 -h
 This usage help...
+
 EOF
 }
 
