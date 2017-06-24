@@ -33,7 +33,7 @@ install_deps_base () {
 install_deps_zfs () {
     if [ ! -e .deps_zfs ]
     then
-	RELEASE=$(cat /dev/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
+	RELEASE=$(cat /etc/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
 	case $RELEASE in
 	    "8")
 		echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
