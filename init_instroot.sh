@@ -183,7 +183,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! "$#" -eq 4 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/system)" ]
+    if [ ! "$#" -eq 5 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/$5)" ]
     then
 	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
@@ -193,16 +193,18 @@ init_instroot_zfs () {
     LUKS_LABEL=$2
     BOOT_PARTUUID=$3
     ZPOOL=$4
+    ROOTFS=$5
 
     mkdir -p $INSTROOT
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
     mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
     mount /dev/mapper/$LUKS_LABEL $INSTROOT && mkdir $INSTROOT/boot
     mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
-    zfs set mountpoint=$INSTROOT $ZPOOL/system
+    zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
 }
 
 LUKS_LABEL=crypt_root
+ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
 
@@ -245,6 +247,9 @@ Specifying a keyfile is necessary for this feature!
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
+-r NAME
+Name of the system root dataset in the ZFS pool (default $ROOTFS)
+
 -s SWAPSIZE
 Size of swap device partition (KMGT suffixes allowed)
 
@@ -260,7 +265,7 @@ then
     exit 1
 fi
 
-while getopts 'l:m:Zz:k:c:d:s:h' opt
+while getopts 'l:m:Zz:k:c:d:r:s:h' opt
 do
     case $opt in
 	l)
@@ -287,6 +292,9 @@ do
 	    ;;
 	d)
 	    DIRLIST=$OPTARG
+	    ;;
+	r)
+	    ROOTFS=$OPTARG
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
@@ -348,8 +356,8 @@ if [ ! -z "$ZPOOL" ]
 then
     [ -z "$KEYFILE" ] || init_cryptdevs $KEYFILE "$DEVLIST"
     [ -e .depsready ] || install_deps_zfs
-    init_zfsroot $ZPOOL "system"  $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
+    init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
+    init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL $ROOTFS
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
