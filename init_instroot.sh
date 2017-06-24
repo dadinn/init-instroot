@@ -297,13 +297,13 @@ BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 
-if [ -z "$ZPOOL" ]
+if [ ! -z "$ZPOOL" ]
 then
-    init_lvmroot $LUKS_LABEL $SWAPSIZE
-    ROOT_LVNAME=${LUKS_LABEL}_vg-root
-    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
-else
     [ -e .depsready ] || install_deps_zfs $RELEASE
     init_zfsroot $ZPOOL "system"  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
+else
+    init_lvmroot $LUKS_LABEL $SWAPSIZE
+    ROOT_LVNAME=${LUKS_LABEL}_vg-root
+    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
 fi
