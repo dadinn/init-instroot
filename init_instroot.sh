@@ -26,24 +26,22 @@ install_deps_base () {
 }
 
 install_deps_zfs () {
-    if [ ! "$#" -eq 1 -o -z "$1" ]
-    then
-	echo "ERROR: called install_deps_zfs with args: $@" >&2
-	exit 1
-    fi
-
-    RELEASE=$1
+    RELEASE=$(cat /dev/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
 
     case $RELEASE in
-	"jessie")
+	"8")
 	    echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
 	    apt update
 	    apt install -y -t jessie-backports zfs-dkms
 	    ;;
-	"stretch")
-	    sed -i -e 's/^deb \(.*\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
+	"9")
+	    sed -i -re 's/^deb \(.+\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
 	    apt update
 	    apt install -y zfs-dkms
+	    ;;
+	*)
+	    echo "ERROR: Debian version $RELEASE is not supported!"
+	    exit 1
 	    ;;
     esac
 }
@@ -180,7 +178,6 @@ init_instroot_zfs () {
     zfs set mountpoint=$INSTROOT $ZPOOL/system
 }
 
-RELEASE=jessie
 LUKS_LABEL=crypt_root
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
@@ -195,9 +192,6 @@ $0 [OPTIONS] DEVICE
 General purpose encrypted root filesystem initializer using LVM, or optionally a ZFS pool for home, var, and swap space
 
 Valid options are:
-
--r RELEASE
-Debian release used as live host system (default $RELEASE)
 
 -m PATH
 Install root mountpoint (default $INSTROOT)
@@ -228,21 +222,18 @@ then
     exit 1
 fi
 
-while getopts 'r:m:l:Zz:d:s:h' opt
+while getopts 'l:m:Zz:d:s:h' opt
 do
     case $opt in
-	r)
-	    RELEASE=$OPTARG
+	l)
+	    LUKS_LABEL=$OPTARG
 	    ;;
 	m)
 	    INSTROOT=$OPTARG
 	    ;;
-	l)
-	    LUKS_LABEL=$OPTARG
-	    ;;
 	Z)
 	    install_deps_base
-	    install_deps_zfs $RELEASE
+	    install_deps_zfs
 	    touch .depsready
 	    "Finished installing all package dependencies!"
 	    exit 0
@@ -299,7 +290,7 @@ init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 
 if [ ! -z "$ZPOOL" ]
 then
-    [ -e .depsready ] || install_deps_zfs $RELEASE
+    [ -e .depsready ] || install_deps_zfs
     init_zfsroot $ZPOOL "system"  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
 else
