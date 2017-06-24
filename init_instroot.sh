@@ -21,29 +21,37 @@ fsuuid () {
 }
 
 install_deps_base () {
-    echo "Installing necessary packages..."
-    apt update && apt install -y gdisk cryptsetup pv lvm2
+    if [ ! -e .deps_base ]
+    then
+	echo "Installing necessary packages..."
+	apt update
+	apt install -y gdisk cryptsetup pv lvm2
+	touch .deps_base
+    fi
 }
 
 install_deps_zfs () {
-    RELEASE=$(cat /dev/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
-
-    case $RELEASE in
-	"8")
-	    echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
-	    apt update
-	    apt install -y -t jessie-backports zfs-dkms
-	    ;;
-	"9")
-	    sed -i -re 's/^deb \(.+\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
-	    apt update
-	    apt install -y zfs-dkms
-	    ;;
-	*)
-	    echo "ERROR: Debian version $RELEASE is not supported!"
-	    exit 1
-	    ;;
-    esac
+    if [ ! -e .deps_zfs ]
+    then
+	RELEASE=$(cat /dev/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
+	case $RELEASE in
+	    "8")
+		echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
+		apt update
+		apt install -y -t jessie-backports zfs-dkms
+		;;
+	    "9")
+		sed -i -re 's/^deb \(.+\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
+		apt update
+		apt install -y zfs-dkms
+		;;
+	    *)
+		echo "ERROR: Debian version $RELEASE is not supported!"
+		exit 1
+		;;
+	esac
+	touch .deps_zfs
+    fi
 }
 
 init_parts () {
@@ -342,7 +350,6 @@ do
 	Z)
 	    install_deps_base
 	    install_deps_zfs
-	    touch .depsready
 	    "Finished installing all package dependencies!"
 	    exit 0
 	    ;;
@@ -411,7 +418,7 @@ then
     exit 1
 fi
 
-[ -e .depsready ] || install_deps_base
+install_deps_base
 init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
@@ -420,7 +427,7 @@ init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 if [ ! -z "$ZPOOL" ]
 then
     [ -z "$KEYFILE" ] || init_cryptdevs $KEYFILE "$DEVLIST"
-    [ -e .depsready ] || install_deps_zfs
+    install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTUUID $BOOT_PARTUUID $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
