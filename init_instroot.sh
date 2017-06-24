@@ -96,6 +96,30 @@ EOF
     echo "Finished setting up LUKS device: $LUKS_LABEL"
 }
 
+init_cryptdevs () {
+    if [ ! "$#" -eq 2 -o ! -e "$1"]
+    then
+	echo "ERROR: calling init_cryptdevs with args: $@" >&2
+	exit 1
+    fi
+
+    KEYFILE=$1
+    DEVLIST=$2
+
+    for i in $(echo $DEVLIST| tr "," "\n")
+    do
+	device=$(echo $i|cut -d : -f1)
+	label=$(echo $i|cut -d : -f2)
+	if [ ! -b "/dev/mapper/$label" ]
+	then
+	    cryptsetup luksOpen $device $label --key-file $KEYFILE || exit 1
+	fi
+    done
+    unset device
+    unset label
+    unset i
+}
+
 init_zfsroot () {
     if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
     then
@@ -205,6 +229,19 @@ Install and configure package dependencies only
 -z ZPOOL
 ZFS pool name for system directories and swap device
 
+-k KEYFILE
+Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
+
+-c DEVLIST
+Coma separeted list of colon separated pairs of other encrypted devices (i.e. members of ZFS pool), and their repsective LUKS labels.
+E.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz
+
+These mappings are used to:
+ a) unlock these devices before importing ZFS pools
+ b) create crypttab entries for automatic unlocking during boot
+
+Specifying a keyfile is necessary for this feature!
+
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
@@ -223,7 +260,7 @@ then
     exit 1
 fi
 
-while getopts 'l:m:Zz:d:s:h' opt
+while getopts 'l:m:Zz:k:c:d:s:h' opt
 do
     case $opt in
 	l)
@@ -241,6 +278,12 @@ do
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
+	    ;;
+	k)
+	    KEYFILE=$OPTARG
+	    ;;
+	c)
+	    DEVLIST=$OPTARG
 	    ;;
 	d)
 	    DIRLIST=$OPTARG
@@ -283,6 +326,18 @@ then
     exit 1
 fi
 
+if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
+then
+    echo "ERROR: keyfile $KEYFILE is not found!" >&2
+    exit 1
+fi
+
+if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
+then
+    echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
+    exit 1
+fi
+
 [ -e .depsready ] || install_deps_base
 init_parts $ROOT_DRIVE
 BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
@@ -291,6 +346,7 @@ init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 
 if [ ! -z "$ZPOOL" ]
 then
+    [ -z "$KEYFILE" ] || init_cryptdevs $KEYFILE "$DEVLIST"
     [ -e .depsready ] || install_deps_zfs
     init_zfsroot $ZPOOL "system"  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL
