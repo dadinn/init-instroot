@@ -183,7 +183,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! "$#" -eq 5 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o -z "$(zpool list $4)" -o -z "$(zfs list $4/$5)" ]
+    if [ ! "$#" -eq 9 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o ! -b "/dev/disk/by-partuuid/$4" -o -z "$(zpool list $5)" -o -z "$(zfs list $5/$6)" ]
     then
 	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
@@ -191,16 +191,81 @@ init_instroot_zfs () {
 
     INSTROOT=$1
     LUKS_LABEL=$2
-    BOOT_PARTUUID=$3
-    ZPOOL=$4
-    ROOTFS=$5
+    LUKS_PARTUUID=$3
+    BOOT_PARTUUID=$4
+    ZPOOL=$5
+    ROOTFS=$6
+    KEYFILE=$7
+    DEVLIST=$8
+    DIRLIST=$9
 
     mkdir -p $INSTROOT
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
     mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
-    mount /dev/mapper/$LUKS_LABEL $INSTROOT && mkdir $INSTROOT/boot
+    mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    mkdir $INSTROOT/boot
+    mkdir $INSTROOT/root
+    mkdir $INSTROOT/etc
     mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
     zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
+
+    LUKS_UUID=$(fsuuid /dev/disk/by-partuuid/$LUKS_PARTUUID)
+    ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
+    SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
+
+    cat <<EOF > $INSTROOT/etc/fstab
+# <file system> <mountpoint> <type> <options> <dump> <pass>
+UUID=$ROOT_UUID / ext4 errors-remount-ro 0 1
+UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
+
+# systemd specific legacy mounts of ZFS datasets
+EOF
+
+    for i in $(echo $DIRLIST | tr "," "\n")
+    do
+	# systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
+	echo "#$ZPOOL/$ROOTFS/$i /$i zfs defaults,x-systemd.after=zfs.target 0 0" >> $INSTROOT/etc/fstab
+    done
+    unset i
+
+    cat <<EOF > $INSTROOT/etc/crypttab
+# LUKS device containing root filesystem
+$LUKS_LABEL UUID=$LUKS_UUID none luks
+
+# LUKS encrypted devices of ZFS member vdevs
+EOF
+
+    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    mkdir -p $ROOTCRYPT_DIR/headers
+    cryptsetup luksHeaderBackup /dev/disk/by-partuuid/$LUKS_PARTUUID \
+	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
+
+    if [ ! -z "$KEYFILE" -a -e "$KEYFILE"]
+    then
+	cp $KEYFILE $ROOTCRYPT_DIR
+	ROOT_KEYFILE=$ROOTCRYPT_DIR/$(basename $KEYFILE)
+	
+	for i in $(echo "$DEVLIST" | tr "," "\n")
+	do
+	    device=$(echo $i|cut -d : -f1)
+	    label=$(echo $i|cut -d : -f2)
+	    if [ -b "$device" -a ! -z "$label" ]
+	    then
+	       uuid=$(fsuuid $device)
+	       
+	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
+	       echo "$label UUID=$uuid $ROOT_KEFILE luks" >> $INSTROOT/etc/crypttab
+	       
+	       # backing up LUKS headers of ZFS member vdevs
+	       cryptsetup luksHeaderBackup $device \
+			  --header-backup-file $ROOTCRYPT_DIR/headers/$label
+	    fi
+	done
+	unset device
+	unset label
+	unset uuid
+	unset i
+    fi
 }
 
 LUKS_LABEL=crypt_root
@@ -357,7 +422,7 @@ then
     [ -z "$KEYFILE" ] || init_cryptdevs $KEYFILE "$DEVLIST"
     [ -e .depsready ] || install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $LUKS_LABEL $BOOT_PARTUUID $ZPOOL $ROOTFS
+    init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTUUID $BOOT_PARTUUID $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
