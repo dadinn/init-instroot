@@ -436,9 +436,13 @@ BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
 LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
 init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
 
+if [ ! -z "$KEYFILE" ]
+then
+    init_cryptdevs "$KEYFILE" "$DEVLIST"
+fi
+
 if [ ! -z "$ZPOOL" ]
 then
-    [ -z "$KEYFILE" ] || init_cryptdevs $KEYFILE "$DEVLIST"
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTUUID $BOOT_PARTUUID $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
