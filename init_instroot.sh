@@ -68,7 +68,7 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ ! "$#" -eq 2 -o ! -b /dev/disk/by-partuuid/$1 -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
+    if [ ! "$#" -eq 2 -o ! -b "/dev/disk/by-partuuid/$1" -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
     then
 	echo "ERROR: calling init_cryptroot with args: $@" >&2
 	exit 1
