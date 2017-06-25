@@ -132,7 +132,7 @@ init_cryptdevs () {
 }
 
 init_zfsroot () {
-    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
+    if [ ! "$#" -eq 4 -o -z "$(echo $1 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo 2 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
@@ -145,7 +145,16 @@ init_zfsroot () {
 
     SYSTEMFS=$ZPOOL/$FSNAME
 
-    if [ ! -z "$(zfs list $SYSTEMFS)" ]
+    if ! zpool list $ZPOOL > /dev/null
+    then
+	if ! zpool import $ZPOOL > /dev/null
+	then
+	    echo "ERROR: could not find or import ZFS pool: $ZPOOL" >&2
+	    exit 1
+	fi
+    fi
+
+    if zfs list $SYSTEMFS > /dev/null
     then
 	echo "ERROR: $SYSTEMFS dataset already exist!" >&2
 	exit 1
