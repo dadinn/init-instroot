@@ -25,7 +25,7 @@ install_deps_base () {
     then
 	echo "Installing necessary packages..."
 	apt update
-	apt install -y gdisk cryptsetup pv lvm2
+	apt install -y gdisk parted cryptsetup pv lvm2
 	touch .deps_base
     fi
 }
@@ -39,11 +39,13 @@ install_deps_zfs () {
 		echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
 		apt update
 		apt install -y -t jessie-backports zfs-dkms
+		modprobe zfs
 		;;
 	    "9")
-		sed -i -re 's/^deb \(.+\) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
+		sed -i -re 's/^deb (.+) stretch main$/deb \1 stretch main contrib/' /etc/apt/sources.list.d/base.list
 		apt update
 		apt install -y zfs-dkms
+		modprobe zfs
 		;;
 	    *)
 		echo "ERROR: Debian version $RELEASE is not supported!"
@@ -64,6 +66,7 @@ init_parts () {
     ROOT_DRIVE=$1
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02
+    partprobe $ROOT_DRIVE
     echo "Finished setting up partitions."
 }
 
