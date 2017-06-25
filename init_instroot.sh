@@ -129,7 +129,7 @@ init_cryptdevs () {
 }
 
 init_zfsroot () {
-    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[:alnum:]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
+    if [ ! "$#" -eq 4 -o -z "$(zpool list $1)" -o -z "$(echo 2 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
     then
 	echo "ERROR: calling init_zfsroot with args: $@" >&2
 	exit 1
