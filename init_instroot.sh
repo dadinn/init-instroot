@@ -80,7 +80,7 @@ init_cryptroot () {
     echo "Formatting partition to be used as LUKS device..."
     cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
     echo "Opening LUKS device..."
-    cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
+    cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL && exit 1
 
     cat <<EOF
 
