@@ -7,7 +7,7 @@ partuuid () {
 	exit 1
     fi
 
-    blkid -s PARTUUID -o value "$1$2"
+    sgdisk -i $2 $1 | grep -E '^Partition unique GUID:' | sed -e 's;^[^:]*: \([[:alnum:]-]*\)$;\1;' | tr '[:upper:]' '[:lower:]'
 }
 
 fsuuid () {
