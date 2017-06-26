@@ -85,7 +85,7 @@ init_cryptroot () {
     echo "Opening LUKS device..."
     if ! cryptsetup luksOpen $LUKS_PARTDEV $LUKS_LABEL
     then
-	echo "ERROR: encrypted root device could not be opened as LUKS label $LUKS_LABEL " >&2
+	echo "ERROR: failed to open LUKS device: $LUKS_LABEL " >&2
 	exit 1
     fi
 
@@ -93,6 +93,7 @@ init_cryptroot () {
 
 It is recommended to overwrite the LUKS device with random data.
 WARNING: This can take quite a long time!
+
 EOF
 
     read -p "Would you like to overwrite LUKS device with random data? [Y/n]" shred
