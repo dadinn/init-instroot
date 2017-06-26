@@ -71,19 +71,19 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ ! "$#" -eq 2 -o ! -b "/dev/disk/by-partuuid/$1" -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
+    if [ ! "$#" -eq 2 -o ! -b "$1" -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
     then
 	echo "ERROR: calling init_cryptroot with args: $@" >&2
 	exit 1
     fi
 
-    LUKS_PARTUUID=$1
+    LUKS_PARTDEV=$1
     LUKS_LABEL=$2
 
     echo "Formatting partition to be used as LUKS device..."
-    cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
+    cryptsetup luksFormat $LUKS_PARTDEV
     echo "Opening LUKS device..."
-    if ! cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
+    if ! cryptsetup luksOpen $LUKS_PARTDEV $LUKS_LABEL
     then
 	echo "ERROR: encrypted root device could not be opened as LUKS label $LUKS_LABEL " >&2
 	exit 1
@@ -207,7 +207,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! "$#" -eq 9 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" -o ! -b "/dev/disk/by-partuuid/$4" -o -z "$(zpool list $5)" -o -z "$(zfs list $5/$6)" ]
+    if [ ! "$#" -eq 9 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "$3" -o ! -b "$4" -o -z "$(zpool list $5)" -o -z "$(zfs list $5/$6)" ]
     then
 	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
 	exit 1
@@ -215,8 +215,8 @@ init_instroot_zfs () {
 
     INSTROOT=$1
     LUKS_LABEL=$2
-    LUKS_PARTUUID=$3
-    BOOT_PARTUUID=$4
+    LUKS_PARTDEV=$3
+    BOOT_PARTDEV=$4
     ZPOOL=$5
     ROOTFS=$6
     KEYFILE=$7
@@ -225,15 +225,15 @@ init_instroot_zfs () {
 
     mkdir -p $INSTROOT
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
-    mkfs.ext4 -m 0 -j /dev/disk/by-partuuid/$BOOT_PARTUUID
+    mkfs.ext4 -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
     mkdir $INSTROOT/root
     mkdir $INSTROOT/etc
-    mount /dev/disk/by-partuuid/$BOOT_PARTUUID /$INSTROOT/boot
+    mount $BOOT_PARTDEV /$INSTROOT/boot
     zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
 
-    LUKS_UUID=$(fsuuid /dev/disk/by-partuuid/$LUKS_PARTUUID)
+    LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
     SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
@@ -261,7 +261,7 @@ EOF
 
     ROOTCRYPT_DIR=$INSTROOT/root/crypt
     mkdir -p $ROOTCRYPT_DIR/headers
-    cryptsetup luksHeaderBackup /dev/disk/by-partuuid/$LUKS_PARTUUID \
+    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
     if [ ! -z "$KEYFILE" -a -e "$KEYFILE"]
@@ -436,9 +436,9 @@ fi
 
 install_deps_base
 init_parts $ROOT_DRIVE
-BOOT_PARTUUID=$(partuuid $ROOT_DRIVE 1)
-LUKS_PARTUUID=$(partuuid $ROOT_DRIVE 2)
-init_cryptroot $LUKS_PARTUUID $LUKS_LABEL
+BOOT_PARTDEV="${ROOT_DRIVE}1"
+LUKS_PARTDEV="${ROOT_DRIVE}2"
+init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
 
 if [ ! -z "$KEYFILE" ]
 then
@@ -449,9 +449,9 @@ if [ ! -z "$ZPOOL" ]
 then
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTUUID $BOOT_PARTUUID $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
+    init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTDEV $BOOT_PARTDEV $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
-    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTUUID
+    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTDEV
 fi
