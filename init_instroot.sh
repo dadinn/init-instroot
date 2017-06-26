@@ -83,7 +83,11 @@ init_cryptroot () {
     echo "Formatting partition to be used as LUKS device..."
     cryptsetup luksFormat /dev/disk/by-partuuid/$LUKS_PARTUUID
     echo "Opening LUKS device..."
-    cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL && exit 1
+    if ! cryptsetup luksOpen /dev/disk/by-partuuid/$LUKS_PARTUUID $LUKS_LABEL
+    then
+	echo "ERROR: encrypted root device could not be opened as LUKS label $LUKS_LABEL " >&2
+	exit 1
+    fi
 
     cat <<EOF
 
