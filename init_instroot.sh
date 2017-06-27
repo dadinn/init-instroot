@@ -65,7 +65,7 @@ init_parts () {
 
     ROOT_DRIVE=$1
     echo "Setting up partitions..."
-    sgdisk $ROOT_DRIVE -o -n 1:0:+500M -N 2 -t 1:ef02 > /dev/null
+    sgdisk $ROOT_DRIVE -Z -n 1:0:+500M -N 2 -t 1:ef02 > /dev/null
     partprobe $ROOT_DRIVE
     echo "Finished setting up partitions."
 }
