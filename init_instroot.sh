@@ -11,11 +11,7 @@ partuuid () {
 }
 
 fsuuid () {
-    if [ ! "$#" -eq 1 -o ! -b "$1" ]
-    then
-	echo "ERROR: called fsuuid with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 1 ] || (echo "ERROR: called fsuuid with $# args: $@" && exit 1) >&2
 
     blkid -s UUID -o value $1
 }
@@ -57,11 +53,7 @@ install_deps_zfs () {
 }
 
 init_parts () {
-    if [ ! "$#" -eq 1 -o ! -b "$1" ]
-    then
-	echo "ERROR: called init_parts with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 1 ] || (echo "ERROR: called init_parts with $# args: $@" && exit 1) >&2
 
     ROOT_DRIVE=$1
     echo "Setting up partitions..."
@@ -71,11 +63,7 @@ init_parts () {
 }
 
 init_cryptroot () {
-    if [ ! "$#" -eq 2 -o ! -b "$1" -o -z "$(echo $2|grep -E '^[[:alnum:]_]+$')" ]
-    then
-	echo "ERROR: calling init_cryptroot with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 2 ] || (echo "ERROR: called init_cryptroot with $# args: $@" && exit 1) >&2
 
     LUKS_PARTDEV=$1
     LUKS_LABEL=$2
@@ -113,11 +101,7 @@ EOF
 }
 
 init_cryptdevs () {
-    if [ ! "$#" -eq 2 -o ! -e "$1"]
-    then
-	echo "ERROR: calling init_cryptdevs with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 2 ] || (echo "ERROR: called init_cryptdevs with $# args: $@" && exit 1) >&2
 
     KEYFILE=$1
     DEVLIST=$2
@@ -137,11 +121,7 @@ init_cryptdevs () {
 }
 
 init_zfsroot () {
-    if [ ! "$#" -eq 4 -o -z "$(echo $1 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo 2 | grep -E '^[[:alnum:]]+$')" -o -z "$(echo $3 | grep -E '^[0-9]+[KMGT]?$')" ]
-    then
-	echo "ERROR: calling init_zfsroot with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 4 ] || (echo "ERROR: called init_zfsroot with $# args: $@" && exit 1) >&2
 
     ZPOOL=$1
     FSNAME=$2
@@ -174,14 +154,12 @@ init_zfsroot () {
 }
 
 init_lvmroot () {
-    if [ ! "$#" -eq 2 -o ! -b "/dev/mapper/$1" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
-    then
-	echo "ERROR: calling init_lvmroot with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 2 ] || (echo "ERROR: called init_lvmroot with $# args: $@" && exit 1) >&2
+
     LUKS_LABEL=$1
-    VG_NAME=${LUKS_LABEL}_vg
     SWAP_SIZE=$2
+    VG_NAME=${LUKS_LABEL}_vg
+
     pvcreate  /dev/mapper/$LUKS_LABEL
     vgcreate $VG_NAME /dev/mapper/$LUKS_LABEL
     lvcreate -L $SWAP_SIZE $VG_NAME -n swap
@@ -189,15 +167,12 @@ init_lvmroot () {
 }
 
 init_instroot_lvm () {
-    if [ ! "$#" -eq 3 -o -e "$1" -o ! -b "/dev/mapper/$2" -o ! -b "/dev/disk/by-partuuid/$3" ]
-    then
-	echo "ERROR: calling init_instroot_lvm with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 3 ] || (echo "ERROR: called init_instroot_lvm with $# args: $@" && exit 1) >&2
 
     INSTROOT=$1
-    ROOT_DEV=/dev/mapper/$2
-    BOOT_DEV=/dev/disk/by-partuuid/$3
+    LUKS_LABEL=$2
+    ROOT_DEV=/dev/mapper/$LUKS_LABEL
+    BOOT_DEV=$3
 
     mkdir -p $INSTROOT
     mkfs.ext4 $ROOT_DEV
@@ -208,11 +183,7 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    if [ ! "$#" -eq 9 -o -d "$1" -o ! -b "/dev/mapper/$2" -o ! -b "$3" -o ! -b "$4" -o -z "$(zpool list $5)" -o -z "$(zfs list $5/$6)" ]
-    then
-	echo "ERROR: calling init_instroot_zfs with args: $@" >&2
-	exit 1
-    fi
+    [ $# -eq 9 ] || (echo "ERROR: called init_instroot_zfs with $# args: $@" && exit 1) >&2
 
     INSTROOT=$1
     LUKS_LABEL=$2
@@ -223,6 +194,13 @@ init_instroot_zfs () {
     KEYFILE=$7
     DEVLIST=$8
     DIRLIST=$9
+
+    [ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
+    [ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
+    [ -b $3 ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
+    [ -b $4 ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
+    zpool list $ZPOOL || (echo "ERROR: zpool $ZPOOL not available" && exit 1) >&2
+    zfs list $ZPOOL/$ROOTFS || (echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" && exit 1) >&2
 
     mkdir -p $INSTROOT
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
