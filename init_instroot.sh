@@ -243,7 +243,7 @@ EOF
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
-    if [ ! -z "$KEYFILE" -a -e "$KEYFILE"]
+    if [ ! -z "$KEYFILE" -a -e "$KEYFILE" ]
     then
 	cp $KEYFILE $ROOTCRYPT_DIR
 	ROOT_KEYFILE=$ROOTCRYPT_DIR/$(basename $KEYFILE)
