@@ -59,7 +59,7 @@ init_parts () {
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -Z -n 1:0:+500M -N 2 -t 1:ef02 > /dev/null
     partprobe $ROOT_DRIVE
-    echo "Finished setting up partitions."
+    echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
 
 init_cryptroot () {
@@ -93,7 +93,7 @@ EOF
 	    LUKS_DEV=/dev/mapper/$LUKS_LABEL
 	    echo "Shredding LUKS device..."
 	    pv --size $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $LUKS_DEV
-	    echo "Finished shredding LUKS device..."
+	    echo "Finished shredding LUKS device: $LUKS_DEV"
 	    ;;
     esac
 
@@ -130,7 +130,7 @@ init_zfsroot () {
 
     SYSTEMFS=$ZPOOL/$FSNAME
 
-    if ! zpool list $ZPOOL > /dev/null
+    if ! zpool list $ZPOOL > /dev/null 2>&1
     then
 	if ! zpool import $ZPOOL > /dev/null
 	then
@@ -139,7 +139,7 @@ init_zfsroot () {
 	fi
     fi
 
-    if zfs list $SYSTEMFS > /dev/null
+    if zfs list $SYSTEMFS > /dev/null 2>&1
     then
 	echo "ERROR: $SYSTEMFS dataset already exist!" >&2
 	exit 1
@@ -149,8 +149,11 @@ init_zfsroot () {
     zfs create -o compression=lz4 -o canmount=off $SYSTEMFS
     for i in $(echo $DIRLIST | tr "," "\n")
     do zfs create $SYSTEMFS/$i; done
+
+    echo "Creating ZFS volume for swap device..."
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
     mkswap /dev/zvol/$SYSTEMFS/swap
+    echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
 init_lvmroot () {
@@ -445,3 +448,6 @@ else
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
     init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTDEV
 fi
+
+echo "Finished setting up installation root $INSTROOT"
+
