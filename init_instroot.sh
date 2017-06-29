@@ -243,6 +243,8 @@ EOF
 
     ROOTCRYPT_DIR=$INSTROOT/root/crypt
     mkdir -p $ROOTCRYPT_DIR/headers
+    chmod -R 700 $INSTROOT/root
+
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
@@ -250,7 +252,8 @@ EOF
     then
 	cp $KEYFILE $ROOTCRYPT_DIR
 	ROOT_KEYFILE=$ROOTCRYPT_DIR/$(basename $KEYFILE)
-	
+	chmod 400 $ROOT_KEYFILE
+
 	for i in $(echo "$DEVLIST" | tr "," "\n")
 	do
 	    device=$(echo $i|cut -d : -f1)
@@ -260,8 +263,8 @@ EOF
 	       uuid=$(fsuuid $device)
 	       
 	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
-	       echo "$label UUID=$uuid $ROOT_KEFILE luks" >> $INSTROOT/etc/crypttab
-	       
+	       echo "$label UUID=$uuid $ROOT_KEYFILE luks" >> $INSTROOT/etc/crypttab
+
 	       # backing up LUKS headers of ZFS member vdevs
 	       cryptsetup luksHeaderBackup $device \
 			  --header-backup-file $ROOTCRYPT_DIR/headers/$label
@@ -272,6 +275,8 @@ EOF
 	unset uuid
 	unset i
     fi
+
+    chmod 400 $ROOTCRYPT_DIR/headers/*
 }
 
 LUKS_LABEL=crypt_root
