@@ -299,6 +299,9 @@ Install and configure package dependencies only
 -z ZPOOL
 ZFS pool name for system directories and swap device
 
+-K FILENAME
+Generate new keyfile
+
 -k KEYFILE
 Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
 
@@ -333,7 +336,7 @@ then
     exit 1
 fi
 
-while getopts 'l:m:Zz:k:c:d:r:s:h' opt
+while getopts 'l:m:Zz:K:k:c:d:r:s:h' opt
 do
     case $opt in
 	l)
@@ -350,6 +353,14 @@ do
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
+	    ;;
+	K)
+	    NEW_KEYFILE=$OPTARG
+	    echo "Generating new key-file..."
+	    dd if=/dev/random of=$NEW_KEYFILE bs=1024 count=4
+	    chmod 0400 $NEW_KEYFILE
+	    echo "Finished generating new key-file."
+	    exit 0
 	    ;;
 	k)
 	    KEYFILE=$OPTARG
