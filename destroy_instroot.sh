@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ -e ./.lastrun ] && . ./.lastrun
+
 usage () {
     cat <<EOF
 
