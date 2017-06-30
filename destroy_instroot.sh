@@ -72,7 +72,7 @@ do
     esac
 done
 
-zfs destroy -r $ZPOOL/$SYSTEMFS
+zfs destroy -r $ZPOOL/$ROOTFS
 zpool export $ZPOOL
 for i in $(echo "$DEVLIST" | tr "," "\n")
 do
