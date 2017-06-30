@@ -356,7 +356,7 @@ do
 	Z)
 	    install_deps_base
 	    install_deps_zfs
-	    "Finished installing all package dependencies!"
+	    echo "Finished installing all package dependencies!"
 	    exit 0
 	    ;;
 	z)
