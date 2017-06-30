@@ -1,7 +1,39 @@
 #!/bin/sh
 
+usage () {
+    cat <<EOF
 
-while getopts 'l:m:Zz:k:c:d:r:s:h' opt
+USAGE:
+
+$0 [OPTIONS]
+
+Destroys installation root folder set up previously by init_instroot script.
+By default uses options from variables defined in .lastrun
+
+Valid options are:
+
+-m PATH
+Install root mountpoint (default $INSTROOT)
+
+-l LABEL
+LUKS encrypted root device name (default $LUKS_LABEL)
+
+-z ZPOOL
+ZFS pool name for system directories and swap device (default $ZPOOL)
+
+-r NAME
+Name of the system root dataset in the ZFS pool (default $ROOTFS)
+
+-c DEVLIST
+Coma separeted list of other opened LUKS device labels (i.e. members of ZFS pool).
+
+-h
+This usage help...
+
+EOF
+}
+
+while getopts 'l:m:z:c:d:r:h' opt
 do
     case $opt in
 	l)
@@ -13,17 +45,11 @@ do
 	z)
 	    ZPOOL=$OPTARG
 	    ;;
-	k)
-	    KEYFILE=$OPTARG
-	    ;;
 	c)
 	    DEVLIST=$OPTARG
 	    ;;
 	r)
 	    ROOTFS=$OPTARG
-	    ;;
-	d)
-	    DIRLIST=$OPTARG
 	    ;;
 	h)
             usage
@@ -44,20 +70,18 @@ do
     esac
 done
 
-shift $(($OPTIND - 1))
-
-if [ "$#" -eq 1 -a -b "$1" ]
-then
-    ROOT_DRIVE=$1
-else
-    echo "ERROR: Block device must be specified for root filesystem!" >&2
-    exit 1
-fi
-
 zfs destroy -r $ZPOOL/$SYSTEMFS
+zpool export $ZPOOL
+for i in $(echo "$DEVLIST" | tr "," "\n")
+do
+    device=$(echo $i|cut -d : -f1)
+    label=$(echo $i|cut -d : -f2)
+
+    cryptsetup luksClose $label;
+done
 umount $INSTROOT/boot
 umount $INSTROOT
 cryptsetup luksClose $LUKS_LABEL
-for i in $(echo "$DEVLIST" | tr "," "\n")
-do cryptsetup luksClose $i; done
 sgdisk -Z $ROOT_DRIVE
+
+echo "Finished distroying initialized root directory: $INSTROOT"
