@@ -234,6 +234,7 @@ EOF
     done
     unset i
 
+    echo "Finished generating entries in ${INSTROOT}/etc/fstab"
     cat <<EOF > $INSTROOT/etc/crypttab
 # LUKS device containing root filesystem
 $LUKS_LABEL UUID=$LUKS_UUID none luks
@@ -276,7 +277,9 @@ EOF
 	unset i
     fi
 
+    echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
     chmod 400 $ROOTCRYPT_DIR/headers/*
+    echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
 }
 
 LUKS_LABEL=crypt_root
