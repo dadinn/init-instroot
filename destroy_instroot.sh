@@ -83,6 +83,7 @@ do
 done
 umount $INSTROOT/boot
 umount $INSTROOT
+rmdir $INSTROOT
 cryptsetup luksClose $LUKS_LABEL
 sgdisk -Z $ROOT_DRIVE
 
