@@ -189,9 +189,9 @@ init_instroot_zfs () {
     [ $# -eq 9 ] || (echo "ERROR: called init_instroot_zfs with $# args: $@" && exit 1) >&2
 
     INSTROOT=$1
-    LUKS_LABEL=$2
+    BOOT_PARTDEV=$2
     LUKS_PARTDEV=$3
-    BOOT_PARTDEV=$4
+    LUKS_LABEL=$4
     ZPOOL=$5
     ROOTFS=$6
     KEYFILE=$7
@@ -199,9 +199,9 @@ init_instroot_zfs () {
     DIRLIST=$9
 
     [ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
+    [ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
+    [ -b $LUKS_PARTDEV ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
     [ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
-    [ -b $3 ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
-    [ -b $4 ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
     zpool list $ZPOOL || (echo "ERROR: zpool $ZPOOL not available" && exit 1) >&2
     zfs list $ZPOOL/$ROOTFS || (echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" && exit 1) >&2
 
@@ -464,7 +464,7 @@ if [ ! -z "$ZPOOL" ]
 then
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $LUKS_LABEL $LUKS_PARTDEV $BOOT_PARTDEV $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
+    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
     ROOT_LVNAME=${LUKS_LABEL}_vg-root
