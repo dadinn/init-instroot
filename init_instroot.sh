@@ -92,7 +92,7 @@ EOF
 	*)
 	    LUKS_DEV=/dev/mapper/$LUKS_LABEL
 	    echo "Shredding LUKS device..."
-	    pv --size $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $LUKS_DEV
+	    pv -Ss $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $LUKS_DEV
 	    echo "Finished shredding LUKS device: $LUKS_DEV"
 	    ;;
     esac
