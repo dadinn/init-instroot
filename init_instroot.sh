@@ -217,11 +217,13 @@ init_instroot_zfs () {
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
+    BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
     cat <<EOF > $INSTROOT/etc/fstab
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors-remount-ro 0 1
+UUID=$BOOT_UUID /boot ext4 defaults 0 2
 UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
 
 # systemd specific legacy mounts of ZFS datasets
