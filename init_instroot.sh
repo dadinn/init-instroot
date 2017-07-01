@@ -250,9 +250,9 @@ EOF
 
     if [ ! -z "$KEYFILE" -a -e "$KEYFILE" ]
     then
+	chmod 400 $KEYFILE
 	cp $KEYFILE $ROOTCRYPT_DIR
-	ROOT_KEYFILE=$ROOTCRYPT_DIR/$(basename $KEYFILE)
-	chmod 400 $ROOT_KEYFILE
+	KEYFILENAME=$(basename $KEYFILE)
 
 	for i in $(echo "$DEVLIST" | tr "," "\n")
 	do
@@ -263,7 +263,7 @@ EOF
 	       uuid=$(fsuuid $device)
 	       
 	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
-	       echo "$label UUID=$uuid $ROOT_KEYFILE luks" >> $INSTROOT/etc/crypttab
+	       echo "$label UUID=${uuid} /root/crypt/${KEYFILENAME} luks" >> $INSTROOT/etc/crypttab
 
 	       # backing up LUKS headers of ZFS member vdevs
 	       cryptsetup luksHeaderBackup $device \
