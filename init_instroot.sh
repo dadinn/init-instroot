@@ -288,6 +288,7 @@ LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
+[ -e ./.lastrun ] && . ./.lastrun
 
 usage () {
     cat <<EOF
