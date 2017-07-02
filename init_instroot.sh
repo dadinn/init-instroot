@@ -178,8 +178,8 @@ init_instroot_lvm () {
     BOOT_DEV=$3
 
     mkdir -p $INSTROOT
-    mkfs.ext4 $ROOT_DEV
-    mkfs.ext4 -m 0 -j $BOOT_DEV
+    mkfs.ext4 -q $ROOT_DEV
+    mkfs.ext4 -q -m 0 -j $BOOT_DEV
     mount $ROOT_DEV $INSTROOT
     mkdir $INSTROOT/boot
     mount $BOOT_DEV /$INSTROOT/boot
