@@ -53,9 +53,14 @@ install_deps_zfs () {
 }
 
 init_parts () {
-    [ $# -eq 1 ] || (echo "ERROR: called init_parts with $# args: $@" && exit 1) >&2
+    if [ $# -eq 1 ]
+    then
+	ROOT_DRIVE=$1
+    else
+	echo "ERROR: called init_parts with $# args: $@" >&2
+	exit 1
+    fi
 
-    ROOT_DRIVE=$1
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -Z -n 1:0:+500M -N 2 -t 1:ef02 > /dev/null
     partprobe $ROOT_DRIVE
@@ -63,10 +68,14 @@ init_parts () {
 }
 
 init_cryptroot () {
-    [ $# -eq 2 ] || (echo "ERROR: called init_cryptroot with $# args: $@" && exit 1) >&2
-
-    LUKS_PARTDEV=$1
-    LUKS_LABEL=$2
+    if [ $# -eq 2 ]
+    then
+	LUKS_PARTDEV=$1
+	LUKS_LABEL=$2
+    else
+	echo "ERROR: called init_cryptroot with $# args: $@" >&2
+	exit 1
+    fi
 
     echo "Formatting partition to be used as LUKS device..."
     cryptsetup luksFormat $LUKS_PARTDEV
@@ -101,10 +110,14 @@ EOF
 }
 
 init_cryptdevs () {
-    [ $# -eq 2 ] || (echo "ERROR: called init_cryptdevs with $# args: $@" && exit 1) >&2
-
-    KEYFILE=$1
-    DEVLIST=$2
+    if [ $# -eq 2 ]
+    then
+	KEYFILE=$1
+	DEVLIST=$2
+    else
+	echo "ERROR: called init_cryptdevs with $# args: $@" >&2
+	exit 1
+    fi
 
     for i in $(echo $DEVLIST| tr "," "\n")
     do
@@ -121,12 +134,16 @@ init_cryptdevs () {
 }
 
 init_zfsroot () {
-    [ $# -eq 4 ] || (echo "ERROR: called init_zfsroot with $# args: $@" && exit 1) >&2
-
-    ZPOOL=$1
-    FSNAME=$2
-    SWAPSIZE=$3
-    DIRLIST=$4
+    if [ $# -eq 4 ]
+    then
+	ZPOOL=$1
+	FSNAME=$2
+	SWAPSIZE=$3
+	DIRLIST=$4
+    else
+	echo "ERROR: called init_zfsroot with $# args: $@" >&2
+	exit 1
+    fi
 
     SYSTEMFS=$ZPOOL/$FSNAME
 
@@ -157,10 +174,15 @@ init_zfsroot () {
 }
 
 init_lvmroot () {
-    [ $# -eq 2 ] || (echo "ERROR: called init_lvmroot with $# args: $@" && exit 1) >&2
+    if [ $# -eq 2 ]
+    then
+	LUKS_LABEL=$1
+	SWAP_SIZE=$2
+    else
+	echo "ERROR: called init_lvmroot with $# args: $@" >&2
+	exit 1
+    fi
 
-    LUKS_LABEL=$1
-    SWAP_SIZE=$2
     VG_NAME=${LUKS_LABEL}_vg
 
     pvcreate  /dev/mapper/$LUKS_LABEL
@@ -170,12 +192,17 @@ init_lvmroot () {
 }
 
 init_instroot_lvm () {
-    [ $# -eq 3 ] || (echo "ERROR: called init_instroot_lvm with $# args: $@" && exit 1) >&2
+    if [ $# -eq 3 ]
+    then
+	INSTROOT=$1
+	LUKS_LABEL=$2
+	BOOT_DEV=$3
+    else
+	echo "ERROR: called init_instroot_lvm with $# args: $@" >&2
+	exit 1
+    fi
 
-    INSTROOT=$1
-    LUKS_LABEL=$2
     ROOT_DEV=/dev/mapper/$LUKS_LABEL
-    BOOT_DEV=$3
 
     mkdir -p $INSTROOT
     mkfs.ext4 -q $ROOT_DEV
@@ -186,24 +213,28 @@ init_instroot_lvm () {
 }
 
 init_instroot_zfs () {
-    [ $# -eq 9 ] || (echo "ERROR: called init_instroot_zfs with $# args: $@" && exit 1) >&2
+    if [ $# -eq 9 ]
+    then
+	INSTROOT=$1
+	BOOT_PARTDEV=$2
+	LUKS_PARTDEV=$3
+	LUKS_LABEL=$4
+	ZPOOL=$5
+	ROOTFS=$6
+	KEYFILE=$7
+	DEVLIST=$8
+	DIRLIST=$9
 
-    INSTROOT=$1
-    BOOT_PARTDEV=$2
-    LUKS_PARTDEV=$3
-    LUKS_LABEL=$4
-    ZPOOL=$5
-    ROOTFS=$6
-    KEYFILE=$7
-    DEVLIST=$8
-    DIRLIST=$9
-
-    [ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
-    [ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
-    [ -b $LUKS_PARTDEV ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
-    [ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
-    zpool list $ZPOOL || (echo "ERROR: zpool $ZPOOL not available" && exit 1) >&2
-    zfs list $ZPOOL/$ROOTFS || (echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" && exit 1) >&2
+	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
+	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
+	[ -b $LUKS_PARTDEV ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
+	[ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
+	zpool list $ZPOOL || (echo "ERROR: zpool $ZPOOL not available" && exit 1) >&2
+	zfs list $ZPOOL/$ROOTFS || (echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" && exit 1) >&2
+    else
+	echo "ERROR: called init_instroot_zfs with $# args: $@" >&2
+	exit 1
+    fi
 
     mkdir -p $INSTROOT
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
