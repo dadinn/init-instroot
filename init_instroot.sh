@@ -195,24 +195,64 @@ init_lvmroot () {
 }
 
 init_instroot_lvm () {
-    if [ $# -eq 3 ]
+    if [ $# -eq 4 ]
     then
 	INSTROOT=$1
-	LUKS_LABEL=$2
-	BOOT_DEV=$3
+	BOOT_PARTDEV=$2
+	LUKS_PARTDEV=$3
+	LUKS_LABEL=$4
+
+	[ ! -e $INSTROOT ] || (echo "ERROR: $INSTROOT already exists" && exit 1) >&2
+	[ -b $BOOT_PARTDEV ] || (echo "ERROR: $BOOT_PARTDEV has to be a block device" && exit 1) >&2
+	[ -b $LUKS_PARTDEV ] || (echo "ERROR: $LUKS_PARTDEV has to be a block device" && exit 1) >&2
+	[ ! -z $(echo $LUKS_LABEL | grep -E '^[[:alnum:]_]+$') ] || (echo "ERROR: invalid LUKS label: $LUKS_LABEL" && exit 1) >&2
     else
 	echo "ERROR: called init_instroot_lvm with $# args: $@" >&2
 	exit 1
     fi
 
-    ROOT_DEV=/dev/mapper/$LUKS_LABEL
+    VG_NAME=${LUKS_LABEL}_vg
+    LV_ROOT_DEV=/dev/mapper/${VG_NAME}-root
+    LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
 
     mkdir -p $INSTROOT
-    mkfs.ext4 -q $ROOT_DEV
-    mkfs.ext4 -q -m 0 -j $BOOT_DEV
-    mount $ROOT_DEV $INSTROOT
+    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 -q $LV_ROOT_DEV
+    mkswap $LV_SWAP_DEV
+    mount $LV_ROOT_DEV $INSTROOT
     mkdir $INSTROOT/boot
-    mount $BOOT_DEV /$INSTROOT/boot
+    mount $BOOT_PARTDEV /$INSTROOT/boot
+
+    LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
+    ROOT_UUID=$(fsuuid $LV_ROOT_DEV)
+    BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
+    SWAP_UUID=$(fsuuid $LV_SWAP_DEV)
+
+    echo "Generating entries for ${INSTROOT}/etc/fstab..."
+    cat <<EOF > $INSTROOT/etc/fstab
+# <file system> <mountpoint> <type> <options> <dump> <pass>
+UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
+UUID=$BOOT_UUID /boot ext4 defaults 0 2
+UUID=$SWAP_UUID none swap sw 0 0
+
+EOF
+
+    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
+    cat <<EOF > $INSTROOT/etc/crypttab
+# LUKS device containing root filesystem
+$LUKS_LABEL UUID=$LUKS_UUID none luks
+
+EOF
+
+    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    mkdir -p $ROOTCRYPT_DIR/headers
+    chmod -R 700 $INSTROOT/root
+
+    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
+    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
+	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
+
+    chmod 400 $ROOTCRYPT_DIR/headers/*
 }
 
 init_instroot_zfs () {
@@ -505,8 +545,7 @@ then
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
-    ROOT_LVNAME=${LUKS_LABEL}_vg-root
-    init_instroot_lvm $INSTROOT $ROOT_LVNAME $BOOT_PARTDEV
+    init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL
 fi
 
 echo "Finished setting up installation root $INSTROOT"
