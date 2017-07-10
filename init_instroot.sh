@@ -44,7 +44,7 @@ install_deps_zfs () {
 		modprobe zfs
 		;;
 	    *)
-		echo "ERROR: Debian version $RELEASE is not supported!"
+		echo "ERROR: Debian version $RELEASE is not supported!" >&2
 		exit 1
 		;;
 	esac
@@ -77,8 +77,11 @@ init_cryptroot () {
 	exit 1
     fi
 
-    echo "Formatting partition to be used as LUKS device..."
+    echo
+    echo "Formatting $LUKS_PARTDEV to be used as LUKS device..."
     cryptsetup luksFormat $LUKS_PARTDEV
+    echo "Finished formatting device $LUKS_PARTDEV for LUKS encryption"
+    echo
     echo "Opening LUKS device..."
     if ! cryptsetup luksOpen $LUKS_PARTDEV $LUKS_LABEL
     then
@@ -251,6 +254,7 @@ init_instroot_zfs () {
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
+    echo "Generating entries for ${INSTROOT}/etc/fstab..."
     cat <<EOF > $INSTROOT/etc/fstab
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors-remount-ro 0 1
@@ -260,14 +264,15 @@ UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
 # systemd specific legacy mounts of ZFS datasets
 EOF
 
+    # systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
     for i in $(echo $DIRLIST | tr "," "\n")
     do
-	# systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
 	echo "#$ZPOOL/$ROOTFS/$i /$i zfs defaults,x-systemd.after=zfs.target 0 0" >> $INSTROOT/etc/fstab
     done
     unset i
+    #echo "Finished generating entries in ${INSTROOT}/etc/fstab"
 
-    echo "Finished generating entries in ${INSTROOT}/etc/fstab"
+    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
     cat <<EOF > $INSTROOT/etc/crypttab
 # LUKS device containing root filesystem
 $LUKS_LABEL UUID=$LUKS_UUID none luks
@@ -279,6 +284,7 @@ EOF
     mkdir -p $ROOTCRYPT_DIR/headers
     chmod -R 700 $INSTROOT/root
 
+    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
@@ -310,9 +316,9 @@ EOF
 	unset i
     fi
 
-    echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
+    #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
     chmod 400 $ROOTCRYPT_DIR/headers/*
-    echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
+    #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
 }
 
 LUKS_LABEL=crypt_root
