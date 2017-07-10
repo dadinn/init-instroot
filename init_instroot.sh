@@ -257,7 +257,7 @@ init_instroot_zfs () {
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
     cat <<EOF > $INSTROOT/etc/fstab
 # <file system> <mountpoint> <type> <options> <dump> <pass>
-UUID=$ROOT_UUID / ext4 errors-remount-ro 0 1
+UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
 UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
 
