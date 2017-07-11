@@ -366,6 +366,7 @@ ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
 [ -e ./.lastrun ] && . ./.lastrun
+unset ROOT_DRIVE
 
 usage () {
     cat <<EOF
