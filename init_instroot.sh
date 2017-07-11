@@ -533,13 +533,12 @@ BOOT_PARTDEV="${ROOT_DRIVE}1"
 LUKS_PARTDEV="${ROOT_DRIVE}2"
 init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
 
-if [ ! -z "$KEYFILE" ]
-then
-    init_cryptdevs "$KEYFILE" "$DEVLIST"
-fi
-
 if [ ! -z "$ZPOOL" ]
 then
+    if [ ! -z "$KEYFILE" ]
+    then
+	init_cryptdevs "$KEYFILE" "$DEVLIST"
+    fi
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
