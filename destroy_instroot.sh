@@ -72,19 +72,29 @@ do
     esac
 done
 
-zfs destroy -r $ZPOOL/$ROOTFS
-zpool export $ZPOOL
-for i in $(echo "$DEVLIST" | tr "," "\n")
-do
-    device=$(echo $i|cut -d : -f1)
-    label=$(echo $i|cut -d : -f2)
+if [ ! -z "$ZPOOL" ]
+then
+    zfs destroy -r $ZPOOL/$ROOTFS
+    zpool export $ZPOOL
+    umount $INSTROOT/boot
+    umount $INSTROOT
 
-    cryptsetup luksClose $label;
-done
-umount $INSTROOT/boot
-umount $INSTROOT
-rmdir $INSTROOT
+    for i in $(echo "$DEVLIST" | tr "," "\n")
+    do
+	device=$(echo $i|cut -d : -f1)
+	label=$(echo $i|cut -d : -f2)
+
+	cryptsetup luksClose $label;
+    done
+else
+    VG_NAME=${LUKS_LABEL}_vg
+    umount $INSTROOT/boot
+    umount $INSTROOT
+    vgremove $VG_NAME
+fi
+
 cryptsetup luksClose $LUKS_LABEL
 sgdisk -Z $ROOT_DRIVE
+rmdir $INSTROOT
 
 echo "Finished distroying initialized root directory: $INSTROOT"
