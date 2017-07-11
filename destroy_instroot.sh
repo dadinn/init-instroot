@@ -90,7 +90,7 @@ else
     VG_NAME=${LUKS_LABEL}_vg
     umount $INSTROOT/boot
     umount $INSTROOT
-    vgremove $VG_NAME
+    vgremove -f $VG_NAME
 fi
 
 cryptsetup luksClose $LUKS_LABEL
