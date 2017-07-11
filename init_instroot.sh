@@ -221,6 +221,8 @@ init_instroot_lvm () {
     mkswap $LV_SWAP_DEV
     mount $LV_ROOT_DEV $INSTROOT
     mkdir $INSTROOT/boot
+    mkdir $INSTROOT/root
+    mkdir $INSTROOT/etc
     mount $BOOT_PARTDEV /$INSTROOT/boot
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
