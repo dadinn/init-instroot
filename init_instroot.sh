@@ -32,7 +32,7 @@ install_deps_zfs () {
 	RELEASE=$(cat /etc/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
 	case $RELEASE in
 	    "8")
-		echo /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sourced.list.d/backports.list
+		cat /etc/apt/sources.list | grep -E '^deb .* jessie main$' | sed -e 's/jessie main/jessie-backports main contrib/' > /etc/apt/sources.list.d/backports.list
 		apt update
 		apt install -y -t jessie-backports zfs-dkms
 		modprobe zfs
