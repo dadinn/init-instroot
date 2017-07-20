@@ -80,7 +80,7 @@ init_cryptroot () {
     echo
     echo "Formatting $LUKS_PARTDEV to be used as LUKS device..."
     cryptsetup luksFormat $LUKS_PARTDEV
-    echo "Finished formatting device $LUKS_PARTDEV for LUKS encryption"
+    echo "Finished formatting device $LUKS_PARTDEV for LUKS encryption!"
     echo
     echo "Opening LUKS device..."
     if ! cryptsetup luksOpen $LUKS_PARTDEV $LUKS_LABEL
@@ -409,14 +409,14 @@ These mappings are used to:
 
 Specifying a keyfile is necessary for this feature!
 
--d DIRLIST
-Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
-
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
 
 -s SWAPSIZE
 Size of swap device partition (KMGT suffixes allowed)
+
+-d DIRLIST
+Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
 -h
 This usage help...
