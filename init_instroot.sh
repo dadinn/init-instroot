@@ -219,6 +219,7 @@ init_instroot_lvm () {
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV
     mkfs.ext4 -q $LV_ROOT_DEV
     mkswap $LV_SWAP_DEV
+    swapon $LV_SWAP_DEV
     mount $LV_ROOT_DEV $INSTROOT
     mkdir $INSTROOT/boot
     mkdir $INSTROOT/root
