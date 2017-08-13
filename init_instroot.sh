@@ -544,7 +544,7 @@ then
 	init_cryptdevs "$KEYFILE" "$DEVLIST"
     fi
     install_deps_zfs
-    init_zfsroot $ZPOOL $ROOTFS  $SWAPSIZE "$DIRLIST"
+    init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
     init_lvmroot $LUKS_LABEL $SWAPSIZE
@@ -552,4 +552,3 @@ else
 fi
 
 echo "Finished setting up installation root $INSTROOT"
-
