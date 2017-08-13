@@ -389,7 +389,7 @@ Install root mountpoint (default $INSTROOT)
 LUKS encrypted device name (default $LUKS_LABEL)
 
 -Z
-Install and configure package dependencies only
+Install and configure necessary ZFS dependencies only
 
 -z ZPOOL
 ZFS pool name for system directories and swap device
@@ -413,11 +413,11 @@ Specifying a keyfile is necessary for this feature!
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
 
--s SWAPSIZE
-Size of swap device partition (KMGT suffixes allowed)
-
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
+
+-s SWAPSIZE
+Size of swap device partition (KMGT suffixes allowed)
 
 -h
 This usage help...
