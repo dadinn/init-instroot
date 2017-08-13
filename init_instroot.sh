@@ -17,18 +17,31 @@ fsuuid () {
 }
 
 install_deps_base () {
-    if [ ! -e .deps_base ]
+    if ! type sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate &> /dev/null
     then
+	if [ ! -e /etc/debian_version ]
+	then
+	    echo "ERROR: necessary binaries are missing!" >&2
+	    echo "ERROR: Please make sure following binaries are available: sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate" >&2
+	    exit 1
+	fi
+
 	echo "Installing necessary packages..."
 	apt update
 	apt install -y gdisk parted cryptsetup pv lvm2
-	touch .deps_base
     fi
 }
 
 install_deps_zfs () {
     if [ ! -e .deps_zfs ]
     then
+	if [ ! -e /etc/debian_version ]
+	then
+	    echo "ERROR: necessary binaries are missing!" >&2
+	    echo "ERROR: please make sure ZFS kernel modules are loaded and CLI tools *zpool* and *zfs* are avialable." >&2
+	    exit 1
+	fi
+
 	RELEASE=$(cat /etc/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
 	case $RELEASE in
 	    "8")
