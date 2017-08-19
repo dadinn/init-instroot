@@ -401,12 +401,6 @@ Install root mountpoint (default $INSTROOT)
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
 
--Z
-Install and configure necessary ZFS dependencies only
-
--z ZPOOL
-ZFS pool name for system directories and swap device
-
 -K FILENAME
 Generate new keyfile
 
@@ -422,6 +416,12 @@ These mappings are used to:
  b) create crypttab entries for automatic unlocking during boot
 
 Specifying a keyfile is necessary for this feature!
+
+-Z
+Install and configure necessary ZFS dependencies only
+
+-z ZPOOL
+ZFS pool name for system directories and swap device
 
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
