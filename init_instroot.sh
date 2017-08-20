@@ -382,10 +382,74 @@ EOF
     #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
 }
 
+init_instroot_swapfile() {
+    if [ $# -eq 2 ]
+    then
+	INSTROOT=$1
+	BOOT_PARTDEV=$2
+	LUKS_PARTDEV=$3
+	LUKS_LABEL=$4
+	SWAP_SIZE=$5
+    else
+	echo "ERROR: called init_lvmroot with $# args: $@" >&2
+	exit 1
+    fi
+
+    mkdir -p $INSTROOT
+    mkfs.ext4 /dev/mapper/$LUKS_LABEL
+    mkfs.ext4 -m 0 -j $BOOT_PARTDEV
+    mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    mkdir $INSTROOT/boot
+    mkdir $INSTROOT/root
+    mkdir $INSTROOT/etc
+    chmod 700 $INSTROOT/root
+    mount $BOOT_PARTDEV /$INSTROOT/boot
+
+    SWAPFILE=$INSTROOOT/root/swapfile
+    echo "Allocating $SWAP_SIZE of swap space..."
+    pv -Ss $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $SWAPFILE
+    chmod 600 $SWAPFILE
+    mkswap $SWAPFILE
+    swapon $SWAPFILE
+
+    BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
+    LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
+    ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
+    #TODO
+    SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
+
+    echo "Generating entries for ${INSTROOT}/etc/fstab..."
+    cat <<EOF > $INSTROOT/etc/fstab
+# <file system> <mountpoint> <type> <options> <dump> <pass>
+UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
+UUID=$BOOT_UUID /boot ext4 defaults 0 2
+$SWAPFILE none swap sw,x-systemd.after=zfs.target 0 0
+
+EOF
+
+    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
+    cat <<EOF > $INSTROOT/etc/crypttab
+# LUKS device containing root filesystem
+$LUKS_LABEL UUID=$LUKS_UUID none luks
+
+EOF
+
+    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    mkdir -p $ROOTCRYPT_DIR/headers
+
+    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
+    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
+	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
+
+    # Making header backups non-writeable and readable only to root
+    chmod 400 $ROOTCRYPT_DIR/headers/*
+}
+
 LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
+SWAPFILE=0
 [ -e ./.lastrun ] && . ./.lastrun
 unset ROOT_DRIVE
 
@@ -434,6 +498,9 @@ Name of the system root dataset in the ZFS pool (default $ROOTFS)
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
+-S
+Use swapfiles instead of logical or ZFS volumes
+
 -s SWAPSIZE
 Size of swap device partition (KMGT suffixes allowed)
 
@@ -449,7 +516,7 @@ then
     exit 1
 fi
 
-while getopts 'l:m:Zz:K:k:c:d:r:s:h' opt
+while getopts 'l:m:Zz:K:k:c:d:r:Ss:h' opt
 do
     case $opt in
 	l)
@@ -486,6 +553,9 @@ do
 	    ;;
 	r)
 	    ROOTFS=$OPTARG
+	    ;;
+	S)
+	    SWAPFILE=1
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
@@ -565,8 +635,13 @@ then
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
 else
-    init_lvmroot $LUKS_LABEL $SWAPSIZE
-    init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL
+    if [ "$SWAPFILE" -gt 0 ]
+    then
+	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
+    else
+	init_lvmroot $LUKS_LABEL $SWAPSIZE
+	init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL
+    fi
 fi
 
 echo "Finished setting up installation root $INSTROOT"
