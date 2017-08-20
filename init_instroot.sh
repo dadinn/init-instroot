@@ -391,12 +391,15 @@ init_instroot_swapfile() {
 	LUKS_LABEL=$4
 	SWAP_SIZE=$5
     else
-	echo "ERROR: called init_swapfile with $# args: $@" >&2
+	echo "ERROR: called init_instroot_swapfile with $# args: $@" >&2
 	exit 1
     fi
 
+    echo "Setting up installation root with swapfile for swap space..."
     mkdir -p $INSTROOT
+    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root..."
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
+    echo "Formatting partition $BOOT_PARTDEV to be with ext4 to be used as /boot..."
     mkfs.ext4 -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
@@ -406,7 +409,7 @@ init_instroot_swapfile() {
     chmod 700 $INSTROOT/root
 
     SWAPFILE=$INSTROOT/root/swapfile
-    echo "Allocating $SWAP_SIZE of swap space..."
+    echo "Allocating $SWAP_SIZE of swap space in $SWAPFILE..."
     pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
     chmod 600 $SWAPFILE
     mkswap $SWAPFILE
