@@ -405,7 +405,7 @@ init_instroot_swapfile() {
     chmod 700 $INSTROOT/root
     mount $BOOT_PARTDEV /$INSTROOT/boot
 
-    SWAPFILE=$INSTROOOT/root/swapfile
+    SWAPFILE=$INSTROOT/root/swapfile
     echo "Allocating $SWAP_SIZE of swap space..."
     pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
     chmod 600 $SWAPFILE
