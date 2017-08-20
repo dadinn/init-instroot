@@ -407,7 +407,7 @@ init_instroot_swapfile() {
 
     SWAPFILE=$INSTROOOT/root/swapfile
     echo "Allocating $SWAP_SIZE of swap space..."
-    pv -Ss $(blockdev --getsize64 $LUKS_DEV) < /dev/zero > $SWAPFILE
+    pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
     chmod 600 $SWAPFILE
     mkswap $SWAPFILE
     swapon $SWAPFILE
