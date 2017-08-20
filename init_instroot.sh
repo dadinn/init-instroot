@@ -410,7 +410,8 @@ init_instroot_swapfile() {
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
 
-    SWAPFILE=$INSTROOT/root/swapfile
+    SWAPFILEPATH=/root/swapfile
+    SWAPFILE=${INSTROOT}${SWAPFILEPATH}
     echo "Allocating $SWAP_SIZE of swap space in $SWAPFILE..."
     pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
     chmod 600 $SWAPFILE
@@ -426,7 +427,7 @@ init_instroot_swapfile() {
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
-$SWAPFILE none swap sw 0 0
+$SWAPFILEPATH none swap sw 0 0
 
 EOF
 
