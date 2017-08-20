@@ -505,7 +505,7 @@ Name of the system root dataset in the ZFS pool (default $ROOTFS)
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
 -S
-Use swapfiles instead of logical or ZFS volumes
+Use swapfile instead of LVM or ZFS volume
 
 -s SWAPSIZE
 Size of swap device partition (KMGT suffixes allowed)
