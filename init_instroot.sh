@@ -455,10 +455,7 @@ DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
 USE_SWAPFILE=0
 
-# override defaults with values from previous run
-[ -e ./.lastrun ] && . ./.lastrun
-
- # root device can only be passed as argument
+ # make sure root device can only be passed as CLI argument
 unset ROOT_DRIVE
 
 usage () {
