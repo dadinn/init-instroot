@@ -80,8 +80,10 @@ done
 
 if [ ! -z "$ZPOOL" ]
 then
+    swapoff /dev/zvol/$ZPOOL/$ROOTFS/swap
     zfs destroy -r $ZPOOL/$ROOTFS
     zpool export $ZPOOL
+
     umount $INSTROOT/boot
     umount $INSTROOT
 
@@ -99,6 +101,7 @@ then
     umount $INSTROOT
 else
     VG_NAME=${LUKS_LABEL}_vg
+    swapoff /dev/mapper/${VG_NAME}-swap
     umount $INSTROOT/boot
     umount $INSTROOT
     vgremove -f $VG_NAME
