@@ -29,13 +29,16 @@ Name of the system root dataset in the ZFS pool (default $ROOTFS)
 -c DEVLIST
 Coma separeted list of other opened LUKS device labels (i.e. members of ZFS pool).
 
+-S
+Swap file has been used instead of LVM or ZFS volume
+
 -h
 This usage help...
 
 EOF
 }
 
-while getopts 'l:m:z:c:d:r:h' opt
+while getopts 'l:m:z:c:d:r:Sh' opt
 do
     case $opt in
 	l)
@@ -52,6 +55,9 @@ do
 	    ;;
 	r)
 	    ROOTFS=$OPTARG
+	    ;;
+	S)
+	    USE_SWAPFILE=1
 	    ;;
 	h)
             usage
@@ -86,6 +92,11 @@ then
 
 	cryptsetup luksClose $label;
     done
+elif [ "${USE_SWAPFILE:-0}" -gt 0 ]
+then
+    swapoff $INSTROOT/root/swapfile
+    umount $INSTROOT/boot
+    umount $INSTROOT
 else
     VG_NAME=${LUKS_LABEL}_vg
     umount $INSTROOT/boot
