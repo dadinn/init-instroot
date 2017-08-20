@@ -445,12 +445,18 @@ EOF
     chmod 400 $ROOTCRYPT_DIR/headers/*
 }
 
+# DEFAULTS
+
 LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
 SWAPFILE=0
+
+# override defaults with values from previous run
 [ -e ./.lastrun ] && . ./.lastrun
+
+ # root device can only be passed as argument
 unset ROOT_DRIVE
 
 usage () {
