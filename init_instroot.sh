@@ -453,7 +453,7 @@ LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
-SWAPFILE=0
+USE_SWAPFILE=0
 
 # override defaults with values from previous run
 [ -e ./.lastrun ] && . ./.lastrun
@@ -563,7 +563,7 @@ do
 	    ROOTFS=$OPTARG
 	    ;;
 	S)
-	    SWAPFILE=1
+	    USE_SWAPFILE=1
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
@@ -625,7 +625,7 @@ ROOTFS=$ROOTFS
 DIRLIST=$DIRLIST
 SWAPSIZE=$SWAPSIZE
 INSTROOT=$INSTROOT
-SWAPFILE=$SWAPFILE
+USE_SWAPFILE=$USE_SWAPFILE
 EOF
 
 install_deps_base
@@ -644,7 +644,7 @@ then
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS "$DIRLIST"
 else
-    if [ "$SWAPFILE" -gt 0 ]
+    if [ "$USE_SWAPFILE" -gt 0 ]
     then
 	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
     else
