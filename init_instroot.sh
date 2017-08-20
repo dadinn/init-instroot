@@ -219,17 +219,18 @@ init_instroot_lvm () {
     LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
 
     mkdir -p $INSTROOT
-    echo "Formatting partition $BOOT_PARTDEV to be with ext4 to be used as /boot..."
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV
-    echo "Formatting LVM logical volume $LV_ROOT_DEV with ext4 to be used as root..."
+    echo "Formatting LVM logical volume $LV_ROOT_DEV with ext4 to be used as root filesystem..."
     mkfs.ext4 -q $LV_ROOT_DEV
     mkswap $LV_SWAP_DEV
     swapon $LV_SWAP_DEV
     mount $LV_ROOT_DEV $INSTROOT
     mkdir $INSTROOT/boot
-    mkdir $INSTROOT/root
-    mkdir $INSTROOT/etc
     mount $BOOT_PARTDEV /$INSTROOT/boot
+    mkdir $INSTROOT/etc
+    mkdir $INSTROOT/root
+    chmod 700 $INSTROOT/root
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid $LV_ROOT_DEV)
@@ -288,13 +289,18 @@ init_instroot_zfs () {
     fi
 
     mkdir -p $INSTROOT
+    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
-    mkdir $INSTROOT/root
-    mkdir $INSTROOT/etc
     mount $BOOT_PARTDEV /$INSTROOT/boot
+    mkdir $INSTROOT/etc
+    mkdir $INSTROOT/root
+    chmod 700 $INSTROOT/root
+
+    echo "Mounting all ZFS root directories..."
     zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
@@ -389,9 +395,9 @@ init_instroot_swapfile() {
 
     echo "Setting up installation root with swapfile for swap space..."
     mkdir -p $INSTROOT
-    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root..."
+    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
-    echo "Formatting partition $BOOT_PARTDEV to be with ext4 to be used as /boot..."
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
