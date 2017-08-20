@@ -278,10 +278,10 @@ init_instroot_zfs () {
 	BOOT_PARTDEV=$2
 	LUKS_PARTDEV=$3
 	LUKS_LABEL=$4
-	ZPOOL=$5
-	ROOTFS=$6
-	KEYFILE=$7
-	DEVLIST=$8
+	KEYFILE=$5
+	DEVLIST=$6
+	ZPOOL=$7
+	ROOTFS=$8
 	DIRLIST=$9
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
@@ -641,7 +641,7 @@ then
     fi
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $ZPOOL $ROOTFS "$KEYFILE" "$DEVLIST" "$DIRLIST"
+    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS "$DIRLIST"
 else
     if [ "$SWAPFILE" -gt 0 ]
     then
