@@ -245,7 +245,7 @@ init_instroot_lvm () {
     SWAP_UUID=$(fsuuid $LV_SWAP_DEV)
 
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
-    cat <<EOF > $INSTROOT/etc/fstab
+    cat > $INSTROOT/etc/fstab <<EOF
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
@@ -254,7 +254,7 @@ UUID=$SWAP_UUID none swap sw 0 0
 EOF
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat <<EOF > $INSTROOT/etc/crypttab
+    cat > $INSTROOT/etc/crypttab <<EOF
 # LUKS device containing root filesystem
 $LUKS_LABEL UUID=$LUKS_UUID none luks
 
@@ -311,7 +311,7 @@ init_instroot_zfs () {
     SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
-    cat <<EOF > $INSTROOT/etc/fstab
+    cat > $INSTROOT/etc/fstab <<EOF
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
@@ -323,13 +323,15 @@ EOF
     # systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
     for i in $(echo $DIRLIST | tr "," "\n")
     do
-	echo "#$ZPOOL/$ROOTFS/$i /$i zfs defaults,x-systemd.after=zfs.target 0 0" >> $INSTROOT/etc/fstab
+	cat >> $INSTROOT/etc/fstab <<EOF
+# $ZPOOL/$ROOTFS/$i /$i zfs defaults,x-systemd.after=zfs.target 0 0
+EOF
     done
     unset i
     #echo "Finished generating entries in ${INSTROOT}/etc/fstab"
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat <<EOF > $INSTROOT/etc/crypttab
+    cat > $INSTROOT/etc/crypttab <<EOF
 # LUKS device containing root filesystem
 $LUKS_LABEL UUID=$LUKS_UUID none luks
 
@@ -359,7 +361,10 @@ EOF
 	       uuid=$(fsuuid $device)
 	       
 	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
-	       echo "$label UUID=${uuid} /root/crypt/${KEYFILENAME} luks" >> $INSTROOT/etc/crypttab
+	       cat >> $INSTROOT/etc/crypttab <<EOF
+$label UUID=${uuid} /root/crypt/${KEYFILENAME} luks
+
+EOF
 
 	       # backing up LUKS headers of ZFS member vdevs
 	       cryptsetup luksHeaderBackup $device \
