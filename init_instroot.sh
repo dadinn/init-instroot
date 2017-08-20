@@ -189,6 +189,7 @@ init_zfsroot () {
     echo "Creating ZFS volume for swap device..."
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
     mkswap /dev/zvol/$SYSTEMFS/swap
+    swapon /dev/zvol/$SYSTEMFS/swap
     echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
