@@ -383,7 +383,7 @@ EOF
 }
 
 init_instroot_swapfile() {
-    if [ $# -eq 2 ]
+    if [ $# -eq 5 ]
     then
 	INSTROOT=$1
 	BOOT_PARTDEV=$2
@@ -391,7 +391,7 @@ init_instroot_swapfile() {
 	LUKS_LABEL=$4
 	SWAP_SIZE=$5
     else
-	echo "ERROR: called init_lvmroot with $# args: $@" >&2
+	echo "ERROR: called init_swapfile with $# args: $@" >&2
 	exit 1
     fi
 
