@@ -209,6 +209,7 @@ init_instroot_lvm () {
 
     VG_NAME=${LUKS_LABEL}_vg
 
+    echo "Setting up LVM with volumes for root and swap filesystems..."
     pvcreate  /dev/mapper/$LUKS_LABEL
     vgcreate $VG_NAME /dev/mapper/$LUKS_LABEL
     lvcreate -L $SWAP_SIZE $VG_NAME -n swap
@@ -218,7 +219,9 @@ init_instroot_lvm () {
     LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
 
     mkdir -p $INSTROOT
+    echo "Formatting partition $BOOT_PARTDEV to be with ext4 to be used as /boot..."
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV
+    echo "Formatting LVM logical volume $LV_ROOT_DEV with ext4 to be used as root..."
     mkfs.ext4 -q $LV_ROOT_DEV
     mkswap $LV_SWAP_DEV
     swapon $LV_SWAP_DEV
