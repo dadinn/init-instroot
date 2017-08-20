@@ -122,7 +122,10 @@ EOF
 	    ;;
     esac
 
-    echo "Finished setting up LUKS device: $LUKS_LABEL"
+    cat <<EOF
+Finished setting up LUKS device: $LUKS_LABEL
+
+EOF
 }
 
 init_cryptdevs () {
