@@ -400,10 +400,10 @@ init_instroot_swapfile() {
     mkfs.ext4 -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
-    mkdir $INSTROOT/root
-    mkdir $INSTROOT/etc
-    chmod 700 $INSTROOT/root
     mount $BOOT_PARTDEV /$INSTROOT/boot
+    mkdir $INSTROOT/etc
+    mkdir $INSTROOT/root
+    chmod 700 $INSTROOT/root
 
     SWAPFILE=$INSTROOT/root/swapfile
     echo "Allocating $SWAP_SIZE of swap space..."
@@ -415,8 +415,6 @@ init_instroot_swapfile() {
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
-    #TODO
-    SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
     cat <<EOF > $INSTROOT/etc/fstab
