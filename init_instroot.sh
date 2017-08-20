@@ -189,31 +189,14 @@ init_zfsroot () {
     echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
-init_lvmroot () {
-    if [ $# -eq 2 ]
-    then
-	LUKS_LABEL=$1
-	SWAP_SIZE=$2
-    else
-	echo "ERROR: called init_lvmroot with $# args: $@" >&2
-	exit 1
-    fi
-
-    VG_NAME=${LUKS_LABEL}_vg
-
-    pvcreate  /dev/mapper/$LUKS_LABEL
-    vgcreate $VG_NAME /dev/mapper/$LUKS_LABEL
-    lvcreate -L $SWAP_SIZE $VG_NAME -n swap
-    lvcreate -l 100%FREE $VG_NAME -n root
-}
-
 init_instroot_lvm () {
-    if [ $# -eq 4 ]
+    if [ $# -eq 5 ]
     then
 	INSTROOT=$1
 	BOOT_PARTDEV=$2
 	LUKS_PARTDEV=$3
 	LUKS_LABEL=$4
+	SWAP_SIZE=$5
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: $INSTROOT already exists" && exit 1) >&2
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: $BOOT_PARTDEV has to be a block device" && exit 1) >&2
@@ -225,6 +208,12 @@ init_instroot_lvm () {
     fi
 
     VG_NAME=${LUKS_LABEL}_vg
+
+    pvcreate  /dev/mapper/$LUKS_LABEL
+    vgcreate $VG_NAME /dev/mapper/$LUKS_LABEL
+    lvcreate -L $SWAP_SIZE $VG_NAME -n swap
+    lvcreate -l 100%FREE $VG_NAME -n root
+
     LV_ROOT_DEV=/dev/mapper/${VG_NAME}-root
     LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
 
@@ -647,8 +636,7 @@ else
     then
 	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
     else
-	init_lvmroot $LUKS_LABEL $SWAPSIZE
-	init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL
+	init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
     fi
 fi
 
