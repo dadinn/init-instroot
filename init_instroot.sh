@@ -469,53 +469,38 @@ USAGE:
 
 $0 [OPTIONS] DEVICE
 
-General purpose encrypted root filesystem initializer, using LVM or optionally a ZFS pool, for home, var, and swap space
-
 Valid options are:
 
 -m PATH
 Install root mountpoint (default $INSTROOT)
-
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
-
 -K FILENAME
 Generate new keyfile
-
 -k KEYFILE
 Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
-
--c DEVLIST
-Coma separeted list of colon separated pairs of other encrypted devices (i.e. members of ZFS pool), and their repsective LUKS labels.
-E.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz
-
-These mappings are used to:
- a) unlock these devices before importing ZFS pools
- b) create crypttab entries for automatic unlocking during boot
-
-Specifying a keyfile is necessary for this feature!
-
 -Z
-Install and configure necessary ZFS dependencies only
-
+Install and configure necessary ZFS dependencies only, then exit
 -z ZPOOL
 ZFS pool name for system directories and swap device
-
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
-
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
-
+-c DEVLIST
+Coma separeted list of colon separated pairs of other encrypted devices
+(e.g. members of ZFS pool), and their repsective LUKS labels.
+(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
+These device mappings are used to:
+ a) unlock these devices before importing ZFS pools
+ b) create crypttab entries for automatic unlocking during boot
+Specifying a keyfile is necessary for this feature!
 -S
 Use swapfile instead of LVM or ZFS volume
-
 -s SWAPSIZE
 Size of swap device partition (KMGT suffixes allowed)
-
 -h
 This usage help...
-
 EOF
 }
 
