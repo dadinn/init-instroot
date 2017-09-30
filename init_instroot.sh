@@ -593,24 +593,27 @@ then
     ROOT_DRIVE=$1
 else
     echo "ERROR: Block device must be specified for root filesystem!" >&2
+    usage
     exit 1
 fi
 
 if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 then
     echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
-    exit 1
-fi
-
-if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
-then
-    echo "ERROR: keyfile $KEYFILE is not found!" >&2
+    usage
     exit 1
 fi
 
 if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
 then
     echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
+    usage
+    exit 1
+fi
+
+if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
+then
+    echo "ERROR: keyfile $KEYFILE is not found!" >&2
     exit 1
 fi
 
