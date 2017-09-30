@@ -456,9 +456,11 @@ ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
 USE_SWAPFILE=0
+PREINIT_DEPENDENCIES=0
 
  # make sure root device can only be passed as CLI argument
 unset ROOT_DRIVE
+unset NEW_KEYFILE
 
 usage () {
     cat <<EOF
@@ -517,12 +519,6 @@ This usage help...
 EOF
 }
 
-if [ $(id -u) -ne 0 ]
-then
-    echo "This script must be run as root!" >&2
-    exit 1
-fi
-
 while getopts 'l:m:Zz:K:k:c:d:r:Ss:h' opt
 do
     case $opt in
@@ -533,21 +529,13 @@ do
 	    INSTROOT=$OPTARG
 	    ;;
 	Z)
-	    install_deps_base
-	    install_deps_zfs
-	    echo "Finished installing all package dependencies!"
-	    exit 0
+	    PREINIT_DEPENDENCIES=1
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
 	    ;;
 	K)
 	    NEW_KEYFILE=$OPTARG
-	    echo "Generating new key-file..."
-	    dd if=/dev/random of=$NEW_KEYFILE bs=1024 count=4
-	    chmod 0400 $NEW_KEYFILE
-	    echo "Finished generating new key-file."
-	    exit 0
 	    ;;
 	k)
 	    KEYFILE=$OPTARG
@@ -615,6 +603,35 @@ if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
 then
     echo "ERROR: keyfile $KEYFILE is not found!" >&2
     exit 1
+fi
+
+if [ $(id -u) -ne 0 ]
+then
+    echo "This script must be run as root!" >&2
+    exit 1
+fi
+
+if [ $PREINIT_DEPENDENCIES -eq 1 ]
+then
+    install_deps_base
+    install_deps_zfs
+    echo "Finished installing all package dependencies!"
+    exit 0
+fi
+
+if [ ! -z "$NEW_KEYFILE"]
+then
+    if [ -e "$NEW_KEYFILE" ]
+    then
+	echo "ERROR: $NEW_KEYFILE already exists. Cannot generate keyfile!"
+	exit 1
+    fi
+
+    echo "Generating new key-file..."
+    dd if=/dev/random of=$NEW_KEYFILE bs=1024 count=4
+    chmod 0400 $NEW_KEYFILE
+    echo "Finished generating new key-file."
+    exit 0
 fi
 
 cat <<EOF > .lastrun
