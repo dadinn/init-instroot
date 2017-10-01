@@ -411,7 +411,9 @@ init_instroot_swapfile() {
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
 
-    SWAPFILEPATH=/root/swapfile
+    mkdir -p $INSTROOT/var/swap
+    chmod 700 $INSTROOT/var/swap
+    SWAPFILEPATH="/var/swap/file01_$SWAPSIZE"
     SWAPFILE=${INSTROOT}${SWAPFILEPATH}
     echo "Allocating $SWAP_SIZE of swap space in $SWAPFILE..."
     pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
