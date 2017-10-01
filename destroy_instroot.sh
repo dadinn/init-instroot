@@ -96,7 +96,7 @@ then
     done
 elif [ "${USE_SWAPFILE:-0}" -gt 0 ]
 then
-    swapoff $INSTROOT/root/swapfile
+    swapoff $INSTROOT/var/swap/*
     umount $INSTROOT/boot
     umount $INSTROOT
 else
@@ -108,7 +108,7 @@ else
 fi
 
 cryptsetup luksClose $LUKS_LABEL
-sgdisk -Z $ROOT_DRIVE
+sgdisk -Z $ROOT_DRIVE &> /dev/null
 rmdir $INSTROOT
 
 echo "Finished distroying initialized root directory: $INSTROOT"

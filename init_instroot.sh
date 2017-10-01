@@ -75,7 +75,8 @@ init_parts () {
     fi
 
     echo "Setting up partitions..."
-    sgdisk $ROOT_DRIVE -Z -n 1:0:+500M -N 2 -t 1:ef02 > /dev/null
+    sgdisk -Z &> /dev/null
+    sgdisk $ROOT_DRIVE -n 1:0:+500M -N 2 -t 1:ef02 &> /dev/null
     partprobe $ROOT_DRIVE
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
@@ -188,8 +189,8 @@ init_zfsroot () {
 
     echo "Creating ZFS volume for swap device..."
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
-    mkswap /dev/zvol/$SYSTEMFS/swap
-    swapon /dev/zvol/$SYSTEMFS/swap
+    mkswap /dev/zvol/$SYSTEMFS/swap &> /dev/null
+    swapon /dev/zvol/$SYSTEMFS/swap &> /dev/null
     echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
@@ -222,15 +223,15 @@ init_instroot_lvm () {
     LV_ROOT_DEV=/dev/mapper/${VG_NAME}-root
     LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
 
-    mkswap $LV_SWAP_DEV
-    swapon $LV_SWAP_DEV
+    mkswap $LV_SWAP_DEV &> /dev/null
+    swapon $LV_SWAP_DEV &> /dev/null
 
     echo "Formatting LVM logical volume $LV_ROOT_DEV with ext4 to be used as root filesystem..."
-    mkfs.ext4 -q $LV_ROOT_DEV
+    mkfs.ext4 -q $LV_ROOT_DEV &> /dev/null
     mkdir -p $INSTROOT
     mount $LV_ROOT_DEV $INSTROOT
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV &> /dev/null
     mkdir $INSTROOT/boot
     mount $BOOT_PARTDEV /$INSTROOT/boot
     mkdir $INSTROOT/etc
@@ -399,12 +400,12 @@ init_instroot_swapfile() {
     fi
 
     echo "Setting up installation root with swapfile for swap space..."
-    mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    mkfs.ext4 /dev/mapper/$LUKS_LABEL
-    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 /dev/mapper/$LUKS_LABEL &> /dev/null
+    mkdir -p $INSTROOT
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV &> /dev/null
     mkdir $INSTROOT/boot
     mount $BOOT_PARTDEV /$INSTROOT/boot
     mkdir $INSTROOT/etc
@@ -416,10 +417,10 @@ init_instroot_swapfile() {
     SWAPFILEPATH="/var/swap/file01_$SWAPSIZE"
     SWAPFILE=${INSTROOT}${SWAPFILEPATH}
     echo "Allocating $SWAP_SIZE of swap space in $SWAPFILE..."
-    pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
+    pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE 2> /dev/null
     chmod 600 $SWAPFILE
-    mkswap $SWAPFILE
-    swapon $SWAPFILE
+    mkswap $SWAPFILE &> /dev/null
+    swapon $SWAPFILE &> /dev/null
 
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
