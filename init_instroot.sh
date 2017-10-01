@@ -230,7 +230,7 @@ init_instroot_lvm () {
     mkdir -p $INSTROOT
     mount $LV_ROOT_DEV $INSTROOT
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
     mkdir $INSTROOT/boot
     mount $BOOT_PARTDEV /$INSTROOT/boot
     mkdir $INSTROOT/etc
@@ -297,7 +297,7 @@ init_instroot_zfs () {
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
     mount $BOOT_PARTDEV /$INSTROOT/boot
@@ -403,7 +403,7 @@ init_instroot_swapfile() {
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 /dev/mapper/$LUKS_LABEL
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -m 0 -j $BOOT_PARTDEV
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
     mount /dev/mapper/$LUKS_LABEL $INSTROOT
     mkdir $INSTROOT/boot
     mount $BOOT_PARTDEV /$INSTROOT/boot
