@@ -220,16 +220,16 @@ init_instroot_lvm () {
     lvcreate -L $SWAP_SIZE $VG_NAME -n swap
     lvcreate -l 100%FREE $VG_NAME -n root
 
-    LV_ROOT_DEV=/dev/mapper/${VG_NAME}-root
-    LV_SWAP_DEV=/dev/mapper/${VG_NAME}-swap
+    LV_ROOT=/dev/mapper/${VG_NAME}-root
+    LV_SWAP=/dev/mapper/${VG_NAME}-swap
 
-    mkswap $LV_SWAP_DEV &> /dev/null
-    swapon $LV_SWAP_DEV &> /dev/null
+    mkswap $LV_SWAP &> /dev/null
+    swapon $LV_SWAP &> /dev/null
 
-    echo "Formatting LVM logical volume $LV_ROOT_DEV with ext4 to be used as root filesystem..."
-    mkfs.ext4 -q $LV_ROOT_DEV &> /dev/null
+    echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
+    mkfs.ext4 -q $LV_ROOT &> /dev/null
     mkdir -p $INSTROOT
-    mount $LV_ROOT_DEV $INSTROOT
+    mount $LV_ROOT $INSTROOT
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV &> /dev/null
     mkdir $INSTROOT/boot
@@ -239,9 +239,9 @@ init_instroot_lvm () {
     chmod 700 $INSTROOT/root
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
-    ROOT_UUID=$(fsuuid $LV_ROOT_DEV)
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
-    SWAP_UUID=$(fsuuid $LV_SWAP_DEV)
+    ROOT_UUID=$(fsuuid $LV_ROOT)
+    SWAP_UUID=$(fsuuid $LV_SWAP)
 
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
     cat > $INSTROOT/etc/fstab <<EOF
