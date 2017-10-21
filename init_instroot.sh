@@ -387,13 +387,14 @@ EOF
 }
 
 init_instroot_swapfile() {
-    if [ $# -eq 5 ]
+    if [ $# -eq 6 ]
     then
 	INSTROOT=$1
 	BOOT_PARTDEV=$2
 	LUKS_PARTDEV=$3
 	LUKS_LABEL=$4
 	SWAP_SIZE=$5
+	SWAPFILES=$6
     else
 	echo "ERROR: called init_instroot_swapfile with $# args: $@" >&2
 	exit 1
@@ -411,17 +412,9 @@ init_instroot_swapfile() {
     mkdir $INSTROOT/etc
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
-
     mkdir -p $INSTROOT/var/swap
     chmod 700 $INSTROOT/var/swap
-    SWAPFILEPATH="/var/swap/file01_$SWAPSIZE"
-    SWAPFILE=${INSTROOT}${SWAPFILEPATH}
-    echo "Allocating $SWAP_SIZE of swap space in $SWAPFILE..."
-    pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE 2> /dev/null
-    chmod 600 $SWAPFILE
-    mkswap $SWAPFILE &> /dev/null
-    swapon $SWAPFILE &> /dev/null
-
+    
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
@@ -431,9 +424,25 @@ init_instroot_swapfile() {
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
-$SWAPFILEPATH none swap sw 0 0
 
+# Swapfiles
 EOF
+
+    SWAPSIZE_NUM=$(sed -E 's;([0-9]+)[KMGT]?;\1;' $SWAP_SIZE)
+    SWAPSIZE_KMGT=$(sed-E 's;[0-9]+([KMGT]?);\1;' $SWAP_SIZE)
+    SWAPFILE_SIZE="$(($SWAPSIZE_NUM / $SWAPFILES))$SWAPSIZE_KGMT"
+
+    for count in $(seq 1 $SWAPFILES)
+    do
+	SWAPFILEPATH="/var/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
+	SWAPFILE=${INSTROOT}${SWAPFILEPATH}
+	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
+	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE 2> /dev/null
+	chmod 600 $SWAPFILE
+	mkswap $SWAPFILE &> /dev/null
+	swapon $SWAPFILE &> /dev/null
+	echo "$SWAPFILEPATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+    done
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
     cat <<EOF > $INSTROOT/etc/crypttab
@@ -459,7 +468,7 @@ LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
-USE_SWAPFILE=0
+SWAPFILES=0
 PREINIT_DEPENDENCIES=0
 
  # make sure root device can only be passed as CLI argument
@@ -499,16 +508,18 @@ These device mappings are used to:
  a) unlock these devices before importing ZFS pools
  b) create crypttab entries for automatic unlocking during boot
 Specifying a keyfile is necessary for this feature!
--S
-Use swapfile instead of LVM or ZFS volume
 -s SWAPSIZE
-Size of swap device partition (KMGT suffixes allowed)
+Size of the total swap space to use (KMGT suffixes allowed)
+-S COUNT
+Number of swapfiles to use to break total swap-space up into. Swapfiles are created
+in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.
+(default $SWAPFILES)
 -h
 This usage help...
 EOF
 }
 
-while getopts 'l:m:Zz:K:k:c:d:r:Ss:h' opt
+while getopts 'l:m:Zz:K:k:c:d:r:S:s:h' opt
 do
     case $opt in
 	l)
@@ -539,7 +550,7 @@ do
 	    ROOTFS=$OPTARG
 	    ;;
 	S)
-	    USE_SWAPFILE=1
+	    SWAPFILES=$OPTARG
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
@@ -633,7 +644,7 @@ ROOTFS=$ROOTFS
 DIRLIST=$DIRLIST
 SWAPSIZE=$SWAPSIZE
 INSTROOT=$INSTROOT
-USE_SWAPFILE=$USE_SWAPFILE
+SWAPFILES=$SWAPFILES
 EOF
 
 install_deps_base
@@ -652,9 +663,9 @@ then
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
     init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS "$DIRLIST"
 else
-    if [ "$USE_SWAPFILE" -gt 0 ]
+    if [ "$SWAPFILES" -gt 0 ]
     then
-	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
+	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE $SWAPFILES
     else
 	init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
     fi
