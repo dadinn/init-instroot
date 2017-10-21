@@ -114,13 +114,13 @@ then
     read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
     case $delinstroot in
 	[yY])
+	    echo "$Removing directory $INSTROOT with its content..."
 	    rm -rf $INSTROOT
-	    echo "$Directory $INSTROOT removed successfully."
 	    ;;
 	*)
-	    echo "Skipping removal of $INSTROOT ..."
+	    echo "Skipped removing $INSTROOT directory."
 	    ;;
     esac
 fi
 
-echo "Finished destroying initialized root directory: $INSTROOT"
+echo "Finished destroying initialized root structure: $INSTROOT"
