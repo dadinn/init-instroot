@@ -222,20 +222,31 @@ init_instroot_lvm () {
     LV_ROOT=/dev/mapper/${VG_NAME}-root
     LV_SWAP=/dev/mapper/${VG_NAME}-swap
 
-    mkswap $LV_SWAP &> /dev/null
-    swapon $LV_SWAP &> /dev/null
-
-    echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
-    mkfs.ext4 -q $LV_ROOT &> /dev/null
     mkdir -p $INSTROOT
-    mount $LV_ROOT $INSTROOT
+    echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
+    if mkfs.ext4 -q $LV_ROOT && mount $LV_ROOT $INSTROOT &> /dev/null
+    then
+	echo "ERROR: $LV_ROOT failed to mount as $INSTROOT!" >&2
+	exit 1
+    fi
+
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV &> /dev/null
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot &> /dev/null
+    then
+	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
+	exit 1
+    fi
+
     mkdir $INSTROOT/boot
-    mount $BOOT_PARTDEV /$INSTROOT/boot
     mkdir $INSTROOT/etc
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
+
+    if ! mkswap $LV_SWAP && swapon $LV_SWAP &> /dev/null
+    then
+	echo "ERROR: $LV_SWAP failed to be mounted as swap device!" >&2
+	exit 1
+    fi
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
@@ -295,12 +306,20 @@ init_instroot_zfs () {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    mkfs.ext4 /dev/mapper/$LUKS_LABEL
-    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV
-    mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    then
+	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!" >&2
+	exit 1
+    fi
+
     mkdir $INSTROOT/boot
-    mount $BOOT_PARTDEV /$INSTROOT/boot
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot
+    then
+	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
+	exit 1
+    fi
+
     mkdir $INSTROOT/etc
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
@@ -400,14 +419,23 @@ init_instroot_swapfile() {
     fi
 
     echo "Setting up installation root with swapfile for swap space..."
-    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    mkfs.ext4 /dev/mapper/$LUKS_LABEL &> /dev/null
+
     mkdir -p $INSTROOT
-    mount /dev/mapper/$LUKS_LABEL $INSTROOT
-    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV &> /dev/null
+    echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
+    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT &> /dev/null
+    then
+	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
+	exit 1
+    fi
+
     mkdir $INSTROOT/boot
-    mount $BOOT_PARTDEV /$INSTROOT/boot
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot &> /dev/null
+    then
+	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
+	exit 1
+    fi
+
     mkdir $INSTROOT/etc
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
@@ -438,9 +466,12 @@ EOF
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
-	mkswap $SWAPFILE &> /dev/null
-	swapon $SWAPFILE &> /dev/null
-	echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+	if mkswap $SWAPFILE && swapon $SWAPFILE &> /dev/null
+	then
+	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+	else
+	    echo "WARNING: Failed to allocate swap space for $SWAPFILE!" >&2
+	fi
     done
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
