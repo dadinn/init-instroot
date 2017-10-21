@@ -111,11 +111,11 @@ cryptsetup luksClose $LUKS_LABEL
 sgdisk -Z $ROOT_DRIVE &> /dev/null
 if ! rmdir $INSTROOT
 then
-    read -p "$INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
+    read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
     case $delinstroot in
 	[yY])
 	    rm -rf $INSTROOT
-	    echo "$INSTROOT removed successfully."
+	    echo "$Directory $INSTROOT removed successfully."
 	    ;;
 	*)
 	    echo "Skipping removal of $INSTROOT ..."
@@ -123,4 +123,4 @@ then
     esac
 fi
 
-echo "Finished distroying initialized root directory: $INSTROOT"
+echo "Finished destroying initialized root directory: $INSTROOT"
