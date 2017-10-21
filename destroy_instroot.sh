@@ -15,22 +15,22 @@ By default uses options from variables defined in .lastrun
 Valid options are:
 
 -m PATH
-Install root mountpoint (default $INSTROOT)
+Install root mountpoint ${INSTROOT:+(default $INSTROOT)}
 
 -l LABEL
-LUKS encrypted root device name (default $LUKS_LABEL)
+LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
 
 -z ZPOOL
-ZFS pool name for system directories and swap device (default $ZPOOL)
+ZFS pool name for system directories and swap device ${ZPOOL:+(default $ZPOOL)}
 
 -r NAME
-Name of the system root dataset in the ZFS pool (default $ROOTFS)
+Name of the system root dataset in the ZFS pool ${ROOTFS:+(default $ROOTFS)}
 
 -c DEVLIST
-Coma separeted list of other opened LUKS device labels (i.e. members of ZFS pool).
+Coma separeted list of other opened LUKS device labels. ${DEVLIST:+(default $DEVLIST)}
 
 -S
-Swap file has been used instead of LVM or ZFS volume
+Swap file has been used instead of LVM or ZFS volume ${SWAPFILES:+(default $SWAPFILES)}
 
 -h
 This usage help...
@@ -57,7 +57,7 @@ do
 	    ROOTFS=$OPTARG
 	    ;;
 	S)
-	    USE_SWAPFILE=1
+	    SWAPFILES=$OPTARG
 	    ;;
 	h)
             usage
@@ -94,7 +94,7 @@ then
 
 	cryptsetup luksClose $label;
     done
-elif [ "${USE_SWAPFILE:-0}" -gt 0 ]
+elif [ "${SWAPFILES:-0}" -gt 0 ]
 then
     swapoff $INSTROOT/var/swap/*
     umount $INSTROOT/boot
@@ -109,6 +109,18 @@ fi
 
 cryptsetup luksClose $LUKS_LABEL
 sgdisk -Z $ROOT_DRIVE &> /dev/null
-rmdir $INSTROOT
+if ! rmdir $INSTROOT
+then
+    read -p "$INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
+    case $delinstroot in
+	[yY])
+	    rm -rf $INSTROOT
+	    echo "$INSTROOT removed successfully."
+	    ;;
+	*)
+	    echo "Skipping removal of $INSTROOT ..."
+	    ;;
+    esac
+fi
 
 echo "Finished distroying initialized root directory: $INSTROOT"
