@@ -109,12 +109,13 @@ fi
 
 cryptsetup luksClose $LUKS_LABEL
 sgdisk -Z $ROOT_DRIVE &> /dev/null
+partprobe $ROOT_DRIVE
 if ! rmdir $INSTROOT
 then
     read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
     case $delinstroot in
 	[yY])
-	    echo "$Removing directory $INSTROOT with its content..."
+	    echo "Removing directory $INSTROOT with its content..."
 	    rm -rf $INSTROOT
 	    ;;
 	*)
