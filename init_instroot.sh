@@ -516,6 +516,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 (default $SWAPFILES)
 -h
 This usage help...
+
 EOF
 }
 
@@ -580,22 +581,22 @@ if [ "$#" -eq 1 -a -b "$1" ]
 then
     ROOT_DRIVE=$1
 else
-    echo "ERROR: Block device must be specified for root filesystem!" >&2
     usage
+    echo "ERROR: Block device must be specified for root filesystem!" >&2
     exit 1
 fi
 
 if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 then
-    echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
     usage
+    echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
     exit 1
 fi
 
 if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
 then
-    echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
     usage
+    echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
     exit 1
 fi
 
