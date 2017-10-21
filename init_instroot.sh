@@ -68,7 +68,7 @@ install_deps_zfs () {
 init_parts () {
     if [ $# -eq 1 ]
     then
-	ROOT_DRIVE=$1
+	local ROOT_DRIVE=$1
     else
 	echo "ERROR: called init_parts with $# args: $@" >&2
 	exit 1
@@ -84,8 +84,8 @@ init_parts () {
 init_cryptroot () {
     if [ $# -eq 2 ]
     then
-	LUKS_PARTDEV=$1
-	LUKS_LABEL=$2
+	local LUKS_PARTDEV=$1
+	local LUKS_LABEL=$2
     else
 	echo "ERROR: called init_cryptroot with $# args: $@" >&2
 	exit 1
@@ -132,8 +132,8 @@ EOF
 init_cryptdevs () {
     if [ $# -eq 2 ]
     then
-	KEYFILE=$1
-	DEVLIST=$2
+	local KEYFILE=$1
+	local DEVLIST=$2
     else
 	echo "ERROR: called init_cryptdevs with $# args: $@" >&2
 	exit 1
@@ -148,18 +148,17 @@ init_cryptdevs () {
 	    cryptsetup luksOpen $device $label --key-file $KEYFILE || exit 1
 	fi
     done
-    unset device
-    unset label
-    unset i
+    unset device label i
 }
 
 init_zfsroot () {
     if [ $# -eq 4 ]
     then
-	ZPOOL=$1
-	FSNAME=$2
-	SWAPSIZE=$3
-	DIRLIST=$4
+	local ZPOOL=$1
+	local FSNAME=$2
+	local SWAPSIZE=$3
+	local DIRLIST=$4
+
     else
 	echo "ERROR: called init_zfsroot with $# args: $@" >&2
 	exit 1
@@ -197,11 +196,11 @@ init_zfsroot () {
 init_instroot_lvm () {
     if [ $# -eq 5 ]
     then
-	INSTROOT=$1
-	BOOT_PARTDEV=$2
-	LUKS_PARTDEV=$3
-	LUKS_LABEL=$4
-	SWAP_SIZE=$5
+	local INSTROOT=$1
+	local BOOT_PARTDEV=$2
+	local LUKS_PARTDEV=$3
+	local LUKS_LABEL=$4
+	local SWAP_SIZE=$5
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: $INSTROOT already exists" && exit 1) >&2
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: $BOOT_PARTDEV has to be a block device" && exit 1) >&2
@@ -273,15 +272,15 @@ EOF
 init_instroot_zfs () {
     if [ $# -eq 9 ]
     then
-	INSTROOT=$1
-	BOOT_PARTDEV=$2
-	LUKS_PARTDEV=$3
-	LUKS_LABEL=$4
-	KEYFILE=$5
-	DEVLIST=$6
-	ZPOOL=$7
-	ROOTFS=$8
-	DIRLIST=$9
+	local INSTROOT=$1
+	local BOOT_PARTDEV=$2
+	local LUKS_PARTDEV=$3
+	local LUKS_LABEL=$4
+	local KEYFILE=$5
+	local DEVLIST=$6
+	local ZPOOL=$7
+	local ROOTFS=$8
+	local DIRLIST=$9
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
@@ -389,12 +388,12 @@ EOF
 init_instroot_swapfile() {
     if [ $# -eq 6 ]
     then
-	INSTROOT=$1
-	BOOT_PARTDEV=$2
-	LUKS_PARTDEV=$3
-	LUKS_LABEL=$4
-	SWAP_SIZE=$5
-	SWAPFILES=$6
+	local INSTROOT=$1
+	local BOOT_PARTDEV=$2
+	local LUKS_PARTDEV=$3
+	local LUKS_LABEL=$4
+	local SWAP_SIZE=$5
+	local SWAPFILES=$6
     else
 	echo "ERROR: called init_instroot_swapfile with $# args: $@" >&2
 	exit 1
