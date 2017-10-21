@@ -428,20 +428,20 @@ UUID=$BOOT_UUID /boot ext4 defaults 0 2
 # Swapfiles
 EOF
 
-    SWAPSIZE_NUM=$(sed -E 's;([0-9]+)[KMGT]?;\1;' $SWAP_SIZE)
-    SWAPSIZE_KMGT=$(sed -E 's;[0-9]+([KMGT]?);\1;' $SWAP_SIZE)
-    SWAPFILE_SIZE="$(($SWAPSIZE_NUM / $SWAPFILES))$SWAPSIZE_KGMT"
+    SWAPSIZE_NUM=$(echo $SWAP_SIZE|sed -E 's;([0-9]+)[KMGT]?;\1;')
+    SWAPSIZE_KMGT=$(echo $SWAP_SIZE|sed -E 's;[0-9]+([KMGT]?);\1;')
+    SWAPFILE_SIZE="$(($SWAPSIZE_NUM / $SWAPFILES))$SWAPSIZE_KMGT"
 
     for count in $(seq 1 $SWAPFILES)
     do
-	SWAPFILEPATH="/var/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
-	SWAPFILE=${INSTROOT}${SWAPFILEPATH}
+	SWAPFILE_PATH="/var/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
+	SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
-	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE 2> /dev/null
+	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
 	mkswap $SWAPFILE &> /dev/null
 	swapon $SWAPFILE &> /dev/null
-	echo "$SWAPFILEPATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+	echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
     done
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
