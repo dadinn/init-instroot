@@ -429,7 +429,7 @@ UUID=$BOOT_UUID /boot ext4 defaults 0 2
 EOF
 
     SWAPSIZE_NUM=$(sed -E 's;([0-9]+)[KMGT]?;\1;' $SWAP_SIZE)
-    SWAPSIZE_KMGT=$(sed-E 's;[0-9]+([KMGT]?);\1;' $SWAP_SIZE)
+    SWAPSIZE_KMGT=$(sed -E 's;[0-9]+([KMGT]?);\1;' $SWAP_SIZE)
     SWAPFILE_SIZE="$(($SWAPSIZE_NUM / $SWAPFILES))$SWAPSIZE_KGMT"
 
     for count in $(seq 1 $SWAPFILES)
