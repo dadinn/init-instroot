@@ -506,7 +506,7 @@ unset ROOT_DRIVE
 unset NEW_KEYFILE
 
 usage () {
-    cat <<EOF
+    cat | more <<EOF
 
 USAGE:
 
@@ -516,20 +516,28 @@ Valid options are:
 
 -m PATH
 Install root mountpoint (default $INSTROOT)
+
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
+
 -K FILENAME
 Generate new keyfile
+
 -k KEYFILE
 Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
+
 -Z
 Install and configure necessary ZFS dependencies only, then exit
+
 -z ZPOOL
 ZFS pool name for system directories and swap device
+
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
+
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
+
 -c DEVLIST
 Coma separeted list of colon separated pairs of other encrypted devices
 (e.g. members of ZFS pool), and their repsective LUKS labels.
@@ -538,12 +546,15 @@ These device mappings are used to:
  a) unlock these devices before importing ZFS pools
  b) create crypttab entries for automatic unlocking during boot
 Specifying a keyfile is necessary for this feature!
+
 -s SWAPSIZE
 Size of the total swap space to use (KMGT suffixes allowed)
+
 -S COUNT
 Number of swapfiles to use to break total swap-space up into. Swapfiles are created
 in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.
 (default $SWAPFILES)
+
 -h
 This usage help...
 
@@ -591,15 +602,9 @@ do
             exit 0
 	    ;;
 	:)
-	    echo "ERROR: Missing argument for potion: -$OPTARG" >&2
 	    exit 1
 	    ;;
 	\?)
-	    echo "ERROR: Illegal option -$OPTARG" >&2
-	    exit 1
-	    ;;
-	*)
-	    usage
 	    exit 1
 	    ;;
     esac
@@ -611,21 +616,18 @@ if [ "$#" -eq 1 -a -b "$1" ]
 then
     ROOT_DRIVE=$1
 else
-    usage
     echo "ERROR: Block device must be specified for root filesystem!" >&2
     exit 1
 fi
 
 if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 then
-    usage
     echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
     exit 1
 fi
 
 if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
 then
-    usage
     echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
     exit 1
 fi
@@ -638,7 +640,7 @@ fi
 
 if [ $(id -u) -ne 0 ]
 then
-    echo "This script must be run as root!" >&2
+    echo "ERROR: This script must be run as root!" >&2
     exit 1
 fi
 
