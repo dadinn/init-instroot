@@ -17,7 +17,7 @@ fsuuid () {
 }
 
 install_deps_base () {
-    if ! type sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate &> /dev/null
+    if ! type sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate 2>&1 > /dev/null
     then
 	if [ ! -e /etc/debian_version ]
 	then
@@ -75,9 +75,9 @@ init_parts () {
     fi
 
     echo "Setting up partitions..."
-    sgdisk -Z $ROOT_DRIVE &> /dev/null
-    sgdisk $ROOT_DRIVE -n 1:0:+500M -N 2 -t 1:ef02 &> /dev/null
-    partprobe $ROOT_DRIVE
+    sgdisk -Z $ROOT_DRIVE 2>&1 > /dev/null
+    sgdisk $ROOT_DRIVE -n 1:0:+500M -N 2 -t 1:ef02 2>&1 > /dev/null
+    partprobe $ROOT_DRIVE 2>&1 > /dev/null
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
 
@@ -188,8 +188,8 @@ init_zfsroot () {
 
     echo "Creating ZFS volume for swap device..."
     zfs create -V $SWAPSIZE $SYSTEMFS/swap
-    mkswap /dev/zvol/$SYSTEMFS/swap &> /dev/null
-    swapon /dev/zvol/$SYSTEMFS/swap &> /dev/null
+    mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
+    swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
     echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
@@ -224,14 +224,14 @@ init_instroot_lvm () {
 
     mkdir -p $INSTROOT
     echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
-    if mkfs.ext4 -q $LV_ROOT && mount $LV_ROOT $INSTROOT &> /dev/null
+    if ! mkfs.ext4 -q $LV_ROOT && mount $LV_ROOT $INSTROOT 2>&1 > /dev/null
     then
 	echo "ERROR: $LV_ROOT failed to mount as $INSTROOT!" >&2
 	exit 1
     fi
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot &> /dev/null
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
 	exit 1
@@ -242,7 +242,7 @@ init_instroot_lvm () {
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
 
-    if ! mkswap $LV_SWAP && swapon $LV_SWAP &> /dev/null
+    if ! mkswap $LV_SWAP && swapon $LV_SWAP 2>&1 > /dev/null
     then
 	echo "ERROR: $LV_SWAP failed to be mounted as swap device!" >&2
 	exit 1
@@ -306,7 +306,7 @@ init_instroot_zfs () {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT 2>&1 > /dev/null
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!" >&2
 	exit 1
@@ -314,7 +314,7 @@ init_instroot_zfs () {
 
     mkdir $INSTROOT/boot
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
 	exit 1
@@ -422,7 +422,7 @@ init_instroot_swapfile() {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT &> /dev/null
+    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT 2>&1 > /dev/null
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
 	exit 1
@@ -430,7 +430,7 @@ init_instroot_swapfile() {
 
     mkdir $INSTROOT/boot
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot &> /dev/null
+    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
     then
 	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
 	exit 1
@@ -466,7 +466,7 @@ EOF
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
-	if mkswap $SWAPFILE && swapon $SWAPFILE &> /dev/null
+	if mkswap $SWAPFILE && swapon $SWAPFILE 2>&1 > /dev/null
 	then
 	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
 	else
@@ -520,17 +520,17 @@ Install root mountpoint (default $INSTROOT)
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
 
--K FILENAME
-Generate new keyfile
-
 -k KEYFILE
 Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
 
--Z
-Install and configure necessary ZFS dependencies only, then exit
+-K FILENAME
+Generate new keyfile
 
 -z ZPOOL
 ZFS pool name for system directories and swap device
+
+-Z
+Install and configure necessary ZFS dependencies only, then exit
 
 -r NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
