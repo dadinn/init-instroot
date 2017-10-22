@@ -1,6 +1,6 @@
 # init_instroot.sh
 
-General purpose root filesystem initializer using LUKS encryption for root, and choice between LVM of swapfile based swap configuration. Optionally allows for using a ZFS pool for root directories and swap volume.
+Fully POSIX compliant (no *isms) root filesystem initializer using LUKS encryption for root partition, and choice between LVM or swapfile based swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume.
 
 ## Examples
 
