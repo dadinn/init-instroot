@@ -224,16 +224,10 @@ init_instroot_lvm () {
 
     mkdir -p $INSTROOT
     echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
-    if ! mkfs.ext4 -q $LV_ROOT && mount $LV_ROOT $INSTROOT 2>&1 > /dev/null
+    mkfs.ext4 -q $LV_ROOT 2>&1 > /dev/null
+    if ! mount $LV_ROOT $INSTROOT
     then
 	echo "ERROR: $LV_ROOT failed to mount as $INSTROOT!" >&2
-	exit 1
-    fi
-
-    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
-    then
-	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
 	exit 1
     fi
 
@@ -242,9 +236,19 @@ init_instroot_lvm () {
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
 
-    if ! mkswap $LV_SWAP && swapon $LV_SWAP 2>&1 > /dev/null
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
-	echo "ERROR: $LV_SWAP failed to be mounted as swap device!" >&2
+	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
+	exit 1
+    fi
+
+    echo "Formatting $LV_SWAP to be used as swap space..."
+    mkswap $LV_SWAP 2>&1 > /dev/null
+    if ! swapon $LV_SWAP
+    then
+	echo "ERROR: $LV_SWAP failed to swap on!" >&2
 	exit 1
     fi
 
@@ -271,7 +275,7 @@ EOF
 
     ROOTCRYPT_DIR=$INSTROOT/root/crypt
     mkdir -p $ROOTCRYPT_DIR/headers
-    chmod -R 700 $INSTROOT/root
+    chmod 700 $ROOTCRYPT_DIR/headers
 
     echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
