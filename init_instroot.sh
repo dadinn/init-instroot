@@ -75,7 +75,7 @@ init_parts () {
     fi
 
     echo "Setting up partitions..."
-    sgdisk -Z &> /dev/null
+    sgdisk -Z $ROOT_DRIVE &> /dev/null
     sgdisk $ROOT_DRIVE -n 1:0:+500M -N 2 -t 1:ef02 &> /dev/null
     partprobe $ROOT_DRIVE
     echo "Finished setting up partitions on: $ROOT_DRIVE"
