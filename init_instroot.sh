@@ -310,23 +310,25 @@ init_instroot_zfs () {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT 2>&1 > /dev/null
+    mkfs.ext4 /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
+    if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!" >&2
 	exit 1
     fi
 
     mkdir $INSTROOT/boot
+    mkdir $INSTROOT/etc
+    mkdir $INSTROOT/root
+    chmod 700 $INSTROOT/root
+
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
 	exit 1
     fi
-
-    mkdir $INSTROOT/etc
-    mkdir $INSTROOT/root
-    chmod 700 $INSTROOT/root
 
     echo "Mounting all ZFS root directories..."
     zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
@@ -366,7 +368,7 @@ EOF
 
     ROOTCRYPT_DIR=$INSTROOT/root/crypt
     mkdir -p $ROOTCRYPT_DIR/headers
-    chmod -R 700 $INSTROOT/root
+    chmod -R 700 $ROOTCRYPT_DIR
 
     echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
@@ -397,10 +399,7 @@ EOF
 			  --header-backup-file $ROOTCRYPT_DIR/headers/$label
 	    fi
 	done
-	unset device
-	unset label
-	unset uuid
-	unset i
+	unset device label uuid i
     fi
 
     #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
