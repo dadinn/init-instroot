@@ -530,7 +530,7 @@ LUKS encrypted device name (default $LUKS_LABEL)
 Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
 
 -K FILENAME
-Generate new keyfile
+Generate new keyfile with the given FILENAME
 
 -z ZPOOL
 ZFS pool name for system directories and swap device
@@ -618,6 +618,30 @@ done
 
 shift $(($OPTIND - 1))
 
+if [ $PREINIT_DEPENDENCIES -eq 1 ]
+then
+    install_deps_base
+    install_deps_zfs
+    echo "Finished installing all package dependencies!"
+    exit 0
+fi
+
+if [ ! -z "$NEW_KEYFILE"]
+then
+    KEYFILE=$(basename $NEW_KEYFILE)
+    if [ -e "$KEYFILE" ]
+    then
+	echo "ERROR: $KEYFILE already exists. Cannot generate keyfile!"
+	exit 1
+    fi
+
+    echo "Generating new key-file $KEYFILE..."
+    dd if=/dev/random of=$KEYFILE bs=1024 count=4
+    chmod 0400 $KEYFILE
+    echo "Finished generating new key-file $KEYFILE."
+    exit 0
+fi
+
 if [ "$#" -eq 1 -a -b "$1" ]
 then
     ROOT_DRIVE=$1
@@ -648,29 +672,6 @@ if [ $(id -u) -ne 0 ]
 then
     echo "ERROR: This script must be run as root!" >&2
     exit 1
-fi
-
-if [ $PREINIT_DEPENDENCIES -eq 1 ]
-then
-    install_deps_base
-    install_deps_zfs
-    echo "Finished installing all package dependencies!"
-    exit 0
-fi
-
-if [ ! -z "$NEW_KEYFILE"]
-then
-    if [ -e "$NEW_KEYFILE" ]
-    then
-	echo "ERROR: $NEW_KEYFILE already exists. Cannot generate keyfile!"
-	exit 1
-    fi
-
-    echo "Generating new key-file..."
-    dd if=/dev/random of=$NEW_KEYFILE bs=1024 count=4
-    chmod 0400 $NEW_KEYFILE
-    echo "Finished generating new key-file."
-    exit 0
 fi
 
 cat <<EOF > .lastrun
