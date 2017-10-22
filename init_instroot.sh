@@ -425,25 +425,27 @@ init_instroot_swapfile() {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    if ! mkfs.ext4 /dev/mapper/$LUKS_LABEL && mount /dev/mapper/$LUKS_LABEL $INSTROOT 2>&1 > /dev/null
+    mkfs.ext4 /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
+    if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
 	exit 1
     fi
 
     mkdir $INSTROOT/boot
-    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV && mount $BOOT_PARTDEV /$INSTROOT/boot 2>&1 > /dev/null
-    then
-	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
-	exit 1
-    fi
-
     mkdir $INSTROOT/etc
     mkdir $INSTROOT/root
     chmod 700 $INSTROOT/root
     mkdir -p $INSTROOT/var/swap
     chmod 700 $INSTROOT/var/swap
+
+    echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
+    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
+    then
+	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
+	exit 1
+    fi
     
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
@@ -469,11 +471,12 @@ EOF
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
-	if mkswap $SWAPFILE && swapon $SWAPFILE 2>&1 > /dev/null
+	mkswap $SWAPFILE 2>&1 > /dev/null
+	if swapon $SWAPFILE
 	then
 	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
 	else
-	    echo "WARNING: Failed to allocate swap space for $SWAPFILE!" >&2
+	    echo "WARNING: $SWAPFILE failed to swap on!" >&2
 	fi
     done
 
