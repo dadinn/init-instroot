@@ -24,3 +24,13 @@ Similar to before, except beforehand it additionally uses key-file `mykey`to unl
 In all examples the initialized devices will be mounted by default under `/mnt/instroot`, with `fstab` and `crypttab` entries generated and placed under `/etc`. For all LUKS encrypted devices header backups are saved under `/root/crypt/headers`.
 
 See usage help with option `-h` for more details about all options.
+
+# destroy_instroot.sh
+
+After each execution of `init_instroot.sh`a config file `.lastrun` is generated containing the parameters which were used. This allows easy un-initialization of the complete root setup with a single call to `destroy_instroot.sh`. This destroys any content which has since been added to the "initialized" root directory:
+  * It unmounts all folders,
+  * detaches swap devices,
+  * removes LVM volumes and volume-groups,
+  * unmounts and exports ZFS pools,
+  * closes all LUKS encrypted devices,
+  * destroys all partition tables created.
