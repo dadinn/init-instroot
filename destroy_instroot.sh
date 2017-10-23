@@ -20,6 +20,9 @@ Install root mountpoint ${INSTROOT:+(default $INSTROOT)}
 -l LABEL
 LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
 
+-d DEVICE
+Device with LUKS encrypted root.
+
 -z ZPOOL
 ZFS pool name for system directories and swap device ${ZPOOL:+(default $ZPOOL)}
 
@@ -38,7 +41,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:z:c:d:r:Sh' opt
+while getopts 'l:m:d:z:c:d:r:Sh' opt
 do
     case $opt in
 	l)
@@ -46,6 +49,9 @@ do
 	    ;;
 	m)
 	    INSTROOT=$OPTARG
+	    ;;
+	d)
+	    ROOT_DEVICE=$OPTARG
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -64,19 +70,31 @@ do
             exit 0
 	    ;;
 	:)
-	    echo "ERROR: Missing argument for potion: -$OPTARG" >&2
 	    exit 1
 	    ;;
 	\?)
-	    echo "ERROR: Illegal option -$OPTARG" >&2
-	    exit 1
-	    ;;
-	*)
-	    usage
 	    exit 1
 	    ;;
     esac
 done
+
+if [ -z "$ROOT_DRIVE" ]
+then
+    echo "ERROR: Root device is not specified!"
+    exit 1
+fi
+
+if [ -z "$LUKS_LABEL" ]
+then
+    echo "ERROR: LUKS label is not specified!"
+    exit 1
+fi
+
+if [ -z "$INSTROOT" ]
+then
+    echo "ERROR: Mounted root directory is not specified."
+    exit 1
+fi
 
 if [ ! -z "$ZPOOL" ]
 then
