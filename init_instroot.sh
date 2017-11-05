@@ -76,8 +76,8 @@ init_parts () {
 
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -Z \
-	   -n 1:0:+500M -N 2 \
-	   -t 1:ef02 -t 2:8300 2>&1 > /dev/null
+	   -n 1:0:+2M -n 2:0:+500M -N 3 \
+	   -t 1:ef02 -t 2:8300 -t 3:8300 -s 2>&1 > /dev/null
     partprobe $ROOT_DRIVE 2>&1 > /dev/null
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
@@ -690,8 +690,8 @@ EOF
 
 install_deps_base
 init_parts $ROOT_DRIVE
-BOOT_PARTDEV="${ROOT_DRIVE}1"
-LUKS_PARTDEV="${ROOT_DRIVE}2"
+BOOT_PARTDEV="${ROOT_DRIVE}2"
+LUKS_PARTDEV="${ROOT_DRIVE}3"
 init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
 
 if [ ! -z "$ZPOOL" ]
