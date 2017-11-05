@@ -684,8 +684,8 @@ ZPOOL=$ZPOOL
 ROOTFS=$ROOTFS
 DIRLIST=$DIRLIST
 SWAPSIZE=$SWAPSIZE
-INSTROOT=$INSTROOT
 SWAPFILES=$SWAPFILES
+INSTROOT=$INSTROOT
 EOF
 
 install_deps_base
@@ -712,4 +712,5 @@ else
     fi
 fi
 
+cp .lastrun $INSTROOT/CONFIG_ME
 echo "Finished setting up installation root $INSTROOT"
