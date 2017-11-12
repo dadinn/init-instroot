@@ -392,7 +392,6 @@ EOF
 	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
 	       cat >> $INSTROOT/etc/crypttab <<EOF
 $label UUID=${uuid} /root/crypt/${KEYFILENAME} luks
-
 EOF
 
 	       # backing up LUKS headers of ZFS member vdevs
