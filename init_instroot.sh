@@ -627,7 +627,7 @@ then
     exit 0
 fi
 
-if [ ! -z "$NEW_KEYFILE"]
+if [ ! -z "$NEW_KEYFILE" ]
 then
     KEYFILE=$(basename $NEW_KEYFILE)
     if [ -e "$KEYFILE" ]
