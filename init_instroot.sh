@@ -469,7 +469,7 @@ EOF
 	SWAPFILE_PATH="/var/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
 	SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
-	pv -Ss $SWAPSIZE < /dev/zero > $SWAPFILE
+	pv -Ss $SWAPFILE_SIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
 	mkswap $SWAPFILE 2>&1 > /dev/null
 	if swapon $SWAPFILE
