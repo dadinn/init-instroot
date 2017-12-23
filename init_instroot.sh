@@ -642,7 +642,6 @@ fi
 
 if [ $PREINIT_DEPENDENCIES -eq 1 ]
 then
-    install_deps_base
     install_deps_zfs
     echo "Finished installing all package dependencies!"
     exit 0
