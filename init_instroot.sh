@@ -179,7 +179,16 @@ init_zfsroot () {
     if zfs list $SYSTEMFS > /dev/null 2>&1
     then
 	echo "ERROR: $SYSTEMFS dataset already exist!" >&2
-	exit 1
+	read -p "Would you like to destroy and recreate dataset? [y/N]" recreate
+	case $recreate in
+	    [yY])
+		zfs destroy -r $SYSTEMFS
+		;;
+	    *)
+		echo "Skipped recreating ZFS root dataset. Exiting..."
+		exit 1
+		;;
+	esac
     fi
 
     # system dataset should be used for mountpoint inheritance only, and never automount
