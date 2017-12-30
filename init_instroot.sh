@@ -443,10 +443,8 @@ init_instroot_swapfile() {
 
     mkdir $INSTROOT/boot
     mkdir $INSTROOT/etc
-    mkdir $INSTROOT/root
-    chmod 700 $INSTROOT/root
-    mkdir -p $INSTROOT/var/swap
-    chmod 700 $INSTROOT/var/swap
+    mkdir -p $INSTROOT/root/swap
+    chmod -R 700 $INSTROOT/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
@@ -475,7 +473,7 @@ EOF
 
     for count in $(seq 1 $SWAPFILES)
     do
-	SWAPFILE_PATH="/var/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
+	SWAPFILE_PATH="/root/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
 	SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	pv -Ss $SWAPFILE_SIZE < /dev/zero > $SWAPFILE
