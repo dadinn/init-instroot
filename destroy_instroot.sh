@@ -96,6 +96,12 @@ then
     exit 1
 fi
 
+if [ $(id -u) -ne 0 ]
+then
+    echo "ERROR: This script must be run as root!" >&2
+    exit 1
+fi
+
 if [ ! -z "$ZPOOL" ]
 then
     swapoff /dev/zvol/$ZPOOL/$ROOTFS/swap
