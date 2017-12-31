@@ -153,12 +153,13 @@ init_cryptdevs () {
 }
 
 init_zfsroot () {
-    if [ $# -eq 4 ]
+    if [ $# -eq 5 ]
     then
 	local ZPOOL=$1
 	local FSNAME=$2
 	local SWAPSIZE=$3
-	local DIRLIST=$4
+	local SWAPFILES=$4
+	local DIRLIST=$5
 
     else
 	echo "ERROR: called init_zfsroot with $# args: $@" >&2
@@ -196,11 +197,14 @@ init_zfsroot () {
     for i in $(echo $DIRLIST | tr "," "\n")
     do zfs create $SYSTEMFS/$i; done
 
-    echo "Creating ZFS volume for swap device..."
-    zfs create -V $SWAPSIZE $SYSTEMFS/swap
-    mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
-    swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
-    echo "Finished setting up ZFS pool: $ZPOOL"
+    if [ "$SWAPFILES" -eq 0 ]
+    then
+	echo "Creating ZFS volume for swap device..."
+	zfs create -V $SWAPSIZE $SYSTEMFS/swap
+	mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
+	swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
+	echo "Finished setting up ZFS pool: $ZPOOL"
+    fi
 }
 
 init_instroot_lvm () {
@@ -295,7 +299,7 @@ EOF
 }
 
 init_instroot_zfs () {
-    if [ $# -eq 9 ]
+    if [ $# -eq 10 ]
     then
 	local INSTROOT=$1
 	local BOOT_PARTDEV=$2
@@ -305,7 +309,8 @@ init_instroot_zfs () {
 	local DEVLIST=$6
 	local ZPOOL=$7
 	local ROOTFS=$8
-	local DIRLIST=$9
+	local SWAPFILES=$9
+	local DIRLIST=$10
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
@@ -346,18 +351,46 @@ init_instroot_zfs () {
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
-    SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 
     echo "Generating entries for ${INSTROOT}/etc/fstab..."
     cat > $INSTROOT/etc/fstab <<EOF
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
-UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
-
-# systemd specific legacy mounts of ZFS datasets
 EOF
+    if [ "$SWAPFILES" -gt 0 ]
+    then
+	mkdir $INSTROOT/root/swap
+	chmod 700 $INSTROOT/root/swap
+	echo $'\n\n# Swapfiles\n' >> INSTROOT/etc/fstab
 
+	SWAPSIZE_NUM=$(echo $SWAP_SIZE|sed -E 's;([0-9]+)[KMGT]?;\1;')
+	SWAPSIZE_KMGT=$(echo $SWAP_SIZE|sed -E 's;[0-9]+([KMGT]?);\1;')
+	SWAPFILE_SIZE="$(($SWAPSIZE_NUM / $SWAPFILES))$SWAPSIZE_KMGT"
+
+	for count in $(seq 1 $SWAPFILES)
+	do
+	    SWAPFILE_PATH="/root/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
+	    SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
+	    echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
+	    pv -Ss $SWAPFILE_SIZE < /dev/zero > $SWAPFILE
+	    chmod 600 $SWAPFILE
+	    mkswap $SWAPFILE 2>&1 > /dev/null
+	    if swapon $SWAPFILE
+	    then
+		echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+	    else
+		echo "WARNING: $SWAPFILE failed to swap on!" >&2
+	    fi
+	done
+    else
+		SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
+	cat >> $INSTROOT/etc/fstab <<EOF
+UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
+EOF
+    fi
+
+    echo $'\n\n# systemd specific legacy mounts of ZFS datasets\n' >> $INSTROOT/etc/fstab
     # systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
     for i in $(echo $DIRLIST | tr "," "\n")
     do
@@ -706,8 +739,8 @@ then
 	init_cryptdevs "$KEYFILE" "$DEVLIST"
     fi
     install_deps_zfs
-    init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE "$DIRLIST"
-    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS "$DIRLIST"
+    init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
+    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS $SWAPFILES "$DIRLIST"
 else
     if [ "$SWAPFILES" -gt 0 ]
     then
