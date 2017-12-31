@@ -321,8 +321,18 @@ init_instroot_zfs () {
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
 	[ -b $LUKS_PARTDEV ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
 	[ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
-	zpool list $ZPOOL || (echo "ERROR: zpool $ZPOOL not available" && exit 1) >&2
-	zfs list $ZPOOL/$ROOTFS || (echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" && exit 1) >&2
+
+	if ! zpool list $ZPOOL 2>&1 > /dev/null
+	then
+	    echo "ERROR: zpool $ZPOOL not available" >&2
+	    exit 1
+	fi
+
+	if ! zfs list $ZPOOL/$ROOTFS 2>&1 > /dev/null
+	then
+	    echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" >&2
+	    exit 1
+	fi
     else
 	echo "ERROR: called init_instroot_zfs with $# args: $@" >&2
 	exit 1
