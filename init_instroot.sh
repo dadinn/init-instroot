@@ -377,7 +377,10 @@ EOF
     then
 	mkdir $INSTROOT/root/swap
 	chmod 700 $INSTROOT/root/swap
-	echo $'\n\n# Swapfiles\n' >> $INSTROOT/etc/fstab
+	cat >> $INSTROOT/etc/fstab <<EOF
+
+# swapfiles
+EOF
 
 	SWAPSIZE_NUM=$(echo $SWAP_SIZE|sed -E 's;([0-9]+)[KMGT]?;\1;')
 	SWAPSIZE_KMGT=$(echo $SWAP_SIZE|sed -E 's;[0-9]+([KMGT]?);\1;')
@@ -399,14 +402,17 @@ EOF
 	    fi
 	done
     else
-		SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
+	SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 	cat >> $INSTROOT/etc/fstab <<EOF
 UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
 EOF
     fi
 
-    echo $'\n\n# systemd specific legacy mounts of ZFS datasets\n' >> $INSTROOT/etc/fstab
-    # systemd specific legacy ZFS fstab mountpoint entries (commented out by default)
+    cat >> $INSTROOT/etc/fstab <<EOF
+
+# systemd specific legacy mounts of ZFS datasets
+EOF
+
     for i in $(echo $DIRLIST | tr "," "\n")
     do
 	cat >> $INSTROOT/etc/fstab <<EOF
@@ -414,7 +420,6 @@ EOF
 EOF
     done
     unset i
-    #echo "Finished generating entries in ${INSTROOT}/etc/fstab"
 
     echo "Generating entries for ${INSTROOT}/etc/crypttab..."
     cat > $INSTROOT/etc/crypttab <<EOF
@@ -512,7 +517,7 @@ init_instroot_swapfile() {
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
 
-# Swapfiles
+# swapfiles
 EOF
 
     SWAPSIZE_NUM=$(echo $SWAP_SIZE|sed -E 's;([0-9]+)[KMGT]?;\1;')
