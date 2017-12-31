@@ -200,7 +200,11 @@ init_zfsroot () {
     if [ "$SWAPFILES" -eq 0 ]
     then
 	echo "Creating ZFS volume for swap device..."
-	zfs create -V $SWAPSIZE $SYSTEMFS/swap
+	zfs create -V $SWAPSIZE \
+	    -o sync=always \
+	    -o primarycache=metadata \
+	    -o logbias=throughput \
+	    $SYSTEMFS/swap
 	mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
 	swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
 	echo "Finished setting up ZFS pool: $ZPOOL"
