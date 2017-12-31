@@ -255,7 +255,7 @@ init_instroot_lvm () {
     chmod 700 $INSTROOT/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
@@ -340,7 +340,7 @@ init_instroot_zfs () {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    mkfs.ext4 /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
+    mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
     if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!" >&2
@@ -353,7 +353,7 @@ init_instroot_zfs () {
     chmod 700 $INSTROOT/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
@@ -482,7 +482,7 @@ init_instroot_swapfile() {
 
     mkdir -p $INSTROOT
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
-    mkfs.ext4 /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
+    mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
     if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
 	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
@@ -495,7 +495,7 @@ init_instroot_swapfile() {
     chmod -R 700 $INSTROOT/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -qF -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
 	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
