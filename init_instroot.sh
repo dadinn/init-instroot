@@ -303,7 +303,7 @@ EOF
 }
 
 init_instroot_zfs () {
-    if [ $# -eq 10 ]
+    if [ $# -eq 11 ]
     then
 	local INSTROOT=$1
 	local BOOT_PARTDEV=$2
@@ -313,8 +313,9 @@ init_instroot_zfs () {
 	local DEVLIST=$6
 	local ZPOOL=$7
 	local ROOTFS=$8
-	local SWAPFILES=$9
-	local DIRLIST=$10
+	local SWAP_SIZE=$9
+	local SWAPFILES=$10
+	local DIRLIST=$11
 
 	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
 	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
@@ -366,7 +367,7 @@ EOF
     then
 	mkdir $INSTROOT/root/swap
 	chmod 700 $INSTROOT/root/swap
-	echo $'\n\n# Swapfiles\n' >> INSTROOT/etc/fstab
+	echo $'\n\n# Swapfiles\n' >> $INSTROOT/etc/fstab
 
 	SWAPSIZE_NUM=$(echo $SWAP_SIZE|sed -E 's;([0-9]+)[KMGT]?;\1;')
 	SWAPSIZE_KMGT=$(echo $SWAP_SIZE|sed -E 's;[0-9]+([KMGT]?);\1;')
@@ -744,7 +745,7 @@ then
     fi
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
-    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS $SWAPFILES "$DIRLIST"
+    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
 else
     if [ "$SWAPFILES" -gt 0 ]
     then
