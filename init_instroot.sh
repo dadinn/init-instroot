@@ -65,12 +65,12 @@ install_deps_zfs () {
     fi
 }
 
-init_parts () {
+init_parts_bios () {
     if [ $# -eq 1 ]
     then
 	local ROOT_DRIVE=$1
     else
-	echo "ERROR: called init_parts with $# args: $@" >&2
+	echo "ERROR: called init_parts_bios with $# args: $@" >&2
 	exit 1
     fi
 
@@ -79,6 +79,24 @@ init_parts () {
 	   -n 1:0:+2M -n 2:0:+500M -N 3 \
 	   -t 1:ef02 -t 2:8300 -t 3:8300 -s 2>&1 > /dev/null
     partprobe $ROOT_DRIVE 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $ROOT_DRIVE"
+}
+
+init_parts_efi () {
+    if [ $# -eq 1 ]
+    then
+	local ROOT_DRIVE=$1
+    else
+	echo "ERROR: called init_parts_efi with $# args: $@" >&2
+	exit 1
+    fi
+
+    echo "Setting up partitions..."
+    sgdisk $ROOT_DRIVE -Z \
+	   -n -n 1:0:+500M -N 2 \
+	   -t 1:ef00 -t 2:8300 2>&1 > /dev/null
+    partprobe $ROOT_DRIVE 2>&1 > /dev/null
+    mkfs.fat -F32 ${ROOT_DRIVE}1 2>&1 > /dev/null
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
 
@@ -564,6 +582,7 @@ LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
 INSTROOT=/mnt/instroot
+UEFI_BOOT=0
 SWAPFILES=0
 PREINIT_DEPENDENCIES=0
 
@@ -621,13 +640,16 @@ Number of swapfiles to use to break total swap-space up into. Swapfiles are crea
 in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.
 (default $SWAPFILES)
 
+-E
+Use UEFI boot partitions instead of BIOS (default)
+
 -h
 This usage help...
 
 EOF
 }
 
-while getopts 'l:m:Zz:K:k:c:d:r:S:s:h' opt
+while getopts 'l:m:Zz:K:k:c:d:r:S:s:Eh' opt
 do
     case $opt in
 	l)
@@ -662,6 +684,9 @@ do
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
+	    ;;
+	E)
+	    UEFI_BOOT=1
 	    ;;
 	h)
             usage
@@ -735,6 +760,7 @@ fi
 
 cat <<EOF > .lastrun
 ROOT_DRIVE=$ROOT_DRIVE
+UEFI_BOOT=$UEFI_BOOT
 LUKS_LABEL=$LUKS_LABEL
 KEYFILE=$KEYFILE
 DEVLIST=$DEVLIST
@@ -747,9 +773,18 @@ INSTROOT=$INSTROOT
 EOF
 
 install_deps_base
-init_parts $ROOT_DRIVE
-BOOT_PARTDEV="${ROOT_DRIVE}2"
-LUKS_PARTDEV="${ROOT_DRIVE}3"
+
+if [ "$UEFI_BOOT" -eq 0 ]
+then
+    init_parts_bios $ROOT_DRIVE
+    BOOT_PARTDEV="${ROOT_DRIVE}2"
+    LUKS_PARTDEV="${ROOT_DRIVE}3"
+else
+    init_parts_efi $ROOT_DRIVE
+    BOOT_PARTDEV="${ROOT_DRIVE}1"
+    LUKS_PARTDEV="${ROOT_DRIVE}2"
+fi
+
 init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
 
 if [ ! -z "$ZPOOL" ]
