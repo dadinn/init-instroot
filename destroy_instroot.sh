@@ -120,7 +120,7 @@ then
     done
 elif [ "${SWAPFILES:-0}" -gt 0 ]
 then
-    swapoff $INSTROOT/var/swap/*
+    swapoff $INSTROOT/root/swap/*
     umount $INSTROOT/boot
     umount $INSTROOT
 else
