@@ -93,8 +93,8 @@ init_parts_efi () {
 
     echo "Setting up partitions..."
     sgdisk $ROOT_DRIVE -Z \
-	   -n -n 1:0:+500M -N 2 \
-	   -t 1:ef00 -t 2:8300 2>&1 > /dev/null
+	   -n 1:0:+500M -N 2 \
+	   -t 1:ef00 -t 2:8300 -s 2>&1 > /dev/null
     partprobe $ROOT_DRIVE 2>&1 > /dev/null
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
