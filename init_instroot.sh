@@ -96,7 +96,6 @@ init_parts_efi () {
 	   -n -n 1:0:+500M -N 2 \
 	   -t 1:ef00 -t 2:8300 2>&1 > /dev/null
     partprobe $ROOT_DRIVE 2>&1 > /dev/null
-    mkfs.fat -F32 ${ROOT_DRIVE}1 2>&1 > /dev/null
     echo "Finished setting up partitions on: $ROOT_DRIVE"
 }
 
@@ -273,7 +272,6 @@ init_instroot_lvm () {
     chmod 700 $INSTROOT/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
 	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
@@ -779,10 +777,12 @@ then
     init_parts_bios $ROOT_DRIVE
     BOOT_PARTDEV="${ROOT_DRIVE}2"
     LUKS_PARTDEV="${ROOT_DRIVE}3"
+    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
 else
     init_parts_efi $ROOT_DRIVE
     BOOT_PARTDEV="${ROOT_DRIVE}1"
     LUKS_PARTDEV="${ROOT_DRIVE}2"
+    mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
 fi
 
 init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
