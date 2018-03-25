@@ -98,6 +98,52 @@ init_parts_efi () {
     echo "Finished setting up partitions on: $ROOT_DEV"
 }
 
+init_parts_boot_bios () {
+    if [ $# -eq 1 ]
+    then
+	local BOOT_DEV=$1
+    else
+	ERROR_EXIT "called init_parts_boot_bios with $# args: $@"
+    fi
+
+    echo "Setting up partitions..."
+    sgdisk $BOOT_DEV -Z \
+	   -n 1:0:+2M -N 2  \
+	   -t 1:ef02 -t 2:8300 2>&1 > /dev/null
+    partprobe $BOOT_DEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $BOOT_DEV"
+}
+
+init_parts_boot_efi () {
+    if [ $# -eq 1 ]
+    then
+	local BOOT_DEV=$1
+    else
+	ERROR_EXIT "called init_parts_boot_efi with $# args: $@"
+    fi
+
+    echo "Setting up partitions..."
+    sgdisk $BOOT_DEV -Z \
+	   -N 1 -t 1:ef00 2>&1 > /dev/null
+    partprobe $BOOT_DEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $BOOT_DEV"
+}
+
+init_parts_root(){
+    if [ $# -eq 1 ]
+    then
+	local ROOT_DEV=$1
+	[ -b "$ROOT_DEV" ] || ERROR_EXIT "$ROOT_DEV has to be a block device!"
+    else
+	ERROR_EXIT "called init_parts_root with $# args: $@"
+    fi
+
+    echo "Setting up partitions..."
+    sgdisk $ROOT_DEV -Z -N 1 -t 1:8300 2>&1 > /dev/null
+    partprobe $ROOT_DEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on $ROOT_DEV"
+}
+
 init_cryptroot () {
     if [ $# -eq 2 ]
     then
@@ -763,17 +809,35 @@ EOF
 
 install_deps_base
 
-if [ "$UEFI_BOOT" -eq 0 ]
+if [ -z "$BOOT_DEV" ]
 then
-    init_parts_bios $ROOT_DEV
-    BOOT_PARTDEV="${ROOT_DEV}2"
-    LUKS_PARTDEV="${ROOT_DEV}3"
-    mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    if [ "$UEFI_BOOT" -eq 0 ]
+    then
+	init_parts_bios $ROOT_DEV
+	BOOT_PARTDEV="${ROOT_DEV}2"
+	LUKS_PARTDEV="${ROOT_DEV}3"
+	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    else
+	init_parts_efi $ROOT_DEV
+	BOOT_PARTDEV="${ROOT_DEV}1"
+	LUKS_PARTDEV="${ROOT_DEV}2"
+	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
+    fi
 else
-    init_parts_efi $ROOT_DEV
-    BOOT_PARTDEV="${ROOT_DEV}1"
-    LUKS_PARTDEV="${ROOT_DEV}2"
-    mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
+    if [ "$UEFI_BOOT" -eq 0 ]
+    then
+	init_parts_root $ROOT_DEV
+	LUKS_PARTDEV="${ROOT_DEV}1"
+	init_parts_boot_bios $BOOT_DEV
+	BOOT_PARTDEV="${BOOT_DEV}2"
+	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
+    else
+	init_parts_root $ROOT_DEV
+	LUKS_PARTDEV="${ROOT_DEV}1"
+	init_parts_boot_efi $BOOT_DEV
+	BOOT_PARTDEV="${BOOT_DEV}1"
+	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
+    fi
 fi
 
 init_cryptroot $LUKS_PARTDEV $LUKS_LABEL
