@@ -620,6 +620,9 @@ Number of swapfiles to use to break total swap-space up into. Swapfiles are crea
 in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.
 (default $SWAPFILES)
 
+-b BOOTDEV
+Use separate boot device for /boot and installing GRUB
+
 -E
 Use UEFI boot partitions instead of BIOS (default)
 
@@ -629,7 +632,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:Zz:K:k:c:d:r:S:s:Eh' opt
+while getopts 'l:m:Zz:K:k:c:d:r:S:s:b:Eh' opt
 do
     case $opt in
 	l)
@@ -678,6 +681,13 @@ do
 	    if [ -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 	    then
 		ERROR_EXIT "swap size has to be specified with KGMT suffixes"
+	    fi
+	    ;;
+	b)
+	    BOOT_DEV=$OPTARG
+	    if [ ! -b "$BOOT_DEV" ]
+	    then
+		ERROR_EXIT "$BOOT_DEV is not a valid device"
 	    fi
 	    ;;
 	E)
@@ -738,6 +748,7 @@ fi
 
 cat <<EOF > .lastrun
 ROOT_DEV=$ROOT_DEV
+BOOT_DEV=$BOOT_DEV
 UEFI_BOOT=$UEFI_BOOT
 LUKS_LABEL=$LUKS_LABEL
 KEYFILE=$KEYFILE
