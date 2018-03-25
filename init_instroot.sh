@@ -663,10 +663,22 @@ do
 	    ZPOOL=$OPTARG
 	    ;;
 	K)
-	    NEW_KEYFILE=$OPTARG
+	    NEW_KEYFILE=$(basename $OPTARG)
+
+	    if [ -e "$NEW_KEYFILE" ]
+	    then
+		echo "ERROR: $NEW_KEYFILE already exists!"
+		exit 1
+	    fi
 	    ;;
 	k)
 	    KEYFILE=$OPTARG
+
+	    if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
+	    then
+		echo "ERROR: keyfile $KEYFILE is not found!" >&2
+		exit 1
+	    fi
 	    ;;
 	c)
 	    DEVLIST=$OPTARG
@@ -682,6 +694,11 @@ do
 	    ;;
 	s)
 	    SWAPSIZE=$OPTARG
+
+	    if [ -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
+	    then
+		echo "ERROR swap size has to be specified with KGMT suffixes"
+		exit 1
 	    ;;
 	E)
 	    UEFI_BOOT=1
@@ -703,17 +720,10 @@ shift $(($OPTIND - 1))
 
 if [ ! -z "$NEW_KEYFILE" ]
 then
-    KEYFILE=$(basename $NEW_KEYFILE)
-    if [ -e "$KEYFILE" ]
-    then
-	echo "ERROR: $KEYFILE already exists. Cannot generate keyfile!"
-	exit 1
-    fi
-
-    echo "Generating new key-file $KEYFILE..."
-    dd if=/dev/random of=$KEYFILE bs=1024 count=4
-    chmod 0400 $KEYFILE
-    echo "Finished generating new key-file $KEYFILE."
+    echo "Generating new key-file $NEW_KEYFILE..."
+    dd if=/dev/random of=$NEW_KEYFILE bs=1024 count=4
+    chmod 0400 $NEW_KEYFILE
+    echo "Finished generating new key-file $NEW_KEYFILE."
     exit 0
 fi
 
@@ -738,21 +748,15 @@ else
     exit 1
 fi
 
-if [ -z "$SWAPSIZE" -o -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
+if [ -z "$SWAPSIZE" ]
 then
-    echo "ERROR: Swap size has to be specified (KMGT suffixes allowed)" >&2
+    echo "ERROR: Swap size must be specified!" >&2
     exit 1
 fi
 
 if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
 then
-    echo "ERROR: Encrypted device mappings cannot be specified without keyfile!" >&2
-    exit 1
-fi
-
-if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
-then
-    echo "ERROR: keyfile $KEYFILE is not found!" >&2
+    echo "ERROR: Keyfile must be specified for encrypted devices!" >&2
     exit 1
 fi
 
