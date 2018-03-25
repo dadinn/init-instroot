@@ -1,17 +1,23 @@
 #!/bin/sh
 
+ERROR_EXIT() {
+    local MESSAGE="$1"
+    local CODE=${2:-1}
+    echo "ERROR: $MESSAGE" >&2
+    exit $CODE
+}
+
 partuuid () {
     if [ ! "$#" -eq 2 -o ! -b "$1" -o ! "$2" -lt 3 ]
     then
-	echo "ERROR: called partuuid with args: $@" >&2
-	exit 1
+	ERROR_EXIT "called partuuid with args: $@"
     fi
 
     sgdisk -i $2 $1 | grep -E '^Partition unique GUID:' | sed -e 's;^[^:]*: \([[:alnum:]-]*\)$;\1;' | tr '[:upper:]' '[:lower:]'
 }
 
 fsuuid () {
-    [ $# -eq 1 ] || (echo "ERROR: called fsuuid with $# args: $@" && exit 1) >&2
+    [ $# -eq 1 ] || ERROR_EXIT "called fsuuid with $# args: $@"
 
     blkid -s UUID -o value $1
 }
@@ -21,9 +27,7 @@ install_deps_base () {
     then
 	if [ ! -e /etc/debian_version ]
 	then
-	    echo "ERROR: necessary binaries are missing!" >&2
-	    echo "ERROR: Please make sure following binaries are available: sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate" >&2
-	    exit 1
+	    ERROR_EXIT "Necessary binaries are missing: sgdisk partprobe cryptsetup pv pvcreate vgcreate lvcreate!"
 	fi
 
 	echo "Installing necessary packages..."
@@ -37,9 +41,7 @@ install_deps_zfs () {
     then
 	if [ ! -e /etc/debian_version ]
 	then
-	    echo "ERROR: necessary binaries are missing!" >&2
-	    echo "ERROR: please make sure ZFS kernel modules are loaded and CLI tools *zpool* and *zfs* are avialable." >&2
-	    exit 1
+	    ERROR_EXIT "Necessary binaries are missing! Please make sure ZFS kernel modules are loaded and CLI commands *zpool* and *zfs* are available."
 	fi
 
 	RELEASE=$(cat /etc/debian_version | sed -e 's;^\([0-9][0-9]*\)\..*$;\1;')
@@ -57,8 +59,7 @@ install_deps_zfs () {
 		modprobe zfs
 		;;
 	    *)
-		echo "ERROR: Debian version $RELEASE is not supported!" >&2
-		exit 1
+		ERROR_EXIT "Debian version $RELEASE is not supported!"
 		;;
 	esac
 	touch .deps_zfs
@@ -70,8 +71,7 @@ init_parts_bios () {
     then
 	local ROOT_DRIVE=$1
     else
-	echo "ERROR: called init_parts_bios with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_parts_bios with $# args: $@"
     fi
 
     echo "Setting up partitions..."
@@ -87,8 +87,7 @@ init_parts_efi () {
     then
 	local ROOT_DRIVE=$1
     else
-	echo "ERROR: called init_parts_efi with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_parts_efi with $# args: $@"
     fi
 
     echo "Setting up partitions..."
@@ -105,8 +104,7 @@ init_cryptroot () {
 	local LUKS_PARTDEV=$1
 	local LUKS_LABEL=$2
     else
-	echo "ERROR: called init_cryptroot with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_cryptroot with $# args: $@"
     fi
 
     echo
@@ -117,8 +115,7 @@ init_cryptroot () {
     echo "Opening LUKS device..."
     if ! cryptsetup luksOpen $LUKS_PARTDEV $LUKS_LABEL
     then
-	echo "ERROR: failed to open LUKS device: $LUKS_LABEL " >&2
-	exit 1
+	ERROR_EXIT "failed to open LUKS device: $LUKS_LABEL"
     fi
 
     cat <<EOF
@@ -153,8 +150,7 @@ init_cryptdevs () {
 	local KEYFILE=$1
 	local DEVLIST=$2
     else
-	echo "ERROR: called init_cryptdevs with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_cryptdevs with $# args: $@"
     fi
 
     for i in $(echo $DEVLIST| tr "," "\n")
@@ -179,8 +175,7 @@ init_zfsroot () {
 	local DIRLIST=$5
 
     else
-	echo "ERROR: called init_zfsroot with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_zfsroot with $# args: $@"
     fi
 
     SYSTEMFS=$ZPOOL/$FSNAME
@@ -189,14 +184,13 @@ init_zfsroot () {
     then
 	if ! zpool import $ZPOOL > /dev/null
 	then
-	    echo "ERROR: could not find or import ZFS pool: $ZPOOL" >&2
-	    exit 1
+	    ERROR_EXIT "could not find or import ZFS pool: $ZPOOL"
 	fi
     fi
 
     if zfs list $SYSTEMFS > /dev/null 2>&1
     then
-	echo "ERROR: $SYSTEMFS dataset already exist!" >&2
+	echo "WARNING: $SYSTEMFS dataset already exist!" >&2
 	read -p "Would you like to destroy and recreate dataset? [y/N]" recreate
 	case $recreate in
 	    [yY])
@@ -237,13 +231,12 @@ init_instroot_lvm () {
 	local LUKS_LABEL=$4
 	local SWAP_SIZE=$5
 
-	[ ! -e $INSTROOT ] || (echo "ERROR: $INSTROOT already exists" && exit 1) >&2
-	[ -b $BOOT_PARTDEV ] || (echo "ERROR: $BOOT_PARTDEV has to be a block device" && exit 1) >&2
-	[ -b $LUKS_PARTDEV ] || (echo "ERROR: $LUKS_PARTDEV has to be a block device" && exit 1) >&2
-	[ ! -z $(echo $LUKS_LABEL | grep -E '^[[:alnum:]_]+$') ] || (echo "ERROR: invalid LUKS label: $LUKS_LABEL" && exit 1) >&2
+	[ ! -e $INSTROOT ] || ERROR_EXIT "$INSTROOT already exists"
+	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "$BOOT_PARTDEV has to be a block device"
+	[ -b $LUKS_PARTDEV ] || ERROR_EXIT "$LUKS_PARTDEV has to be a block device"
+	[ ! -z $(echo $LUKS_LABEL | grep -E '^[[:alnum:]_]+$') ] || ERROR_EXIT "invalid LUKS label: $LUKS_LABEL"
     else
-	echo "ERROR: called init_instroot_lvm with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_instroot_lvm with $# args: $@"
     fi
 
     VG_NAME=${LUKS_LABEL}_vg
@@ -262,8 +255,7 @@ init_instroot_lvm () {
     mkfs.ext4 -q $LV_ROOT 2>&1 > /dev/null
     if ! mount $LV_ROOT $INSTROOT
     then
-	echo "ERROR: $LV_ROOT failed to mount as $INSTROOT!" >&2
-	exit 1
+	ERROR_EXIT "$LV_ROOT failed to mount as $INSTROOT!"
     fi
 
     mkdir $INSTROOT/boot
@@ -274,16 +266,14 @@ init_instroot_lvm () {
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
-	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
-	exit 1
+	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $INSTROOT/boot!"
     fi
 
     echo "Formatting $LV_SWAP to be used as swap space..."
     mkswap $LV_SWAP 2>&1 > /dev/null
     if ! swapon $LV_SWAP
     then
-	echo "ERROR: $LV_SWAP failed to swap on!" >&2
-	exit 1
+	ERROR_EXIT "$LV_SWAP failed to swap on!"
     fi
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
@@ -333,25 +323,22 @@ init_instroot_zfs () {
 	local SWAPFILES=$10
 	local DIRLIST=$11
 
-	[ ! -e $INSTROOT ] || (echo "ERROR: target $INSTROOT already exists" && exit 1) >&2
-	[ -b $BOOT_PARTDEV ] || (echo "ERROR: cannot find boot partition device $BOOT_PARTDEV" && exit 1) >&2
-	[ -b $LUKS_PARTDEV ] || (echo "ERROR: cannot find root partition device $LUKS_PARTDEV" && exit 1) >&2
-	[ -b /dev/mapper/$LUKS_LABEL ] || (echo "ERROR: cannot find LUKS device $LUKS_LABEL" && exit 1) >&2
+	[ ! -e $INSTROOT ] || ERROR_EXIT "target $INSTROOT already exists!"
+	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "cannot find boot partition device $BOOT_PARTDEV"
+	[ -b $LUKS_PARTDEV ] || ERROR_EXIT "cannot find root partition device $LUKS_PARTDEV"
+	[ -b /dev/mapper/$LUKS_LABEL ] || ERROR_EXIT "cannot find LUKS device $LUKS_LABEL"
 
 	if ! zpool list $ZPOOL 2>&1 > /dev/null
 	then
-	    echo "ERROR: zpool $ZPOOL not available" >&2
-	    exit 1
+	    ERROR_EXIT "zpool $ZPOOL not available"
 	fi
 
 	if ! zfs list $ZPOOL/$ROOTFS 2>&1 > /dev/null
 	then
-	    echo "ERROR: ZFS dataset $ZPOOL/ROOTFS does not exist" >&2
-	    exit 1
+	    ERROR_EXIT "ZFS dataset $ZPOOL/ROOTFS does not exist"
 	fi
     else
-	echo "ERROR: called init_instroot_zfs with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_instroot_zfs with $# args: $@"
     fi
 
     mkdir -p $INSTROOT
@@ -359,8 +346,7 @@ init_instroot_zfs () {
     mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
     if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
-	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!" >&2
-	exit 1
+	 ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
     fi
 
     mkdir $INSTROOT/boot
@@ -372,8 +358,7 @@ init_instroot_zfs () {
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
-	echo "ERROR: $BOOT_PARTDEV failed to mount as $INSTROOT/boot!" >&2
-	exit 1
+	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $INSTROOT/boot!"
     fi
 
     echo "Mounting all ZFS root directories..."
@@ -495,8 +480,7 @@ init_instroot_swapfile() {
 	local SWAP_SIZE=$5
 	local SWAPFILES=$6
     else
-	echo "ERROR: called init_instroot_swapfile with $# args: $@" >&2
-	exit 1
+	ERROR_EXIT "called init_instroot_swapfile with $# args: $@"
     fi
 
     echo "Setting up installation root with swapfile for swap space..."
@@ -506,8 +490,7 @@ init_instroot_swapfile() {
     mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
     if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
     then
-	echo "ERROR: Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
-	exit 1
+	ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
     fi
 
     mkdir $INSTROOT/boot
@@ -519,8 +502,7 @@ init_instroot_swapfile() {
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     if ! mount $BOOT_PARTDEV /$INSTROOT/boot
     then
-	echo "ERROR: Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!" >&2
-	exit 1
+	ERROR_EXIT "Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!"
     fi
     
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
@@ -667,8 +649,7 @@ do
 
 	    if [ -e "$NEW_KEYFILE" ]
 	    then
-		echo "ERROR: $NEW_KEYFILE already exists!"
-		exit 1
+		ERROR_EXIT "$NEW_KEYFILE already exists!"
 	    fi
 	    ;;
 	k)
@@ -676,8 +657,7 @@ do
 
 	    if [ ! -z "$KEYFILE" -a ! -e "$KEYFILE" ]
 	    then
-		echo "ERROR: keyfile $KEYFILE is not found!" >&2
-		exit 1
+		ERROR_EXIT "keyfile $KEYFILE is not found!"
 	    fi
 	    ;;
 	c)
@@ -697,8 +677,8 @@ do
 
 	    if [ -z "$(echo $SWAPSIZE | grep -E '^[0-9]+[KMGT]?$')" ]
 	    then
-		echo "ERROR swap size has to be specified with KGMT suffixes"
-		exit 1
+		ERROR_EXIT "swap size has to be specified with KGMT suffixes"
+	    fi
 	    ;;
 	E)
 	    UEFI_BOOT=1
@@ -729,8 +709,7 @@ fi
 
 if [ $(id -u) -ne 0 ]
 then
-    echo "ERROR: This script must be run as root!" >&2
-    exit 1
+    ERROR_EXIT "This script must be run as root!"
 fi
 
 if [ $PREINIT_DEPENDENCIES -eq 1 ]
@@ -744,20 +723,17 @@ if [ "$#" -eq 1 -a -b "$1" ]
 then
     ROOT_DRIVE=$1
 else
-    echo "ERROR: Block device must be specified for root filesystem!" >&2
-    exit 1
+    ERROR_EXIT "Block device must be specified for root filesystem!"
 fi
 
 if [ -z "$SWAPSIZE" ]
 then
-    echo "ERROR: Swap size must be specified!" >&2
-    exit 1
+    ERROR_EXIT "Swap size must be specified!"
 fi
 
 if [ ! -z "$DEVLIST" -a -z "$KEYFILE" ]
 then
-    echo "ERROR: Keyfile must be specified for encrypted devices!" >&2
-    exit 1
+    ERROR_EXIT "Keyfile must be specified for encrypted devices!"
 fi
 
 cat <<EOF > .lastrun
