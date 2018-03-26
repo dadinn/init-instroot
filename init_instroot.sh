@@ -69,33 +69,33 @@ install_deps_zfs () {
 init_parts_bios () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DRIVE=$1
+	local ROOT_DEV=$1
     else
 	ERROR_EXIT "called init_parts_bios with $# args: $@"
     fi
 
     echo "Setting up partitions..."
-    sgdisk $ROOT_DRIVE -Z \
+    sgdisk $ROOT_DEV -Z \
 	   -n 1:0:+2M -n 2:0:+500M -N 3 \
 	   -t 1:ef02 -t 2:8300 -t 3:8300 -s 2>&1 > /dev/null
-    partprobe $ROOT_DRIVE 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $ROOT_DRIVE"
+    partprobe $ROOT_DEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $ROOT_DEV"
 }
 
 init_parts_efi () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DRIVE=$1
+	local ROOT_DEV=$1
     else
 	ERROR_EXIT "called init_parts_efi with $# args: $@"
     fi
 
     echo "Setting up partitions..."
-    sgdisk $ROOT_DRIVE -Z \
+    sgdisk $ROOT_DEV -Z \
 	   -n 1:0:+500M -N 2 \
 	   -t 1:ef00 -t 2:8300 -s 2>&1 > /dev/null
-    partprobe $ROOT_DRIVE 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $ROOT_DRIVE"
+    partprobe $ROOT_DEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $ROOT_DEV"
 }
 
 init_cryptroot () {
@@ -567,7 +567,7 @@ SWAPFILES=0
 PREINIT_DEPENDENCIES=0
 
  # make sure root device can only be passed as CLI argument
-unset ROOT_DRIVE
+unset ROOT_DEV
 unset NEW_KEYFILE
 
 usage () {
@@ -721,7 +721,7 @@ fi
 
 if [ "$#" -eq 1 -a -b "$1" ]
 then
-    ROOT_DRIVE=$1
+    ROOT_DEV=$1
 else
     ERROR_EXIT "Block device must be specified for root filesystem!"
 fi
@@ -737,7 +737,7 @@ then
 fi
 
 cat <<EOF > .lastrun
-ROOT_DRIVE=$ROOT_DRIVE
+ROOT_DEV=$ROOT_DEV
 UEFI_BOOT=$UEFI_BOOT
 LUKS_LABEL=$LUKS_LABEL
 KEYFILE=$KEYFILE
@@ -754,14 +754,14 @@ install_deps_base
 
 if [ "$UEFI_BOOT" -eq 0 ]
 then
-    init_parts_bios $ROOT_DRIVE
-    BOOT_PARTDEV="${ROOT_DRIVE}2"
-    LUKS_PARTDEV="${ROOT_DRIVE}3"
+    init_parts_bios $ROOT_DEV
+    BOOT_PARTDEV="${ROOT_DEV}2"
+    LUKS_PARTDEV="${ROOT_DEV}3"
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
 else
-    init_parts_efi $ROOT_DRIVE
-    BOOT_PARTDEV="${ROOT_DRIVE}1"
-    LUKS_PARTDEV="${ROOT_DRIVE}2"
+    init_parts_efi $ROOT_DEV
+    BOOT_PARTDEV="${ROOT_DEV}1"
+    LUKS_PARTDEV="${ROOT_DEV}2"
     mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
 fi
 

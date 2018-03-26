@@ -51,7 +51,7 @@ do
 	    INSTROOT=$OPTARG
 	    ;;
 	d)
-	    ROOT_DEVICE=$OPTARG
+	    ROOT_DEV=$OPTARG
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -78,7 +78,7 @@ do
     esac
 done
 
-if [ -z "$ROOT_DRIVE" ]
+if [ -z "$ROOT_DEV" ]
 then
     echo "ERROR: Root device is not specified!"
     exit 1
@@ -132,8 +132,8 @@ else
 fi
 
 cryptsetup luksClose $LUKS_LABEL
-sgdisk -Z $ROOT_DRIVE 2>&1 > /dev/null
-partprobe $ROOT_DRIVE 2>&1 >/dev/null
+sgdisk -Z $ROOT_DEV 2>&1 > /dev/null
+partprobe $ROOT_DEV 2>&1 >/dev/null
 if ! rmdir $INSTROOT
 then
     read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
