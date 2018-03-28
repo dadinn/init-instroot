@@ -110,7 +110,11 @@ fi
 
 if [ ! -z "$ZPOOL" ]
 then
-    swapoff /dev/zvol/$ZPOOL/$ROOTFS/swap
+    if [ "${SWAPFILES:-0}" -gt 0 ]
+    then swapoff $INSTROOT/root/swap/*
+    else swapoff /dev/zvol/$ZPOOL/$ROOTFS/swap
+    fi
+
     zfs destroy -r $ZPOOL/$ROOTFS
     zpool export $ZPOOL
 
