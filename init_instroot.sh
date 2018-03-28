@@ -351,7 +351,9 @@ EOF
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
-    chmod 400 $ROOTCRYPT_DIR/headers/*
+    for i in $ROOTCRYPT_DIR/headers/*
+    do chmod 400 $i; done
+
 }
 
 init_instroot_zfs () {
@@ -512,7 +514,8 @@ EOF
     fi
 
     #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
-    chmod 400 $ROOTCRYPT_DIR/headers/*
+    for i in $ROOTCRYPT_DIR/headers/*
+    do chmod 400 $i; done
     #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
 }
 
@@ -599,7 +602,8 @@ EOF
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
     # Making header backups non-writeable and readable only to root
-    chmod 400 $ROOTCRYPT_DIR/headers/*
+    for i in $ROOTCRYPT_DIR/headers/*
+    do chmod 400 $i; done
 }
 
 # DEFAULTS
