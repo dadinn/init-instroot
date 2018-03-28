@@ -108,6 +108,13 @@ then
     exit 1
 fi
 
+umount $INSTROOT/boot
+if [ ! -z "$BOOT_DEV" ]
+then
+    sgdisk -Z $BOOT_DEV 2>&1 > /dev/null
+    partprobe $BOOT_DEV 2>&1 > /dev/null
+fi
+
 if [ ! -z "$ZPOOL" ]
 then
     if [ "${SWAPFILES:-0}" -gt 0 ]
@@ -118,7 +125,6 @@ then
     zfs destroy -r $ZPOOL/$ROOTFS
     zpool export $ZPOOL
 
-    umount $INSTROOT/boot
     umount $INSTROOT
 
     for i in $(echo "$DEVLIST" | tr "," "\n")
@@ -131,19 +137,21 @@ then
 elif [ "${SWAPFILES:-0}" -gt 0 ]
 then
     swapoff $INSTROOT/root/swap/*
-    umount $INSTROOT/boot
     umount $INSTROOT
 else
     VG_NAME=${LUKS_LABEL}_vg
     swapoff /dev/mapper/${VG_NAME}-swap
-    umount $INSTROOT/boot
     umount $INSTROOT
     vgremove -f $VG_NAME
 fi
 
-cryptsetup luksClose $LUKS_LABEL
-sgdisk -Z $ROOT_DEV 2>&1 > /dev/null
-partprobe $ROOT_DEV 2>&1 >/dev/null
+if [ ! -z "$ROOT_DEV" ]
+then
+    cryptsetup luksClose $LUKS_LABEL
+    sgdisk -Z $ROOT_DEV 2>&1 > /dev/null
+    partprobe $ROOT_DEV 2>&1 >/dev/null
+fi
+
 if ! rmdir $INSTROOT
 then
     read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
