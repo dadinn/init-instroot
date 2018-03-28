@@ -21,7 +21,10 @@ Install root mountpoint ${INSTROOT:+(default $INSTROOT)}
 LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
 
 -d DEVICE
-Device with LUKS encrypted root.
+Device with LUKS encrypted root ${ROOT_DEV:+(default $ROOT_DEV)}
+
+-b DEVICE
+Device for boot partition ${BOOT_DEV:+(default $BOOT_DEV)}
 
 -z ZPOOL
 ZFS pool name for system directories and swap device ${ZPOOL:+(default $ZPOOL)}
@@ -41,7 +44,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:d:z:c:d:r:Sh' opt
+while getopts 'l:m:d:z:c:d:b:r:Sh' opt
 do
     case $opt in
 	l)
@@ -52,6 +55,9 @@ do
 	    ;;
 	d)
 	    ROOT_DEV=$OPTARG
+	    ;;
+	b)
+	    BOOT_DEV=$OPTARG
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
