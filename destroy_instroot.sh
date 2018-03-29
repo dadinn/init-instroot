@@ -152,7 +152,7 @@ then
     partprobe $ROOT_DEV 2>&1 >/dev/null
 fi
 
-if ! rmdir $INSTROOT
+if [ -d $INSTROOT -a ! $(rmdir $INSTROOT) ]
 then
     read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
     case $delinstroot in
