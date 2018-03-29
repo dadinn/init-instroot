@@ -341,7 +341,7 @@ EOF
     cryptsetup luksHeaderBackup $LUKS_PARTDEV \
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
-    for i in $ROOTCRYPT_DIR/headers/*
+    for i in $(ls $ROOTCRYPT_DIR/headers/*)
     do chmod 400 $i; done
 
 }
@@ -504,7 +504,7 @@ EOF
     fi
 
     #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
-    for i in $ROOTCRYPT_DIR/headers/*
+    for i in $(ls $ROOTCRYPT_DIR/headers/*)
     do chmod 400 $i; done
     #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
 }
@@ -592,7 +592,7 @@ EOF
 	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
 
     # Making header backups non-writeable and readable only to root
-    for i in $ROOTCRYPT_DIR/headers/*
+    for i in $(ls $ROOTCRYPT_DIR/headers/*)
     do chmod 400 $i; done
 }
 
