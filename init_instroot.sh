@@ -258,6 +258,66 @@ init_zfsroot () {
     fi
 }
 
+generate_crypttab() {
+    if [ $# -eq 5 ]
+    then
+	INSTROOT="$1"
+	LUKS_PARTDEV="$2"
+	LUKS_LABEL="$3"
+	KEYFILE="$4"
+	DEVLIST="$5"
+    else
+	ERROR_EXIT "called generate_crypttab with $# args: $@"
+    fi
+
+    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
+    cat > $INSTROOT/etc/crypttab <<EOF
+# LUKS device containing root filesystem
+$LUKS_LABEL UUID=$(fsuuid $LUKS_PARTDEV) none luks
+
+EOF
+
+    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    mkdir -p $ROOTCRYPT_DIR/headers
+    chmod 700 $ROOTCRYPT_DIR/headers
+
+    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
+    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
+	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
+
+    if [ ! -z "$KEYFILE" -a -e "$KEYFILE" ]
+    then
+	chmod 400 $KEYFILE
+	cp $KEYFILE $ROOTCRYPT_DIR
+	KEYFILENAME=$(basename $KEYFILE)
+
+	for i in $(echo "$DEVLIST" | tr "," "\n")
+	do
+	    device=$(echo $i|cut -d : -f1)
+	    label=$(echo $i|cut -d : -f2)
+	    if [ -b "$device" -a ! -z "$label" ]
+	    then
+	       uuid=$(fsuuid $device)
+
+	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
+	       cat >> $INSTROOT/etc/crypttab <<EOF
+$label UUID=${uuid} /root/crypt/${KEYFILENAME} luks
+EOF
+
+	       # backing up LUKS headers of ZFS member vdevs
+	       cryptsetup luksHeaderBackup $device \
+			  --header-backup-file $ROOTCRYPT_DIR/headers/$label
+	    fi
+	done
+	unset device label uuid i
+    fi
+
+    #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
+    for i in $(ls $ROOTCRYPT_DIR/headers/*)
+    do chmod 400 $i; done
+    #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
+}
+
 init_instroot_lvm () {
     if [ $# -eq 5 ]
     then
@@ -326,24 +386,7 @@ UUID=$SWAP_UUID none swap sw 0 0
 
 EOF
 
-    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat > $INSTROOT/etc/crypttab <<EOF
-# LUKS device containing root filesystem
-$LUKS_LABEL UUID=$LUKS_UUID none luks
-
-EOF
-
-    ROOTCRYPT_DIR=$INSTROOT/root/crypt
-    mkdir -p $ROOTCRYPT_DIR/headers
-    chmod 700 $ROOTCRYPT_DIR/headers
-
-    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
-    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
-	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
-
-    for i in $(ls $ROOTCRYPT_DIR/headers/*)
-    do chmod 400 $i; done
-
+    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL "" ""
 }
 
 init_instroot_zfs () {
@@ -460,53 +503,7 @@ EOF
     done
     unset i
 
-    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat > $INSTROOT/etc/crypttab <<EOF
-# LUKS device containing root filesystem
-$LUKS_LABEL UUID=$LUKS_UUID none luks
-
-# LUKS encrypted devices of ZFS member vdevs
-EOF
-
-    ROOTCRYPT_DIR=$INSTROOT/root/crypt
-    mkdir -p $ROOTCRYPT_DIR/headers
-    chmod -R 700 $ROOTCRYPT_DIR
-
-    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
-    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
-	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
-
-    if [ ! -z "$KEYFILE" -a -e "$KEYFILE" ]
-    then
-	chmod 400 $KEYFILE
-	cp $KEYFILE $ROOTCRYPT_DIR
-	KEYFILENAME=$(basename $KEYFILE)
-
-	for i in $(echo "$DEVLIST" | tr "," "\n")
-	do
-	    device=$(echo $i|cut -d : -f1)
-	    label=$(echo $i|cut -d : -f2)
-	    if [ -b "$device" -a ! -z "$label" ]
-	    then
-	       uuid=$(fsuuid $device)
-	       
-	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
-	       cat >> $INSTROOT/etc/crypttab <<EOF
-$label UUID=${uuid} /root/crypt/${KEYFILENAME} luks
-EOF
-
-	       # backing up LUKS headers of ZFS member vdevs
-	       cryptsetup luksHeaderBackup $device \
-			  --header-backup-file $ROOTCRYPT_DIR/headers/$label
-	    fi
-	done
-	unset device label uuid i
-    fi
-
-    #echo "Finished generating entries for ${INSTROOT}/etc/crypttab"
-    for i in $(ls $ROOTCRYPT_DIR/headers/*)
-    do chmod 400 $i; done
-    #echo "Finished backing up LUKS headers in ${ROOTCRYPT_DIR}/headers"
+    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL $KEYFILE $DEVLIST
 }
 
 init_instroot_swapfile() {
@@ -577,23 +574,7 @@ EOF
 	fi
     done
 
-    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat <<EOF > $INSTROOT/etc/crypttab
-# LUKS device containing root filesystem
-$LUKS_LABEL UUID=$LUKS_UUID none luks
-
-EOF
-
-    ROOTCRYPT_DIR=$INSTROOT/root/crypt
-    mkdir -p $ROOTCRYPT_DIR/headers
-
-    echo "Backing up LUKS headers in ${ROOTCRYPT_DIR}/headers..."
-    cryptsetup luksHeaderBackup $LUKS_PARTDEV \
-	       --header-backup-file $ROOTCRYPT_DIR/headers/$LUKS_LABEL
-
-    # Making header backups non-writeable and readable only to root
-    for i in $(ls $ROOTCRYPT_DIR/headers/*)
-    do chmod 400 $i; done
+    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL "" ""
 }
 
 # DEFAULTS
