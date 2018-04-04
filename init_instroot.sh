@@ -266,6 +266,13 @@ generate_crypttab() {
 	LUKS_LABEL="$3"
 	KEYFILE="$4"
 	DEVLIST="$5"
+    elif [ $# -eq 3 ]
+    then
+	INSTROOT="$1"
+	LUKS_PARTDEV="$2"
+	LUKS_LABEL="$3"
+	KEYFILE=""
+	DEVLIST=""
     else
 	ERROR_EXIT "called generate_crypttab with $# args: $@"
     fi
@@ -386,7 +393,7 @@ UUID=$SWAP_UUID none swap sw 0 0
 
 EOF
 
-    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL "" ""
+    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL
 }
 
 init_instroot_zfs () {
@@ -574,7 +581,7 @@ EOF
 	fi
     done
 
-    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL "" ""
+    generate_crypttab $INSTROOT $LUKS_PARTDEV $LUKS_LABEL
 }
 
 # DEFAULTS
