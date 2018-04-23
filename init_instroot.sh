@@ -69,7 +69,7 @@ install_deps_zfs () {
 init_parts_bios () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV=$1
+	local ROOT_DEV="$1"
     else
 	ERROR_EXIT "called init_parts_bios with $# args: $@"
     fi
@@ -85,7 +85,7 @@ init_parts_bios () {
 init_parts_efi () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV=$1
+	local ROOT_DEV="$1"
     else
 	ERROR_EXIT "called init_parts_efi with $# args: $@"
     fi
@@ -101,7 +101,7 @@ init_parts_efi () {
 init_parts_boot_bios () {
     if [ $# -eq 1 ]
     then
-	local BOOT_DEV=$1
+	local BOOT_DEV="$1"
     else
 	ERROR_EXIT "called init_parts_boot_bios with $# args: $@"
     fi
@@ -117,7 +117,7 @@ init_parts_boot_bios () {
 init_parts_boot_efi () {
     if [ $# -eq 1 ]
     then
-	local BOOT_DEV=$1
+	local BOOT_DEV="$1"
     else
 	ERROR_EXIT "called init_parts_boot_efi with $# args: $@"
     fi
@@ -132,7 +132,7 @@ init_parts_boot_efi () {
 init_parts_root(){
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV=$1
+	local ROOT_DEV="$1"
 	[ -b "$ROOT_DEV" ] || ERROR_EXIT "$ROOT_DEV has to be a block device!"
     else
 	ERROR_EXIT "called init_parts_root with $# args: $@"
@@ -147,8 +147,8 @@ init_parts_root(){
 init_cryptroot () {
     if [ $# -eq 2 ]
     then
-	local LUKS_PARTDEV=$1
-	local LUKS_LABEL=$2
+	local LUKS_PARTDEV="$1"
+	local LUKS_LABEL="$2"
     else
 	ERROR_EXIT "called init_cryptroot with $# args: $@"
     fi
@@ -193,8 +193,8 @@ EOF
 init_cryptdevs () {
     if [ $# -eq 2 ]
     then
-	local KEYFILE=$1
-	local DEVLIST=$2
+	local KEYFILE="$1"
+	local DEVLIST="$2"
     else
 	ERROR_EXIT "called init_cryptdevs with $# args: $@"
     fi
@@ -214,12 +214,11 @@ init_cryptdevs () {
 init_zfsroot () {
     if [ $# -eq 5 ]
     then
-	local ZPOOL=$1
-	local FSNAME=$2
-	local SWAPSIZE=$3
-	local SWAPFILES=$4
-	local DIRLIST=$5
-
+	local ZPOOL="$1"
+	local FSNAME="$2"
+	local SWAPSIZE="$3"
+	local SWAPFILES="$4"
+	local DIRLIST="$5"
     else
 	ERROR_EXIT "called init_zfsroot with $# args: $@"
     fi
@@ -328,11 +327,11 @@ EOF
 init_instroot_lvm () {
     if [ $# -eq 5 ]
     then
-	local INSTROOT=$1
-	local BOOT_PARTDEV=$2
-	local LUKS_PARTDEV=$3
-	local LUKS_LABEL=$4
-	local SWAP_SIZE=$5
+	local INSTROOT="$1"
+	local BOOT_PARTDEV="$2"
+	local LUKS_PARTDEV="$3"
+	local LUKS_LABEL="$4"
+	local SWAP_SIZE="$5"
 
 	[ ! -e $INSTROOT ] || ERROR_EXIT "$INSTROOT already exists"
 	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "$BOOT_PARTDEV has to be a block device"
@@ -399,17 +398,17 @@ EOF
 init_instroot_zfs () {
     if [ $# -eq 11 ]
     then
-	local INSTROOT=$1
-	local BOOT_PARTDEV=$2
-	local LUKS_PARTDEV=$3
-	local LUKS_LABEL=$4
-	local KEYFILE=$5
-	local DEVLIST=$6
-	local ZPOOL=$7
-	local ROOTFS=$8
-	local SWAP_SIZE=$9
-	local SWAPFILES=$10
-	local DIRLIST=$11
+	local INSTROOT="$1"
+	local BOOT_PARTDEV="$2"
+	local LUKS_PARTDEV="$3"
+	local LUKS_LABEL="$4"
+	local KEYFILE="$5"
+	local DEVLIST="$6"
+	local ZPOOL="$7"
+	local ROOTFS="$8"
+	local SWAP_SIZE="$9"
+	local SWAPFILES="$10"
+	local DIRLIST="$11"
 
 	[ ! -e $INSTROOT ] || ERROR_EXIT "target $INSTROOT already exists!"
 	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "cannot find boot partition device $BOOT_PARTDEV"
@@ -516,12 +515,12 @@ EOF
 init_instroot_swapfile() {
     if [ $# -eq 6 ]
     then
-	local INSTROOT=$1
-	local BOOT_PARTDEV=$2
-	local LUKS_PARTDEV=$3
-	local LUKS_LABEL=$4
-	local SWAP_SIZE=$5
-	local SWAPFILES=$6
+	local INSTROOT="$1"
+	local BOOT_PARTDEV="$2"
+	local LUKS_PARTDEV="$3"
+	local LUKS_LABEL="$4"
+	local SWAP_SIZE="$5"
+	local SWAPFILES="$6"
     else
 	ERROR_EXIT "called init_instroot_swapfile with $# args: $@"
     fi
