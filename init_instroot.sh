@@ -254,8 +254,8 @@ init_zfsroot () {
 	    $SYSTEMFS/swap
 	mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
 	swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
-	echo "Finished setting up ZFS pool: $ZPOOL"
     fi
+    echo "Finished setting up ZFS pool: $ZPOOL"
 }
 
 generate_crypttab() {
