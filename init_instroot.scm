@@ -77,8 +77,10 @@
 	  (swapsize (option-ref options 'swapsize #f))
 	  (swapfiles (option-ref options 'swapfiles 0))
 	  (help? (option-ref options 'help #f)))
-      (if new-keyfile
-	  (if (not (file-exists? new-keyfile))
-	      (create-keyfile new-keyfile)
-	      (error "File already exists:" new-keyfile)))
-      (if help? (usage 1 2 3)))))
+      (cond
+       (help?
+	(usage))
+       (new-keyfile
+	(if (not (file-exists? new-keyfile))
+	    (create-keyfile new-keyfile)
+	    (error "File already exists:" new-keyfile)))))))
