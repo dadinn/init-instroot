@@ -4,6 +4,7 @@
 
 (use-modules
  (ice-9 getopt-long)
+ (ice-9 regex)
  (ice-9 rdelim)
  (ice-9 popen))
 
@@ -25,7 +26,7 @@
   (newline))
 
 (define options-spec
-  '((target ; default "/mnt/instroot"
+  `((target ; default "/mnt/instroot"
      (single-char #\t)
      (value #t))
     (label ; default "crypt_root"
@@ -33,6 +34,8 @@
      (value #t))
     (keyfile
      (single-char #\k)
+     (predicate
+      ,(lambda (s) (file-exists? s)))
      (value #t))
     (genkey
      (single-char #\K)
@@ -54,6 +57,8 @@
      (value #t))
     (swapsize
      (single-char #\s)
+     (predicate
+      ,(lambda (s) (string-match "^[0-9]+[KMGT]?$" s)))
      (value #t))
     (swapfiles
      ;; default 0
