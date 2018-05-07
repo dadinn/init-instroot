@@ -24,6 +24,27 @@
 	(match:substring match 1))
       (error (string-append "Not a block device: " path))))
 
+(define deps-base
+  (list "sgdisk" "partprobe" "cryptsetup" "pv" "pvcreate" "vgcreate" "lvcreate"))
+
+(define (which acc args)
+  (if (not (null? args))
+      (let ((curr (car args)))
+	(if (zero? (system* "which" curr))
+	    (which acc (cdr args))
+	    (which (cons curr acc) (cdr args))))
+      acc))
+
+(define (install-deps-base)
+  (let ((missing (which #nil deps-base)))
+    (if (not (null? missing))
+	(if (file-exists? "/etc/debian_version")
+	    (begin
+	      (display "Installing necessary packages...")
+	      (system "apt update")
+	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
+	    (error "Necessary binaries are missing" missing)))))
+
 (define* (usage #:rest args)
   (display "Here is some help!")
   (newline))
