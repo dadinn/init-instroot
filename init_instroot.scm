@@ -63,6 +63,8 @@
      (value #t))
     (genkey
      (single-char #\K)
+     (predicate
+      ,(lambda (s) (not (file-exists? s))))
      (value #t))
     (zpool
      (single-char #\z)
@@ -110,6 +112,4 @@
      (help?
       (usage))
      (new-keyfile
-      (if (not (file-exists? new-keyfile))
-	  (create-keyfile new-keyfile)
-	  (error "File already exists:" new-keyfile))))))
+      (create-keyfile new-keyfile)))))
