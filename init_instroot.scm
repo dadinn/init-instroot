@@ -56,6 +56,24 @@
     (label ; default "crypt_root"
      (single-char #\l)
      (value #t))
+    (bootdev
+     (single-char #\b)
+     (value #t))
+    (rootdev
+     (single-char #\r)
+     (value #t))
+    (zpool
+     (single-char #\z)
+     (value #t))
+    (rootfs ; default "system"
+     (single-char #\f)
+     (value #t))
+    (dirlst ; default "home,var,gnu"
+     (single-char #\d)
+     (value #t))
+    (devlst
+     (single-char #\c)
+     (value #t))
     (keyfile
      (single-char #\k)
      (predicate
@@ -66,21 +84,6 @@
      (predicate
       ,(lambda (s) (not (file-exists? s))))
      (value #t))
-    (zpool
-     (single-char #\z)
-     (value #t))
-    (initdeps
-     (single-char #\Z)
-     (value #f))
-    (rootfs ; default "system"
-     (single-char #\r)
-     (value #t))
-    (dirlst ; default "home,var,gnu"
-     (single-char #\d)
-     (value #t))
-    (devlst
-     (single-char #\c)
-     (value #t))
     (swapsize
      (single-char #\s)
      (predicate
@@ -90,24 +93,30 @@
      ;; default 0
      (single-char #\S)
      (value #t))
+    (uefiboot
+     (single-char #\E))
+    (initdeps
+     (single-char #\Z))
     (help
-     (single-char #\h)
-     (value #f))))
+     (single-char #\h))))
 
 (define (main args)
   (let* ((options (getopt-long args options-spec))
 	 (target (option-ref options 'target "/mnt/instroot"))
+	 (boot-dev (option-ref options 'bootdev #f))
+	 (root-dev (option-ref options 'rootdev #f))
 	 (label (option-ref options 'label "crypt_root"))
+	 (zpool (option-ref options 'zpool #f))
+	 (rootfs (option-ref options 'rootfs "system"))
+	 (dir-list (option-ref options 'dirlst "home,var,gnu"))
 	 (keyfile (option-ref options 'keyfile #f))
 	 (new-keyfile (option-ref options 'genkey #f))
-	 (zpool (option-ref options 'zpool #f))
-	 (initdeps? (option-ref options 'initdeps #f))
-	 (rootfs (option-ref options 'rootfs "system"))
-	 (dirlst (option-ref options 'dirlst "home,var,gnu"))
-	 (devlst (option-ref options 'devlst '()))
-	 (swapsize (option-ref options 'swapsize #f))
-	 (swapfiles (option-ref options 'swapfiles 0))
-	 (help? (option-ref options 'help #f)))
+	 (dev-list (option-ref options 'devlst #f))
+	 (swap-size (option-ref options 'swapsize #f))
+	 (swapfiles (string->number (option-ref options 'swapfiles "0")))
+	 (uefiboot? (option-ref options 'uefiboot))
+	 (initdeps? (option-ref options 'initdeps))
+	 (help? (option-ref options 'help)))
     (cond
      (help?
       (usage))
