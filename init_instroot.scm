@@ -93,23 +93,23 @@
      (value #f))))
 
 (define (main args)
-  (let ((options (getopt-long args options-spec)))
-    (let ((target (option-ref options 'target "/mnt/instroot"))
-	  (label (option-ref options 'label "crypt_root"))
-	  (keyfile (option-ref options 'keyfile #f))
-	  (new-keyfile (option-ref options 'genkey #f))
-	  (zpool (option-ref options 'zpool #f))
-	  (initdeps? (option-ref options 'initdeps #f))
-	  (rootfs (option-ref options 'rootfs "system"))
-	  (dirlst (option-ref options 'dirlst "home,var,gnu"))
-	  (devlst (option-ref options 'devlst '()))
-	  (swapsize (option-ref options 'swapsize #f))
-	  (swapfiles (option-ref options 'swapfiles 0))
-	  (help? (option-ref options 'help #f)))
-      (cond
-       (help?
-	(usage))
-       (new-keyfile
-	(if (not (file-exists? new-keyfile))
-	    (create-keyfile new-keyfile)
-	    (error "File already exists:" new-keyfile)))))))
+  (let* ((options (getopt-long args options-spec))
+	 (target (option-ref options 'target "/mnt/instroot"))
+	 (label (option-ref options 'label "crypt_root"))
+	 (keyfile (option-ref options 'keyfile #f))
+	 (new-keyfile (option-ref options 'genkey #f))
+	 (zpool (option-ref options 'zpool #f))
+	 (initdeps? (option-ref options 'initdeps #f))
+	 (rootfs (option-ref options 'rootfs "system"))
+	 (dirlst (option-ref options 'dirlst "home,var,gnu"))
+	 (devlst (option-ref options 'devlst '()))
+	 (swapsize (option-ref options 'swapsize #f))
+	 (swapfiles (option-ref options 'swapfiles 0))
+	 (help? (option-ref options 'help #f)))
+    (cond
+     (help?
+      (usage))
+     (new-keyfile
+      (if (not (file-exists? new-keyfile))
+	  (create-keyfile new-keyfile)
+	  (error "File already exists:" new-keyfile))))))
