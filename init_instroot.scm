@@ -3,6 +3,7 @@
 !#
 
 (use-modules
+ (srfi srfi-1)
  (ice-9 getopt-long)
  (ice-9 hash-table)
  (ice-9 pretty-print)
@@ -107,6 +108,34 @@
      (single-char #\Z))
     (help
      (single-char #\h))))
+
+(define supported-props
+  (alist->hash-table
+   (map
+    (lambda (k) (cons k #t))
+    '(single-char value required? predicate))))
+
+(define (conform-props props)
+  (fold
+   (lambda (kv new-props)
+     (if (hash-ref supported-props (car kv))
+	 (cons kv new-props)
+	 new-props))
+   #nil
+   props))
+
+(define (conform-spec spec)
+  (map
+   (lambda (kv)
+     (cons
+      (car kv)
+      (conform-props (cdr kv))))
+   spec))
+
+(define (getopt-long args options-spec)
+  ((@ (ice-9 getopt-long) getopt-long)
+   args
+   (conform-spec options-spec)))
 
 (define* (make-optref lastrun-map)
   (lambda* (options key #:optional default)
