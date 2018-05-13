@@ -147,6 +147,18 @@
      (new-keyfile
       (create-keyfile new-keyfile))
      (else
+      (let* ((id-res (process->string "id -u"))
+	     (id-match (string-match "[0-9]+" id-res))
+	     (id-str (match:substring id-match))
+	     (id (string->number id-str)))
+	(if (not (eqv? 0 id))
+	    (error "This script must be run as root!")))
+      (if
+       (not swap-size)
+       (error "Swap size must be specified!"))
+      (if
+       (and dev-list (not keyfile))
+       (error "Keyfile must be specified to unlock encrypted devices!"))
       (let ((lrfile (open-output-file ".lastrun")))
 	(write
 	 `((target . ,target)
