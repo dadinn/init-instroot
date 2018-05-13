@@ -59,42 +59,68 @@
   (newline))
 
 (define options-spec
-  `((target ; default "/mnt/instroot"
+  `((target
      (single-char #\t)
+     (description
+      "Root mountpoint for installation")
+     (default "/mnt/instroot")
      (value #t))
-    (label ; default "crypt_root"
+    (label
      (single-char #\l)
+     (description
+      "LUKS encrypted device name for root")
+     (default "crypt_root")
      (value #t))
     (bootdev
      (single-char #\b)
+     (description
+      "Use separate boot device for /boot and insalling GRUB")
      (value #t))
     (rootdev
      (single-char #\r)
+     (description
+      "Device to use for root filesystem")
      (value #t))
     (zpool
      (single-char #\z)
+     (description
+      "ZFS pool name for system directories and swap device")
      (value #t))
-    (rootfs ; default "system"
+    (rootfs
      (single-char #\f)
+     (description
+      "Name of the system root dataset in the ZFS pool")
+     (default "system")
      (value #t))
-    (dirlst ; default "home,var,gnu"
+    (dirlst
      (single-char #\d)
+     (description
+      "Coma separated list of root directories to mount as ZFS datasets")
+     (default "home,var,gnu")
      (value #t))
     (devlst
      (single-char #\c)
+     (description
+      "Coma separeted list of colon separated pairs of other encrypted devices")
      (value #t))
     (keyfile
      (single-char #\k)
+     (description
+      "Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)")
      (predicate
       ,(lambda (s) (file-exists? s)))
      (value #t))
     (genkey
      (single-char #\K)
+     (description
+      "Generate new keyfile with the given value as filename")
      (predicate
       ,(lambda (s) (not (file-exists? s))))
      (value #t))
     (swapsize
      (single-char #\s)
+     (description
+      "Size of the total swap space to use (KMGT suffixes allowed)")
      (predicate
       ,(lambda (s) (string-match "^[0-9]+[KMGT]?$" s)))
      (value #t))
