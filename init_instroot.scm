@@ -4,6 +4,7 @@
 
 (use-modules
  (ice-9 getopt-long)
+ (ice-9 hash-table)
  (ice-9 regex)
  (ice-9 rdelim)
  (ice-9 popen))
@@ -106,8 +107,25 @@
     (help
      (single-char #\h))))
 
+(define* (make-optref #:optional lastrun-map)
+  (if lastrun-map
+      (lambda* (options key #:optional default)
+	(let ((lrval (hash-ref lastrun-map key)))
+	  (or lrval (option-ref options key default))))
+      (lambda* (options key #:optional default)
+	(option-ref options key default))))
+
+(define (with-lastrun lr-path)
+  (if (file-exists? lr-path)
+      (let* ((lr-file (open-input-file lr-path))
+	     (lr-map (alist->hash-table (read lr-file))))
+	(close lr-file)
+	(make-optref lr-map))
+      (make-optref)))
+
 (define (main args)
-  (let* ((options (getopt-long args options-spec))
+  (let* ((option-ref (with-lastrun ".lastrun"))
+	 (options (getopt-long args options-spec))
 	 (target (option-ref options 'target "/mnt/instroot"))
 	 (boot-dev (option-ref options 'bootdev))
 	 (root-dev (option-ref options 'rootdev))
@@ -127,4 +145,22 @@
      (help?
       (usage))
      (new-keyfile
-      (create-keyfile new-keyfile)))))
+      (create-keyfile new-keyfile))
+     (else
+      (let ((lrfile (open-output-file ".lastrun")))
+	(write
+	 `((target . ,target)
+	   (label . ,label)
+	   (bootdev . ,boot-dev)
+	   (rootdev . ,root-dev)
+	   (label . ,label)
+	   (zpool . ,zpool)
+	   (rootfs . ,rootfs)
+	   (dirlst . ,dir-list)
+	   (keyfile . ,keyfile)
+	   (devlst . ,dev-list)
+	   (swapsize . ,swap-size)
+	   (swapfiles . ,(number->string swapfiles))
+	   (uefiboot . ,uefiboot?))
+	 lrfile)
+	(close lrfile))))))
