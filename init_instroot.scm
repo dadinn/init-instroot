@@ -8,6 +8,13 @@
  (ice-9 rdelim)
  (ice-9 popen))
 
+(define* (process->string #:rest args)
+  (let* ((command (string-join args " "))
+	 (in (open-input-pipe command))
+	 (text (read-string in)))
+    (close in)
+    text))
+
 (define (create-keyfile f)
   (let ((fname (basename f)))
     (if (file-exists? fname)
@@ -16,12 +23,11 @@
 
 (define (partuuid path n)
   (if (eq? 'block-special (stat:type (stat path)))
-      (let* ((opt (string-join (list "sgdisk" "-i" (number->string n) path) " "))
-	     (in (open-input-pipe opt))
-	     (text (read-string in))
-	     (match (string-match "Partition unique GUID: ([0-9A-F-]+).*$" text)))
-	(close in)
-	(match:substring match 1))
+      (let ((match
+	     (string-match
+	      "Partition unique GUID: ([0-9A-F-]+)"
+	      (process->string "sgdisk -i" (number->string n) path))))
+	(if match (match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
 (define deps-base
