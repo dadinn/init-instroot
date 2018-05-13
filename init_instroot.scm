@@ -125,14 +125,23 @@
       ,(lambda (s) (string-match "^[0-9]+[KMGT]?$" s)))
      (value #t))
     (swapfiles
-     ;; default 0
      (single-char #\S)
+     (description
+      "Number of swapfiles to use to break total swap-space up into. Swapfiles are created
+in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.")
+     (default "0")
      (value #t))
     (uefiboot
+     (description
+      "Use UEFI boot partitions instead of BIOS.")
      (single-char #\E))
     (initdeps
+     (description
+      "Install and configure necessary ZFS dependencies only, then exit.")
      (single-char #\Z))
     (help
+     (description
+      "This usage help...")
      (single-char #\h))))
 
 (define supported-props
