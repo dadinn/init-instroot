@@ -108,21 +108,21 @@
     (help
      (single-char #\h))))
 
-(define* (make-optref #:optional lastrun-map)
-  (if lastrun-map
-      (lambda* (options key #:optional default)
-	(let ((lrval (hash-ref lastrun-map key)))
-	  (or lrval (option-ref options key default))))
-      (lambda* (options key #:optional default)
-	(option-ref options key default))))
+(define* (make-optref lastrun-map)
+  (lambda* (options key #:optional default)
+    (let ((default (hash-ref lastrun-map key default)))
+      (option-ref options key default))))
 
 (define (with-lastrun lr-path)
   (if (file-exists? lr-path)
       (let* ((lr-file (open-input-file lr-path))
-	     (lr-map (alist->hash-table (read lr-file))))
+	     (lr-alist
+	      (map
+	       (lambda (kv) (cons (car kv) (cadr kv)))
+	       (read lr-file))))
 	(close lr-file)
-	(make-optref lr-map))
-      (make-optref)))
+	(make-optref (alist->hash-table lr-alist)))
+      (make-optref (make-hash-table 0))))
 
 (define (main args)
   (let* ((option-ref (with-lastrun ".lastrun"))
