@@ -178,19 +178,25 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	   (default (hash-ref lastrun key (and default (car default)))))
       (option-ref options key default))))
 
-(define (with-defaults spec lr-path)
-  (if (file-exists? lr-path)
-      (let* ((lr-file (open-input-file lr-path))
+(define (with-defaults spec lastrun)
+  (if lastrun
+      (make-optref spec lastrun)
+      (make-optref spec (make-hash-table 0))))
+
+(define (get-lastrun path)
+  (if (file-exists? path)
+      (let* ((lr-file (open-input-file path))
 	     (lr-alist
 	      (map
 	       (lambda (kv) (cons (car kv) (cadr kv)))
 	       (read lr-file))))
 	(close lr-file)
-	(make-optref spec (alist->hash-table lr-alist)))
-      (make-optref spec (make-hash-table 0))))
+	(alist->hash-table lr-alist))
+      #f))
 
 (define (main args)
-  (let* ((option-ref (with-defaults options-spec ".lastrun"))
+  (let* ((lastrun-map (get-lastrun ".lastrun"))
+	 (option-ref (with-defaults options-spec lastrun-map))
 	 (options (getopt-long args options-spec))
 	 (target (option-ref options 'target))
 	 (boot-dev (option-ref options 'bootdev))
