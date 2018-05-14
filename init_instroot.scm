@@ -93,39 +93,46 @@
      (description
       "Root mountpoint for installation")
      (default "/mnt/instroot")
+     (value-arg "path")
      (value #t))
     (label
      (single-char #\l)
      (description
       "LUKS encrypted device name for root")
      (default "crypt_root")
+     (value-arg "label")
      (value #t))
     (bootdev
      (single-char #\b)
      (description
       "Use separate boot device for /boot and insalling GRUB")
+     (value-arg "device")
      (value #t))
     (rootdev
      (single-char #\r)
      (description
       "Device to use for root filesystem")
+     (value-arg "device")
      (value #t))
     (zpool
      (single-char #\z)
      (description
       "ZFS pool name for system directories and swap device")
+     (value-arg "zpool")
      (value #t))
     (rootfs
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
      (default "system")
+     (value-arg "name")
      (value #t))
     (dirlst
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
      (default "home,var,gnu")
+     (value-arg "dirlist")
      (value #t))
     (devlst
      (single-char #\v)
@@ -137,6 +144,7 @@ These device mappings are used to:
  a) unlock these devices before importing ZFS pools
  b) create crypttab entries for automatic unlocking during boot
 Specifying a keyfile is necessary for this feature!")
+     (value-arg "devlist")
      (value #t))
     (keyfile
      (single-char #\k)
@@ -144,6 +152,7 @@ Specifying a keyfile is necessary for this feature!")
       "Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)")
      (predicate
       ,(lambda (s) (file-exists? s)))
+     (value-arg "keyfile")
      (value #t))
     (genkey
      (single-char #\K)
@@ -151,6 +160,7 @@ Specifying a keyfile is necessary for this feature!")
       "Generate new keyfile with the given value as filename")
      (predicate
       ,(lambda (s) (not (file-exists? s))))
+     (value-arg "filename")
      (value #t))
     (swapsize
      (single-char #\s)
@@ -158,6 +168,7 @@ Specifying a keyfile is necessary for this feature!")
       "Size of the total swap space to use (KMGT suffixes allowed)")
      (predicate
       ,(lambda (s) (string-match "^[0-9]+[KMGT]?$" s)))
+     (value-arg "size")
      (value #t))
     (swapfiles
      (single-char #\S)
@@ -165,6 +176,7 @@ Specifying a keyfile is necessary for this feature!")
       "Number of swapfiles to use to break total swap-space up into. Swapfiles are created
 in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.")
      (default "0")
+     (value-arg "count")
      (value #t))
     (uefiboot
      (description
