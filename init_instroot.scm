@@ -245,7 +245,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	       (read lr-file))))
 	(close lr-file)
 	(alist->hash-table lr-alist))
-      #f))
+      (make-hash-table 0)))
 
 (define (main args)
   (let* ((lastrun-map (get-lastrun ".lastrun"))
