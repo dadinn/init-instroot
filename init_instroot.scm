@@ -4,6 +4,7 @@
 
 (use-modules
  (srfi srfi-1)
+ (ice-9 i18n)
  (ice-9 getopt-long)
  (ice-9 hash-table)
  (ice-9 pretty-print)
@@ -73,7 +74,7 @@
 	 (string-append "--" (symbol->string long-name))
 	 (if value
 	     (if value-arg
-		 (string-append " " (car value-arg) "\n")
+		 (string-append " " (string-locale-upcase (car value-arg)) "\n")
 		 " ARG\n")
 	     "\n")
 	 (if description (car description) "NO DESCRIPTION")
