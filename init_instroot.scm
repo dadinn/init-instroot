@@ -87,6 +87,10 @@
     specs)
    "\n\n"))
 
+(define (block-device? path)
+  (and (file-exists? path)
+       (eq? 'block-special (stat:type (stat path)))))
+
 (define options-spec
   `((target
      (single-char #\t)
@@ -106,12 +110,14 @@
      (single-char #\b)
      (description
       "Use separate boot device for /boot and insalling GRUB")
+     (predicate ,block-device?)
      (value-arg "device")
      (value #t))
     (rootdev
      (single-char #\r)
      (description
       "Device to use for root filesystem")
+     (predicate ,block-device?)
      (value-arg "device")
      (value #t))
     (zpool
