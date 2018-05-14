@@ -128,9 +128,15 @@
      (default "home,var,gnu")
      (value #t))
     (devlst
-     (single-char #\c)
+     (single-char #\v)
      (description
-      "Coma separeted list of colon separated pairs of other encrypted devices")
+      "Coma separeted list of colon separated pairs of other encrypted devices
+\(e.g. members of ZFS pool), and their repsective LUKS labels.
+\(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
+These device mappings are used to:
+ a) unlock these devices before importing ZFS pools
+ b) create crypttab entries for automatic unlocking during boot
+Specifying a keyfile is necessary for this feature!")
      (value #t))
     (keyfile
      (single-char #\k)
