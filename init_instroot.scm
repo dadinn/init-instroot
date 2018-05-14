@@ -54,9 +54,37 @@
 	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
 	    (error "Necessary binaries are missing" missing)))))
 
-(define* (usage #:rest args)
-  (display "Here is some help!")
-  (newline))
+(define (usage specs lastrun)
+  (string-join
+   (map
+    (lambda (spec)
+      (let* ((long-name (car spec))
+	     (props (cdr spec))
+	     (single-char (assoc-ref props 'single-char))
+	     (description (assoc-ref props 'description))
+	     (value (assoc-ref props 'value))
+	     (value-arg (assoc-ref props 'value-arg))
+	     (default (assoc-ref props 'default))
+	     (lastrun (hash-ref lastrun long-name)))
+	(string-append
+	 (if single-char
+	     (string #\- (car single-char)))
+	 " "
+	 (string-append "--" (symbol->string long-name))
+	 (if value
+	     (if value-arg
+		 (string-append " " (car value-arg) "\n")
+		 " ARG\n")
+	     "\n")
+	 (if description (car description) "NO DESCRIPTION")
+	 (if value
+	     (cond
+	      (lastrun (string-append " (default " lastrun ")"))
+	      (default (string-append " (default " (car default) ")"))
+	      (else ""))
+	     (if (or lastrun default) " (default)" "")))))
+    specs)
+   "\n\n"))
 
 (define options-spec
   `((target
@@ -215,7 +243,8 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (help? (option-ref options 'help)))
     (cond
      (help?
-      (usage))
+      (display (usage options-spec lastrun-map))
+      (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
      (else
