@@ -638,11 +638,11 @@ Generate new keyfile with the given FILENAME
 -r ROOTDEV
 Device used for LUKS encrypted root filesystem, and optionally for boot partition.
 
+-b BOOTDEV
+Use separate boot device for /boot and installing GRUB
+
 -z ZPOOL
 ZFS pool name for system directories and swap device
-
--Z
-Install and configure necessary ZFS dependencies only, then exit
 
 -f NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
@@ -667,11 +667,11 @@ Number of swapfiles to use to break total swap-space up into. Swapfiles are crea
 in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.
 (default $SWAPFILES)
 
--b BOOTDEV
-Use separate boot device for /boot and installing GRUB
-
 -E
 Use UEFI boot partitions instead of BIOS (default)
+
+-Z
+Install and configure necessary ZFS dependencies only, then exit
 
 -h
 This usage help...
@@ -679,7 +679,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:Zr:z:K:k:v:d:R:S:s:b:Eh' opt
+while getopts 'l:m:r:b:z:f:d:K:k:v:S:s:EZh' opt
 do
     case $opt in
 	l)
@@ -688,14 +688,24 @@ do
 	m)
 	    INSTROOT=$OPTARG
 	    ;;
-	Z)
-	    PREINIT_DEPENDENCIES=1
-	    ;;
 	r)
 	    ROOT_DEV=$OPTARG
 	    ;;
+	b)
+	    BOOT_DEV=$OPTARG
+	    if [ ! -b "$BOOT_DEV" ]
+	    then
+		ERROR_EXIT "$BOOT_DEV is not a valid device"
+	    fi
+	    ;;
 	z)
 	    ZPOOL=$OPTARG
+	    ;;
+	f)
+	    ROOTFS=$OPTARG
+	    ;;
+	d)
+	    DIRLIST=$OPTARG
 	    ;;
 	K)
 	    NEW_KEYFILE=$(basename $OPTARG)
@@ -716,12 +726,6 @@ do
 	v)
 	    DEVLIST=$OPTARG
 	    ;;
-	d)
-	    DIRLIST=$OPTARG
-	    ;;
-	f)
-	    ROOTFS=$OPTARG
-	    ;;
 	S)
 	    SWAPFILES=$OPTARG
 	    ;;
@@ -733,15 +737,11 @@ do
 		ERROR_EXIT "swap size has to be specified with KGMT suffixes"
 	    fi
 	    ;;
-	b)
-	    BOOT_DEV=$OPTARG
-	    if [ ! -b "$BOOT_DEV" ]
-	    then
-		ERROR_EXIT "$BOOT_DEV is not a valid device"
-	    fi
-	    ;;
 	E)
 	    UEFI_BOOT=1
+	    ;;
+	Z)
+	    PREINIT_DEPENDENCIES=1
 	    ;;
 	h)
             usage
