@@ -641,7 +641,7 @@ ZFS pool name for system directories and swap device
 -Z
 Install and configure necessary ZFS dependencies only, then exit
 
--r NAME
+-f NAME
 Name of the system root dataset in the ZFS pool (default $ROOTFS)
 
 -d DIRLIST
@@ -676,7 +676,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:Zz:K:k:c:d:r:S:s:b:Eh' opt
+while getopts 'l:m:Zz:K:k:c:d:f:S:s:b:Eh' opt
 do
     case $opt in
 	l)
@@ -713,7 +713,7 @@ do
 	d)
 	    DIRLIST=$OPTARG
 	    ;;
-	r)
+	f)
 	    ROOTFS=$OPTARG
 	    ;;
 	S)
