@@ -2,10 +2,11 @@
 -e main -s
 !#
 
+(add-to-load-path
+ (dirname (current-filename)))
+
 (use-modules
- (srfi srfi-1)
- (ice-9 i18n)
- (ice-9 getopt-long)
+ ((local utils) #:prefix utils:)
  (ice-9 hash-table)
  (ice-9 pretty-print)
  (ice-9 regex)
@@ -54,38 +55,6 @@
 	      (system "apt update")
 	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
 	    (error "Necessary binaries are missing" missing)))))
-
-(define (usage specs lastrun)
-  (string-join
-   (map
-    (lambda (spec)
-      (let* ((long-name (car spec))
-	     (props (cdr spec))
-	     (single-char (assoc-ref props 'single-char))
-	     (description (assoc-ref props 'description))
-	     (value (assoc-ref props 'value))
-	     (value-arg (assoc-ref props 'value-arg))
-	     (default (assoc-ref props 'default))
-	     (lastrun (hash-ref lastrun long-name)))
-	(string-append
-	 (if single-char
-	     (string #\- (car single-char)))
-	 " "
-	 (string-append "--" (symbol->string long-name))
-	 (if value
-	     (if value-arg
-		 (string-append " " (string-locale-upcase (car value-arg)) "\n")
-		 " ARG\n")
-	     "\n")
-	 (if description (car description) "NO DESCRIPTION")
-	 (if value
-	     (cond
-	      (lastrun (string-append " (default " lastrun ")"))
-	      (default (string-append " (default " (car default) ")"))
-	      (else ""))
-	     (if (or lastrun default) " (default)" "")))))
-    specs)
-   "\n\n"))
 
 (define (block-device? path)
   (and (file-exists? path)
@@ -197,61 +166,13 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
       "This usage help...")
      (single-char #\h))))
 
-(define supported-props
-  (alist->hash-table
-   (map
-    (lambda (k) (cons k #t))
-    '(single-char value required? predicate))))
-
-(define (conform-props props)
-  (fold
-   (lambda (kv new-props)
-     (if (hash-ref supported-props (car kv))
-	 (cons kv new-props)
-	 new-props))
-   #nil
-   props))
-
-(define (conform-spec spec)
-  (map
-   (lambda (kv)
-     (cons
-      (car kv)
-      (conform-props (cdr kv))))
-   spec))
-
-(define (get-lastrun path)
-  (if (file-exists? path)
-      (let* ((lr-file (open-input-file path))
-	     (lr-alist
-	      (map
-	       (lambda (kv) (cons (car kv) (cadr kv)))
-	       (read lr-file))))
-	(close lr-file)
-	(alist->hash-table lr-alist))
-      (make-hash-table 0)))
-
-(define (getopt-with-lastrun args options-spec lastrun-map)
-  (let* ((options (getopt-long args (conform-spec options-spec)))
-	 (result (make-hash-table (length options-spec))))
-    (fold
-     (lambda (spec mutable-shit!)
-       (let* ((long-name (car spec))
-	      (props (cdr spec))
-	      (default (assoc-ref props 'default))
-	      (default (hash-ref lastrun-map long-name (and default (car default))))
-	      (value (option-ref options long-name default)))
-	 (if value (hash-set! result long-name value))))
-     #nil options-spec)
-    result))
-
 (define (main args)
-  (let* ((lastrun-map (get-lastrun ".lastrun"))
-	 (options (getopt-with-lastrun args options-spec lastrun-map))
+  (let* ((lastrun-map (utils:get-lastrun ".lastrun"))
+	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
-	 (label (hash-ref options 'label))
+	 (luks-label (hash-ref options 'label))
 	 (zpool (hash-ref options 'zpool))
 	 (rootfs (hash-ref options 'rootfs))
 	 (dir-list (hash-ref options 'dirlst))
@@ -265,7 +186,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
-      (display (usage options-spec lastrun-map))
+      (display (utils:usage options-spec lastrun-map))
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
