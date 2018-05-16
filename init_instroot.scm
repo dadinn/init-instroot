@@ -8,7 +8,6 @@
 (use-modules
  ((local utils) #:prefix utils:)
  (ice-9 hash-table)
- (ice-9 pretty-print)
  (ice-9 regex)
  (ice-9 rdelim)
  (ice-9 popen))
@@ -203,6 +202,4 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
       (if
        (and dev-list (not keyfile))
        (error "Keyfile must be specified to unlock encrypted devices!"))
-      (let ((lrfile (open-output-file ".lastrun")))
-	(pretty-print (hash-map->list list options) lrfile)
-	(close lrfile))))))
+      (utils:write-lastrun ".lastrun" options)))))

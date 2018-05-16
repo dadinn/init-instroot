@@ -1,9 +1,11 @@
 (define-module (local utils)
-  #:export (get-lastrun getopt-lastrun usage)
+  #:export (get-lastrun write-lastrun getopt-lastrun usage)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 i18n)
+  #:use-module (ice-9 pretty-print)
   #:use-module (ice-9 getopt-long)
-  #:use-module (ice-9 hash-table))
+  #:use-module (ice-9 hash-table)
+  #:use-module (ice-9 popen))
 
 (define supported-props
   (alist->hash-table
@@ -53,6 +55,11 @@
 	 (if value (hash-set! result long-name value))))
      #nil options-spec)
     result))
+
+(define (write-lastrun path options)
+  (let ((lrfile (open-output-file ".lastrun")))
+    (pretty-print (hash-map->list list options) lrfile)
+    (close lrfile)))
 
 (define (usage specs lastrun)
   (string-join
