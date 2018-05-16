@@ -635,6 +635,9 @@ Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)
 -K FILENAME
 Generate new keyfile with the given FILENAME
 
+-r ROOTDEV
+Device used for LUKS encrypted root filesystem, and optionally for boot partition.
+
 -z ZPOOL
 ZFS pool name for system directories and swap device
 
@@ -676,7 +679,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:Zz:K:k:c:d:f:S:s:b:Eh' opt
+while getopts 'l:m:Zr:z:K:k:c:d:R:S:s:b:Eh' opt
 do
     case $opt in
 	l)
@@ -687,6 +690,9 @@ do
 	    ;;
 	Z)
 	    PREINIT_DEPENDENCIES=1
+	    ;;
+	r)
+	    ROOT_DEV=$OPTARG
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -773,10 +779,8 @@ then
     exit 0
 fi
 
-if [ "$#" -eq 1 -a -b "$1" ]
+if [ -z "$ROOT_DEV" ]
 then
-    ROOT_DEV=$1
-else
     ERROR_EXIT "Block device must be specified for root filesystem!"
 fi
 
