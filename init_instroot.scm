@@ -19,6 +19,13 @@
     (close in)
     text))
 
+(define (getuid)
+  (let* ((id-res (process->string "id -u"))
+	 (id-match (string-match "[0-9]+" id-res))
+	 (id-str (match:substring id-match))
+	 (id (string->number id-str)))
+    id))
+
 (define (create-keyfile f)
   (let ((fname (basename f)))
     (if (file-exists? fname)
@@ -190,12 +197,8 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (new-keyfile
       (create-keyfile new-keyfile))
      (else
-      (let* ((id-res (process->string "id -u"))
-	     (id-match (string-match "[0-9]+" id-res))
-	     (id-str (match:substring id-match))
-	     (id (string->number id-str)))
-	(when (not (eqv? 0 id))
-	  (error "This script must be run as root!")))
+      (when (not (eqv? 0 (getuid)))
+	(error "This script must be run as root!"))
       (when (not swap-size)
 	(error "Swap size must be specified!"))
       (when (and dev-list (not keyfile))
