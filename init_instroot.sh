@@ -505,9 +505,8 @@ EOF
 	    fi
 	done
     else
-	SWAP_UUID=$(fsuuid /dev/zvol/$ZPOOL/$ROOTFS/swap)
 	cat >> $INSTROOT/etc/fstab <<EOF
-UUID=$SWAP_UUID none swap sw,x-systemd.after=zfs.target 0 0
+/dev/zvol/$ZPOOL/$ROOTFS/swap none swap sw 0 0
 EOF
     fi
 
