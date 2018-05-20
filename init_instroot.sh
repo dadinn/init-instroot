@@ -66,7 +66,7 @@ install_deps_zfs () {
     fi
 }
 
-init_parts_bios () {
+init_parts_joint_bios () {
     if [ $# -eq 1 ]
     then
 	local ROOT_DEV="$1"
@@ -82,7 +82,7 @@ init_parts_bios () {
     echo "Finished setting up partitions on: $ROOT_DEV"
 }
 
-init_parts_efi () {
+init_parts_joint_efi () {
     if [ $# -eq 1 ]
     then
 	local ROOT_DEV="$1"
@@ -129,7 +129,7 @@ init_parts_boot_efi () {
     echo "Finished setting up partitions on: $BOOT_DEV"
 }
 
-init_parts_root(){
+init_parts_root_only(){
     if [ $# -eq 1 ]
     then
 	local ROOT_DEV="$1"
@@ -815,12 +815,12 @@ if [ -z "$BOOT_DEV" ]
 then
     if [ "$UEFI_BOOT" -eq 0 ]
     then
-	init_parts_bios $ROOT_DEV
+	init_parts_joint_bios $ROOT_DEV
 	BOOT_PARTDEV="${ROOT_DEV}2"
 	LUKS_PARTDEV="${ROOT_DEV}3"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
-	init_parts_efi $ROOT_DEV
+	init_parts_joint_efi $ROOT_DEV
 	BOOT_PARTDEV="${ROOT_DEV}1"
 	LUKS_PARTDEV="${ROOT_DEV}2"
 	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
@@ -828,13 +828,13 @@ then
 else
     if [ "$UEFI_BOOT" -eq 0 ]
     then
-	init_parts_root $ROOT_DEV
+	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
 	init_parts_boot_bios $BOOT_DEV
 	BOOT_PARTDEV="${BOOT_DEV}2"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
-	init_parts_root $ROOT_DEV
+	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
 	init_parts_boot_efi $BOOT_DEV
 	BOOT_PARTDEV="${BOOT_DEV}1"
