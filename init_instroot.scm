@@ -194,12 +194,10 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	     (id-match (string-match "[0-9]+" id-res))
 	     (id-str (match:substring id-match))
 	     (id (string->number id-str)))
-	(if (not (eqv? 0 id))
-	    (error "This script must be run as root!")))
-      (if
-       (not swap-size)
-       (error "Swap size must be specified!"))
-      (if
-       (and dev-list (not keyfile))
-       (error "Keyfile must be specified to unlock encrypted devices!"))
+	(when (not (eqv? 0 id))
+	  (error "This script must be run as root!")))
+      (when (not swap-size)
+	(error "Swap size must be specified!"))
+      (when (and dev-list (not keyfile))
+	(error "Keyfile must be specified to unlock encrypted devices!"))
       (utils:write-lastrun ".lastrun" options)))))
