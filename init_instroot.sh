@@ -74,7 +74,6 @@ init_parts_joint_bios () {
 	ERROR_EXIT "called init_parts_bios with $# args: $@"
     fi
 
-    echo "Setting up partitions..."
     sgdisk $ROOT_DEV -Z \
 	   -n 1:0:+2M -n 2:0:+500M -N 3 \
 	   -t 1:ef02 -t 2:8300 -t 3:8300 -s 2>&1 > /dev/null
@@ -90,7 +89,6 @@ init_parts_joint_efi () {
 	ERROR_EXIT "called init_parts_efi with $# args: $@"
     fi
 
-    echo "Setting up partitions..."
     sgdisk $ROOT_DEV -Z \
 	   -n 1:0:+500M -N 2 \
 	   -t 1:ef00 -t 2:8300 -s 2>&1 > /dev/null
@@ -106,7 +104,6 @@ init_parts_boot_bios () {
 	ERROR_EXIT "called init_parts_boot_bios with $# args: $@"
     fi
 
-    echo "Setting up partitions..."
     sgdisk $BOOT_DEV -Z \
 	   -n 1:0:+2M -N 2  \
 	   -t 1:ef02 -t 2:8300 2>&1 > /dev/null
@@ -122,7 +119,6 @@ init_parts_boot_efi () {
 	ERROR_EXIT "called init_parts_boot_efi with $# args: $@"
     fi
 
-    echo "Setting up partitions..."
     sgdisk $BOOT_DEV -Z \
 	   -N 1 -t 1:ef00 2>&1 > /dev/null
     partprobe $BOOT_DEV 2>&1 > /dev/null
@@ -138,7 +134,6 @@ init_parts_root_only(){
 	ERROR_EXIT "called init_parts_root with $# args: $@"
     fi
 
-    echo "Setting up partitions..."
     sgdisk $ROOT_DEV -Z -N 1 -t 1:8300 2>&1 > /dev/null
     partprobe $ROOT_DEV 2>&1 > /dev/null
     echo "Finished setting up partitions on $ROOT_DEV"
@@ -820,11 +815,13 @@ if [ -z "$BOOT_DEV" ]
 then
     if [ "$UEFI_BOOT" -eq 0 ]
     then
+	echo "Setting up partitions..."
 	init_parts_joint_bios $ROOT_DEV
 	BOOT_PARTDEV="${ROOT_DEV}2"
 	LUKS_PARTDEV="${ROOT_DEV}3"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
+	echo "Setting up partitions..."
 	init_parts_joint_efi $ROOT_DEV
 	BOOT_PARTDEV="${ROOT_DEV}1"
 	LUKS_PARTDEV="${ROOT_DEV}2"
@@ -833,12 +830,14 @@ then
 else
     if [ "$UEFI_BOOT" -eq 0 ]
     then
+	echo "Setting up partitions..."
 	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
 	init_parts_boot_bios $BOOT_DEV
 	BOOT_PARTDEV="${BOOT_DEV}2"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
+	echo "Setting up partitions..."
 	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
 	init_parts_boot_efi $BOOT_DEV
