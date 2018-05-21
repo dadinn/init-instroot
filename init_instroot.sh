@@ -253,6 +253,7 @@ init_zfsroot () {
 	    $SYSTEMFS/swap
 	mkswap /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
 	swapon /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
+	swapoff /dev/zvol/$SYSTEMFS/swap 2>&1 > /dev/null
     fi
     echo "Finished setting up ZFS pool: $ZPOOL"
 }
@@ -389,8 +390,10 @@ init_instroot_lvm () {
 
     echo "Formatting $LV_SWAP to be used as swap space..."
     mkswap $LV_SWAP 2>&1 > /dev/null
-    if ! swapon $LV_SWAP
+    if swapon $LV_SWAP
     then
+	swapoff $LV_SWAP
+    else
 	ERROR_EXIT "$LV_SWAP failed to swap on!"
     fi
 
@@ -500,6 +503,7 @@ EOF
 	    mkswap $SWAPFILE 2>&1 > /dev/null
 	    if swapon $SWAPFILE
 	    then
+		swapoff $SWAPFILE
 		echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
 	    else
 		echo "WARNING: $SWAPFILE failed to swap on!" >&2
@@ -591,6 +595,7 @@ EOF
 	mkswap $SWAPFILE 2>&1 > /dev/null
 	if swapon $SWAPFILE
 	then
+	    swapoff $SWAPFILE
 	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
 	else
 	    echo "WARNING: $SWAPFILE failed to swap on!" >&2
