@@ -650,7 +650,7 @@ Name of the system root dataset in the ZFS pool (default $ROOTFS)
 -d DIRLIST
 Coma separated list of root directories to mount as ZFS datasets (default $DIRLIST)
 
--c DEVLIST
+-v DEVLIST
 Coma separeted list of colon separated pairs of other encrypted devices
 (e.g. members of ZFS pool), and their repsective LUKS labels.
 (e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
@@ -679,7 +679,7 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:Zr:z:K:k:c:d:R:S:s:b:Eh' opt
+while getopts 'l:m:Zr:z:K:k:v:d:R:S:s:b:Eh' opt
 do
     case $opt in
 	l)
@@ -713,7 +713,7 @@ do
 		ERROR_EXIT "keyfile $KEYFILE is not found!"
 	    fi
 	    ;;
-	c)
+	v)
 	    DEVLIST=$OPTARG
 	    ;;
 	d)
