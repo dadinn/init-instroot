@@ -117,11 +117,6 @@ fi
 
 if [ ! -z "$ZPOOL" ]
 then
-    if [ "${SWAPFILES:-0}" -gt 0 ]
-    then swapoff $INSTROOT/root/swap/*
-    else swapoff /dev/zvol/$ZPOOL/$ROOTFS/swap
-    fi
-
     zfs destroy -r $ZPOOL/$ROOTFS
     zpool export $ZPOOL
 
@@ -136,13 +131,10 @@ then
     done
 elif [ "${SWAPFILES:-0}" -gt 0 ]
 then
-    swapoff $INSTROOT/root/swap/*
     umount $INSTROOT
 else
-    VG_NAME=${LUKS_LABEL}_vg
-    swapoff /dev/mapper/${VG_NAME}-swap
     umount $INSTROOT
-    vgremove -f $VG_NAME
+    vgremove -f ${LUKS_LABEL}_vg
 fi
 
 if [ ! -z "$ROOT_DEV" ]
