@@ -1,11 +1,19 @@
 (define-module (local utils)
-  #:export (get-lastrun write-lastrun getopt-lastrun usage)
+  #:export (get-lastrun write-lastrun getopt-lastrun usage process->string)
   #:use-module ((srfi srfi-1) #:prefix srfi-1:)
   #:use-module ((ice-9 i18n) #:prefix i18n:)
   #:use-module ((ice-9 pretty-print) #:prefix pp:)
   #:use-module ((ice-9 getopt-long) #:prefix getopt:)
   #:use-module ((ice-9 hash-table) #:prefix hash:)
+  #:use-module ((ice-9 rdelim) #:prefix rdelim:)
   #:use-module ((ice-9 popen) #:prefix popen:))
+
+(define* (process->string #:rest args)
+  (let* ((command (string-join args " "))
+	 (in (popen:open-input-pipe command))
+	 (text (rdelim:read-string in)))
+    (close in)
+    text))
 
 (define supported-props
   (hash:alist->hash-table

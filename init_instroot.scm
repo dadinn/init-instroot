@@ -9,18 +9,10 @@
  ((local utils) #:prefix utils:)
  ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
- ((ice-9 rdelim) #:prefix rdelim:)
  ((ice-9 popen) #:prefix popen:))
 
-(define* (process->string #:rest args)
-  (let* ((command (string-join args " "))
-	 (in (popen:open-input-pipe command))
-	 (text (rdelim:read-string in)))
-    (close in)
-    text))
-
 (define (getuid)
-  (let* ((id-res (process->string "id -u"))
+  (let* ((id-res (utils:process->string "id -u"))
 	 (id-match (regex:string-match "[0-9]+" id-res))
 	 (id-str (regex:match:substring id-match))
 	 (id (string->number id-str)))
@@ -37,7 +29,7 @@
       (let ((match
 	     (regex:string-match
 	      "Partition unique GUID: ([0-9A-F-]+)"
-	      (process->string "sgdisk -i" (number->string n) path))))
+	      (utils:process->string "sgdisk -i" (number->string n) path))))
 	(if match (regex:match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
