@@ -1,20 +1,20 @@
 (define-module (local utils)
   #:export (get-lastrun write-lastrun getopt-lastrun usage)
-  #:use-module (srfi srfi-1)
-  #:use-module (ice-9 i18n)
-  #:use-module (ice-9 pretty-print)
-  #:use-module (ice-9 getopt-long)
-  #:use-module (ice-9 hash-table)
-  #:use-module (ice-9 popen))
+  #:use-module ((srfi srfi-1) #:prefix srfi-1:)
+  #:use-module ((ice-9 i18n) #:prefix i18n:)
+  #:use-module ((ice-9 pretty-print) #:prefix pp:)
+  #:use-module ((ice-9 getopt-long) #:prefix getopt:)
+  #:use-module ((ice-9 hash-table) #:prefix hash:)
+  #:use-module ((ice-9 popen) #:prefix popen:))
 
 (define supported-props
-  (alist->hash-table
+  (hash:alist->hash-table
    (map
     (lambda (k) (cons k #t))
     '(single-char value required? predicate))))
 
 (define (conform-props props)
-  (fold
+  (srfi-1:fold
    (lambda (kv new-props)
      (if (hash-ref supported-props (car kv))
 	 (cons kv new-props)
@@ -38,27 +38,27 @@
 	       (lambda (kv) (cons (car kv) (cadr kv)))
 	       (read lr-file))))
 	(close lr-file)
-	(alist->hash-table lr-alist))
+	(hash:alist->hash-table lr-alist))
       (make-hash-table 0)))
 
 (define* (getopt-lastrun args options-spec #:optional lastrun-map)
-  (let* ((options (getopt-long args (conform-spec options-spec)))
+  (let* ((options (getopt:getopt-long args (conform-spec options-spec)))
 	 (result (make-hash-table (length options-spec))))
-    (fold
+    (srfi-1:fold
      (lambda (spec noop!)
        (let* ((long-name (car spec))
 	      (props (cdr spec))
 	      (default (assoc-ref props 'default))
 	      (default (and default (car default)))
 	      (default (hash-ref lastrun-map long-name default))
-	      (value (option-ref options long-name default)))
+	      (value (getopt:option-ref options long-name default)))
 	 (if value (hash-set! result long-name value))))
      #nil options-spec)
     result))
 
 (define (write-lastrun path options)
   (let ((lrfile (open-output-file ".lastrun")))
-    (pretty-print (hash-map->list list options) lrfile)
+    (pp:pretty-print (hash-map->list list options) lrfile)
     (close lrfile)))
 
 (define (usage specs lastrun)
@@ -80,7 +80,7 @@
 	 (string-append "--" (symbol->string long-name))
 	 (if value
 	     (if value-arg
-		 (string-append " " (string-locale-upcase (car value-arg)) "\n")
+		 (string-append " " (i18n:string-locale-upcase (car value-arg)) "\n")
 		 " ARG\n")
 	     "\n")
 	 (if description (car description) "NO DESCRIPTION")
