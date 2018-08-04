@@ -6,6 +6,7 @@
  (dirname (current-filename)))
 
 (use-modules
+ ((ice-9 readline))
  ((local utils) #:prefix utils:)
  ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
@@ -54,6 +55,102 @@
 	      (system "apt update")
 	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
 	    (error "Necessary binaries are missing" missing)))))
+
+(define* (init-boot-parts boot-dev #:key uefi?)
+    (cond
+     (uefi?
+      (system* "sgdisk" boot-dev "-Z"
+	       "-N 1"
+	       "-t 1:ef00")
+      (system* "partprobe" boot-dev)
+      (let ((boot-partdev (string-append boot-dev "1")))
+	(system* "mkfs.fat" "-F32" boot-partdev)
+	(utils:println "Finished setting up partitions on:" boot-dev)
+	boot-partdev))
+     (else
+      (system* "sgdisk" boot-dev "-Z"
+	       "-n 1:0:+2M"
+	       "-t 1:ef02"
+	       "-N 2"
+	       "-t 2:8300")
+      (system* "partprobe" boot-dev)
+      (let ((boot-partdev (string-append boot-dev "2")))
+	(system* "mkfs.ext4 -q -m 0 -j" boot-partdev)
+	(utils:println "Finished setting up partitions on:" boot-dev)
+	boot-partdev))))
+
+(define* (init-root-parts root-dev #:key boot-dev uefi?)
+  (cond
+   (boot-dev
+    (system* "sgdisk" root-dev "-Z" "-N 1" "-t 1:8300")
+    (system* "partprobe" root-dev)
+    (vector
+     (init-boot-parts boot-dev #:uefi? uefi?)
+     (string-append root-dev "1")))
+   (else
+    (cond
+     (uefi?
+      (system* "sgdisk" root-dev "-Z"
+	       "-n 1:0:+500M"
+	       "-N 2"
+	       "-t 1:ef00"
+	       "-t 2:8300")
+      (system* "partprobe" root-dev)
+      (vector
+       (string-append root-dev "1")
+       (string-append root-dev "2")))
+     (else
+      (system* "sgdisk" root-dev "-Z"
+	       "-n 1:0:+2M"
+	       "-n 2:0:+500M"
+	       "-N 3"
+	       "-t 1:ef02"
+	       "-t 2:8300"
+	       "-t 3:8300")
+      (system* "partprobe" root-dev)
+      (vector
+       (string-append root-dev "2")
+       (string-append root-dev "3")))))))
+
+(define (init-cryptroot partdev label)
+  (utils:println "formatting" partdev "to be used as LUKS device...")
+  (system* "cryptsetup" "luksFormat" partdev)
+  (newline)
+  (utils:println "Finished formatting device" partdev "for LUKS encryption!")
+  (utils:println "Opening LUKS device" partdev "as" label "...")
+  (when (not
+	 (with-input-from-port (current-input-port)
+	   (lambda () (system* "cryptsetup" "luksOpen" partdev label))))
+    (error "Failed to open LUKS device:" label))
+  (newline)
+  (utils:println "It is recommended to overwrite a new LUKS device with random data.")
+  (utils:println "WARNING: This can take quite a long time!")
+  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [Y/n]")))
+    (cond
+     ((regex:string-match "[nN]" shred-prompt)
+      (utils:println "Skipping shredding of LUKS device."))
+     (else
+      (utils:println "Shredding LUKS device...")
+      (let* ((luks-dev (string-append "/dev/mapper/" label))
+	     (dev-size (utils:process->string "blockdev" "--getsize64" luks-dev))
+	     (in (popen:open-input-pipe (string-append "pv -Ss " dev-size)))
+	     (out (open-output-file luks-dev #:binary)))
+	(display "Trying to do shredding..."))))))
+
+(define* (init-instroot #:key root-dev boot-dev zpool uefi? label)
+  (cond
+   (root-dev
+    (let* ((parts (init-root-parts root-dev))
+	   (boot-partdev (vector-ref parts 0))
+	   (root-partdev (vector-ref parts 1)))
+      (init-cryptroot root-partdev label)))
+   (else
+    (cond
+     (zpool
+      (when (not boot-dev)
+	(error "Need separate boot device for using ZFS pool for root filesystem!")))
+     (else
+      (error "Need either root device, or ZFS pool for root filesystem!"))))))
 
 (define (block-device? path)
   (and (file-exists? path)
@@ -196,4 +293,11 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(error "Swap size must be specified!"))
       (when (and dev-list (not keyfile))
 	(error "Keyfile must be specified to unlock encrypted devices!"))
-      (utils:write-lastrun ".lastrun" options)))))
+      (utils:write-lastrun ".lastrun" options)
+      (install-deps-base)
+      (init-instroot
+       #:root-dev root-dev
+       #:boot-dev boot-dev
+       #:label luks-label
+       #:zpool zpool
+       #:uefi? uefiboot?)))))
