@@ -33,19 +33,20 @@
 	(if match (regex:match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
-(define deps-base
-  (list "sgdisk" "partprobe" "cryptsetup" "pv" "pvcreate" "vgcreate" "lvcreate"))
-
-(define (which acc args)
+(define (which* acc args)
   (if (not (null? args))
       (let ((curr (car args)))
 	(if (zero? (system* "which" curr))
-	    (which acc (cdr args))
-	    (which (cons curr acc) (cdr args))))
+	    (which* acc (cdr args))
+	    (which* (cons curr acc) (cdr args))))
       acc))
 
+(define* (which #:rest args)
+  (with-output-to-file "/dev/null"
+    (lambda () (which* #nil args))))
+
 (define (install-deps-base)
-  (let ((missing (which #nil deps-base)))
+  (let ((missing (which "sgdisk" "partprobe" "cryptsetup" "pv" "pvcreate" "vgcreate" "lvcreate")))
     (if (not (null? missing))
 	(if (file-exists? "/etc/debian_version")
 	    (begin
