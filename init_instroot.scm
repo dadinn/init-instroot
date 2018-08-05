@@ -12,13 +12,6 @@
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 popen) #:prefix popen:))
 
-(define (root-user?)
-  (let* ((id-res (utils:process->string "id" "-u"))
-	 (id-match (regex:string-match "[0-9]+" id-res))
-	 (id-match (regex:match:substring id-match 0))
-	 (id (string->number id-match)))
-    (eqv? 0 id)))
-
 (define (device-size dev)
   (let* ((dev-size (utils:process->string "blockdev" "--getsize64" dev))
 	 (dev-size (regex:string-match "[0-9]+" dev-size)))
@@ -291,7 +284,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (new-keyfile
       (create-keyfile new-keyfile))
      (else
-      (when (not (root-user?))
+      (when (not (utils:root-user?))
 	(error "This script must be run as root!"))
       (when (not swap-size)
 	(error "Swap size must be specified!"))
