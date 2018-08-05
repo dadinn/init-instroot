@@ -1,5 +1,5 @@
 (define-module (local utils)
-  #:export (get-lastrun write-lastrun getopt-lastrun usage process->string println)
+  #:export (get-lastrun write-lastrun getopt-lastrun usage process->string println block-device?)
   #:use-module ((srfi srfi-1) #:prefix srfi-1:)
   #:use-module ((ice-9 i18n) #:prefix i18n:)
   #:use-module ((ice-9 pretty-print) #:prefix pp:)
@@ -7,6 +7,10 @@
   #:use-module ((ice-9 hash-table) #:prefix hash:)
   #:use-module ((ice-9 rdelim) #:prefix rdelim:)
   #:use-module ((ice-9 popen) #:prefix popen:))
+
+(define (block-device? path)
+  (and (file-exists? path)
+       (eq? 'block-special (stat:type (stat path)))))
 
 (define* (println #:rest args)
   (display (string-join args " "))
