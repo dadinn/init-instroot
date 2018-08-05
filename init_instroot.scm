@@ -19,6 +19,13 @@
 	 (id (string->number id-match)))
     (eqv? 0 id)))
 
+(define (device-size dev)
+  (let* ((dev-size (utils:process->string "blockdev" "--getsize64" dev))
+	 (dev-size (regex:string-match "[0-9]+" dev-size)))
+    (if dev-size
+	(regex:match:substring dev-size 0)
+	(error "Could not calculate device size" dev))))
+
 (define (create-keyfile f)
   (let ((fname (basename f)))
     (if (file-exists? fname)
@@ -114,13 +121,12 @@
 
 (define (init-cryptroot partdev label)
   (utils:println "formatting" partdev "to be used as LUKS device...")
-  (system* "cryptsetup" "luksFormat" partdev)
+  (when (not (eqv? 0 (system* "cryptsetup" "luksFormat" partdev)))
+    (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
   (utils:println "Opening LUKS device" partdev "as" label "...")
-  (when (not
-	 (with-input-from-port (current-input-port)
-	   (lambda () (system* "cryptsetup" "luksOpen" partdev label))))
+  (when (not (eqv? 0 (system* "cryptsetup" "luksOpen" partdev label)))
     (error "Failed to open LUKS device:" label))
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
@@ -132,10 +138,11 @@
      (else
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
-	     (dev-size (utils:process->string "blockdev" "--getsize64" luks-dev))
-	     (in (popen:open-input-pipe (string-append "pv -Ss " dev-size)))
-	     (out (open-output-file luks-dev #:binary)))
-	(display "Trying to do shredding..."))))))
+	     (dev-size (device-size luks-dev)))
+	(with-input-from-file "/dev/zero"
+	  (lambda ()
+	    (with-output-to-file luks-dev
+	      (lambda () (system* "pv" "-Ss" dev-size))))))))))
 
 (define* (init-instroot #:key root-dev boot-dev zpool uefi? label)
   (cond
