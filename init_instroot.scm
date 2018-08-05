@@ -12,12 +12,12 @@
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 popen) #:prefix popen:))
 
-(define (getuid)
-  (let* ((id-res (utils:process->string "id -u"))
+(define (root-user?)
+  (let* ((id-res (utils:process->string "id" "-u"))
 	 (id-match (regex:string-match "[0-9]+" id-res))
-	 (id-str (regex:match:substring id-match))
-	 (id (string->number id-str)))
-    id))
+	 (id-match (regex:match:substring id-match 0))
+	 (id (string->number id-match)))
+    (eqv? 0 id)))
 
 (define (create-keyfile f)
   (let ((fname (basename f)))
@@ -284,7 +284,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (new-keyfile
       (create-keyfile new-keyfile))
      (else
-      (when (not (eqv? 0 (getuid)))
+      (when (not (root-user?))
 	(error "This script must be run as root!"))
       (when (not swap-size)
 	(error "Swap size must be specified!"))
