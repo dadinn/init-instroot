@@ -30,7 +30,7 @@
       (let ((match
 	     (regex:string-match
 	      "Partition unique GUID: ([0-9A-F-]+)"
-	      (utils:process->string "sgdisk -i" (number->string n) path))))
+	      (utils:process->string "sgdisk" "-i" (number->string n) path))))
 	(if match (regex:match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
