@@ -283,9 +283,4 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	       (root-partdev (vector-ref parts 1)))
 	  (init-cryptroot root-partdev label)))
        (else
-	(cond
-	 (zpool
-	  (when (not boot-dev)
-	    (error "Need separate boot device for using ZFS pool for root filesystem!")))
-	 (else
-	  (error "Need either root device, or ZFS pool for root filesystem!")))))))))
+	(error "Block device must me specified for root filesystem!")))))))
