@@ -137,22 +137,6 @@
 	    (with-output-to-file luks-dev
 	      (lambda () (system* "pv" "-Ss" dev-size))))))))))
 
-(define* (init-instroot #:key root-dev boot-dev zpool uefi? label)
-  (cond
-   (root-dev
-    (let* ((parts (init-root-parts root-dev))
-	   (boot-partdev (vector-ref parts 0))
-	   (root-partdev (vector-ref parts 1)))
-      (init-cryptroot root-partdev label)))
-   (else
-    (cond
-     (zpool
-      (when (not boot-dev)
-	(error "Need separate boot device for using ZFS pool for root filesystem!")))
-     (else
-      (error "Need either root device, or ZFS pool for root filesystem!"))))))
-
-
 (define options-spec
   `((target
      (single-char #\t)
@@ -292,9 +276,16 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(error "Keyfile must be specified to unlock encrypted devices!"))
       (utils:write-lastrun ".lastrun" options)
       (install-deps-base)
-      (init-instroot
-       #:root-dev root-dev
-       #:boot-dev boot-dev
-       #:label luks-label
-       #:zpool zpool
-       #:uefi? uefiboot?)))))
+      (cond
+       (root-dev
+	(let* ((parts (init-root-parts root-dev))
+	       (boot-partdev (vector-ref parts 0))
+	       (root-partdev (vector-ref parts 1)))
+	  (init-cryptroot root-partdev label)))
+       (else
+	(cond
+	 (zpool
+	  (when (not boot-dev)
+	    (error "Need separate boot device for using ZFS pool for root filesystem!")))
+	 (else
+	  (error "Need either root device, or ZFS pool for root filesystem!")))))))))
