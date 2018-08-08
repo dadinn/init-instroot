@@ -281,6 +281,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(let* ((parts (init-root-parts root-dev))
 	       (boot-partdev (vector-ref parts 0))
 	       (root-partdev (vector-ref parts 1)))
-	  (init-cryptroot root-partdev label)))
+	  (init-cryptroot root-partdev luks-label)))
        (else
 	(error "Block device must me specified for root filesystem!")))))))
