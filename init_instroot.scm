@@ -10,6 +10,7 @@
  ((local utils) #:prefix utils:)
  ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
+ ((ice-9 rdelim) #:prefix rdelim:)
  ((ice-9 popen) #:prefix popen:))
 
 (define (device-size dev)
@@ -55,6 +56,47 @@
 	      (system "apt update")
 	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
 	    (error "Necessary binaries are missing" missing)))))
+
+(define (read-debian-version)
+  (let* ((rdr (open-input-file "/etc/debian_version"))
+	 (res (rdelim:read-string rdr))
+	 (res (regex:string-match "^[0-9]+" res))
+	 (res (regex:match:substring res))
+	 (res (string->number res)))
+    (close rdr)
+    res))
+
+(define (install-deps-zfs)
+  (when (not (file-exists? ".deps_zfs"))
+    (cond
+     ((file-exists? "/etc/debian_version")
+      (let ((release (read-debian-version)))
+	(case release
+	  ((8)
+	   (with-output-to-file "/etc/apt/sources.list.d/backports.list"
+	     (lambda ()
+	       (with-input-from-string
+		   (with-output-to-string
+		     (lambda ()
+		       (with-input-from-file "/etc/apt/sources.list"
+			 (lambda ()
+			   (system* "grep" "-E" "^deb .* jessie main$")))))
+		 (lambda ()
+		   (system* "sed" "-e" "s;jessie main;jessie-backports main contrib;")))))
+	   (system* "apt" "update")
+	   (system* "apt" "install" "-y" "-t" "jessie-backports" "zfs-dkms"))
+	  ((9)
+	   (system* "sed" "-i" "-re" "s;^deb (.+) stretch main$;deb \\1 stretch main contrib;" "/etc/apt/sources.list.d/base.list")
+	   (system* "apt" "update")
+	   (system* "apt" "install" "-y" "zfs-dkms"))
+	  (else
+	   (error "Debian version is not supported" release)))))
+     (else
+      (error "Necessary binaries are missing! Please make sure ZFS kernel modules are loaded and CLI commands *zpool* and *zfs* are available.")))
+    (if (eqv? 0 (system* "modprobe" "zfs"))
+	(utils:println "ZFS kernel modules are loaded!")
+	(error "ZFS kernel modules are missing!"))
+    (system* "touch" ".deps_zfs")))
 
 (define* (init-boot-parts boot-dev #:key uefi?)
     (cond
