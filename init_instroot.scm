@@ -179,6 +179,16 @@
 	    (with-output-to-file luks-dev
 	      (lambda () (system* "pv" "-Ss" dev-size))))))))))
 
+(define (init-cryptdevs keyfile dev-list)
+  (map
+   (lambda (s)
+     (let* ((m (string-split s #\:))
+	    (device (car m))
+	    (label (cadr m)))
+       (when (not (file-exists? (string-append "/dev/mapper/" label)))
+	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
+   (string-split dev-list #\,)))
+
 (define options-spec
   `((target
      (single-char #\t)
