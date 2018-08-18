@@ -14,7 +14,7 @@
  ((ice-9 popen) #:prefix popen:))
 
 (define (device-size dev)
-  (let* ((dev-size (utils:process->string "blockdev" "--getsize64" dev))
+  (let* ((dev-size (utils:system->string* "blockdev" "--getsize64" dev))
 	 (dev-size (regex:string-match "[0-9]+" dev-size)))
     (if dev-size
 	(regex:match:substring dev-size 0)
@@ -31,12 +31,12 @@
       (let ((match
 	     (regex:string-match
 	      "Partition unique GUID: ([0-9A-F-]+)"
-	      (utils:process->string "sgdisk" "-i" (number->string n) path))))
+	      (utils:system->string* "sgdisk" "-i" (number->string n) path))))
 	(if match (regex:match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
 (define (fsuuid path)
-  (let ((res (utils:process->string "blkid" "-s UUID" "-o value" path)))
+  (let ((res (utils:system->string* "blkid" "-s UUID" "-o value" path)))
     (regex:match:substring
      (regex:string-match "[^\n]+?" res)
      0)))

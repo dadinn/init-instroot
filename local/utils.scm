@@ -1,5 +1,5 @@
 (define-module (local utils)
-  #:export (get-lastrun write-lastrun getopt-lastrun usage process->string println block-device? root-user? system->devnull*)
+  #:export (get-lastrun write-lastrun getopt-lastrun usage println block-device? root-user? system->string* system->devnull*)
   #:use-module ((srfi srfi-1) #:prefix srfi-1:)
   #:use-module ((ice-9 i18n) #:prefix i18n:)
   #:use-module ((ice-9 pretty-print) #:prefix pp:)
@@ -9,19 +9,12 @@
   #:use-module ((ice-9 regex) #:prefix regex:)
   #:use-module ((ice-9 popen) #:prefix popen:))
 
-(define* (system->devnull* #:rest args)
-  (with-error-to-file "/dev/null"
-    (lambda ()
-      (with-output-to-file "/dev/null"
-	(lambda ()
-	  (apply system* args))))))
-
 (define (block-device? path)
   (and (file-exists? path)
        (eq? 'block-special (stat:type (stat path)))))
 
 (define (root-user?)
-  (let* ((id-res (process->string "id" "-u"))
+  (let* ((id-res (system->string* "id" "-u"))
 	 (id-match (regex:string-match "[0-9]+" id-res))
 	 (id-match (regex:match:substring id-match 0))
 	 (id (string->number id-match)))
@@ -31,12 +24,19 @@
   (display (string-join args " "))
   (newline))
 
-(define* (process->string #:rest args)
+(define* (system->string* #:rest args)
   (let* ((command (string-join args " "))
 	 (in (popen:open-input-pipe command))
 	 (text (rdelim:read-string in)))
     (close in)
     text))
+
+(define* (system->devnull* #:rest args)
+  (with-error-to-file "/dev/null"
+    (lambda ()
+      (with-output-to-file "/dev/null"
+	(lambda ()
+	  (apply system* args))))))
 
 (define supported-props
   (hash:alist->hash-table
