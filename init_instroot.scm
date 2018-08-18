@@ -7,6 +7,7 @@
 
 (use-modules
  ((ice-9 readline))
+ ((ice-9 format))
  ((local utils) #:prefix utils:)
  ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
@@ -52,6 +53,9 @@
 (define* (which #:rest args)
   (with-output-to-file "/dev/null"
     (lambda () (which* #nil args))))
+
+(define* (mkpath head #:rest tail)
+  (string-join (cons head tail) "/"))
 
 (define (install-deps-base)
   (let ((missing (which "sgdisk" "partprobe" "cryptsetup" "pv" "pvcreate" "vgcreate" "lvcreate")))
@@ -194,6 +198,147 @@
        (when (not (file-exists? (string-append "/dev/mapper/" label)))
 	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
    (string-split dev-list #\,)))
+
+(define* (init-zfsroot zpool rootfs swap-size #:key swapfiles dir-list)
+  (with-output-to-file "/dev/null"
+    (lambda ()
+      (if (system* "zpool" "list" zpool)
+	  (system* "zpool" "import" zpool)
+	  (error "could not find ZFS pool" zpool))
+      (when (system* "zfs" "list" (mkpath zpool rootfs))
+	(error "root dataset already exists!" (mkpath zpool rootfs)))))
+  (utils:println "Creating ZFS volume for swap device...")
+  (let* ((swap-dataset (mkpath zpool rootfs "swap"))
+	 (swap-zvol (mkpath "/dev" "zvol" swap-dataset)))
+    (system* "zfs" "create" "-V" swap-size
+	     "-o sync=always"
+	     "-o primary=cache=metadata"
+	     "-o logbias=throughput"
+	     swap-dataset)
+    (with-output-to-file "/dev/null"
+      (lambda ()
+	(system* "mkswap" swap-zvol)
+	(system* "swapon" swap-zvol)
+	(system* "swapoff" swap-zvol)))))
+
+(define* (get-swapfile-args swap-size swapfiles)
+  (let* ((swapsize-num (regex:match:substring
+			(regex:string-match "^([0-9]+)[KMGT]?$" swap-size) 1))
+	 (swapsize-num (string->number swapsize-num))
+	 (swapsize-unit (regex:match:substring
+			 (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1))
+	 (swapfile-size (/ swapsize-num swapfiles))
+	 (swapfile-size (number->string swapfile-size))
+	 (swapfile-size (string-append swapfile-size swapsize-unit)))
+    (map
+     (lambda (idx)
+       (let ((filename (string-append "file" (format #f "~4,'0d" idx) "_" swapfile-size)))
+	 (list filename swapfile-size)))
+     (cdr (iota (+ 1 swapfiles))))))
+
+(define* (init-swapfiles root-dir swapfile-args)
+  (when (not (file-exists? root-dir))
+    (error "Directory" root-dir "does not exists!"))
+  (let ((swap-dir (mkpath root-dir "swap")))
+    (when (not (file-exists? swap-dir))
+      (mkdir swap-dir))
+    (map
+     (lambda (args)
+       (let* ((filename (car args))
+	      (size (cadr args))
+	      (swapfile (mkpath swap-dir filename)))
+	 (utils:println "Allocating" size "of swap space in" swapfile "...")
+	 (with-output-to-file swapfile
+	   (lambda ()
+	     (with-input-from-file "/dev/zero"
+	       (lambda ()
+		 (system* "pv" "-Ss" size)))))
+	 (chmod swapfile #o600)
+	 (utils:system->devnull* "mkswap" swapfile)
+	 (if (eqv? 0 (system* "swapon" swapfile))
+	     (system* "swapoff" swapfile)
+	     (utils:println "WARNING:" swapfile "failed to swap on!"))))
+     swapfile-args)))
+
+(define* (gen-fstab etc-dir #:key boot-partdev luks-partdev luks-label swapfile-args zpool rootfs dir-list)
+  (when (not (file-exists? etc-dir))
+    (error "Directory" etc-dir "does not exists!"))
+  (with-output-to-file (mkpath etc-dir "fstab")
+    (lambda ()
+      (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
+      (utils:println (string-append "UUID=" (fsuuid luks-partdev)) "/" "ext4" "errors=remount-ro" "0" "1")
+      (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "default" "0" "2")
+      (cond
+       (zpool
+	(utils:println (mkpath "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	(newline)
+	(utils:println "# systemd specific legacy mounts of ZFS datasets")
+	(map
+	 (lambda (dirfs)
+	   (utils:println (mkpath zpool rootfs dirfs) (string-append "/" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
+	 (string-split dir-list #\,)))
+       ((not (null? swapfile-args))
+	(newline)
+	(utils:println "#swapfiles")
+	(map
+	 (lambda (args)
+	   (let* ((filename (car args))
+		  (file-path (mkpath "/root/swap" filename)))
+	     (utils:println file-path "none" "swap" "sw" "0" "0")))
+	 swapfile-args))
+       (else
+	(let* ((vg-name (string-append luks-label "_vg"))
+	       (lv-root (string-append vg-name "-root"))
+	       (lv-swap (string-append vg-name "-swap")))
+	  (error "using LVM for swaps is not yet supported")
+	  )
+	)))))
+
+(define* (backup-header headers-dir device label)
+  (let ((file (mkpath headers-dir label)))
+    (with-output-to-file "/dev/null"
+      (lambda ()
+	(system* "cryptsetup" "luksHeaderBackup" device
+		 "--header-backup-file" file)
+	(chmod file #o400)))))
+
+(define* (gen-crypttab etc-dir root-dir #:key luks-partdev luks-label keyfile dev-list)
+  (let* ((crypttab-file (mkpath etc-dir "crypttab"))
+	 (crypt-dir (mkpath root-dir "crypt"))
+	 (headers-dir (mkpath crypt-dir "headers")))
+    (when (not (file-exists? crypt-dir))
+      (mkdir crypt-dir))
+    (when (not (file-exists? headers-dir))
+      (mkdir headers-dir))
+    ;; ROOOTDEV
+    (with-output-to-file crypttab-file
+      (lambda ()
+	(utils:println "# LUKS device containing root filesystem")
+	(utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")))
+    (backup-header headers-dir luks-partdev luks-label)
+    ;; DEVLISTS
+    (when keyfile
+      (let ((keyfile-name (basename keyfile)))
+	(chmod keyfile #o400)
+	(copy-file keyfile (mkpath crypt-dir keyfile-name))
+	(with-output-to-file crypttab-file
+	  (lambda ()
+	    (newline)
+	    (utils:println "# LUKS devices containing encrypted ZFS vdevs")
+	    (newline)
+	    (map
+	     (lambda (args)
+	       (let ((device (car args))
+		     (label (cadr args)))
+		 (utils:println label
+				(string-append "UUID=" (fsuuid device))
+				(string-append "/root/crypt/" keyfile-name)
+				"luks")
+		 (backup-header headers-dir device label)))
+	     (map
+	      (lambda (s)
+		(string-split s #\:))
+	      (string-split dev-list #\,)))))))))
 
 (define options-spec
   `((target
