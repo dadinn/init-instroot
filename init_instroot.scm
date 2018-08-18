@@ -35,6 +35,12 @@
 	(if match (regex:match:substring match 1) #f))
       (error (string-append "Not a block device: " path))))
 
+(define (fsuuid path)
+  (let ((res (utils:process->string "blkid" "-s UUID" "-o value" path)))
+    (regex:match:substring
+     (regex:string-match "[^\n]+?" res)
+     0)))
+
 (define (which* acc args)
   (if (not (null? args))
       (let ((curr (car args)))
