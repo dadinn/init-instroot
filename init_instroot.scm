@@ -6,9 +6,9 @@
  (dirname (current-filename)))
 
 (use-modules
+ ((common utils) #:prefix utils:)
  ((ice-9 readline))
  ((ice-9 format))
- ((local utils) #:prefix utils:)
  ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 rdelim) #:prefix rdelim:)

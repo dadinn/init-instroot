@@ -6,7 +6,7 @@
  (dirname (current-filename)))
 
 (use-modules
- ((local utils) #:prefix utils:)
+ ((common utils) #:prefix utils:)
  ((ice-9 readline)))
 
 (define options-spec
