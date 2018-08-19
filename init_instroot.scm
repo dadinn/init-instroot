@@ -61,13 +61,13 @@
   (string-join (cons head tail) "/"))
 
 (define (install-deps-base)
-  (let ((missing (which "sgdisk" "partprobe" "cryptsetup" "pv" "pvcreate" "vgcreate" "lvcreate")))
+  (let ((missing (which "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
     (if (not (null? missing))
 	(if (file-exists? "/etc/debian_version")
 	    (begin
 	      (display "Installing necessary packages...")
 	      (system "apt update")
-	      (system "apt install -y gdisk parted cryptsetup pv lvm2"))
+	      (system "apt install -y gdisk parted cryptsetup lvm2"))
 	    (error "Necessary binaries are missing" missing)))))
 
 (define (read-debian-version)
@@ -187,10 +187,7 @@
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
 	     (dev-size (device-size luks-dev)))
-	(with-input-from-file "/dev/zero"
-	  (lambda ()
-	    (with-output-to-file luks-dev
-	      (lambda () (system* "pv" "-Ss" dev-size))))))))))
+	(system* "dd" "if=/dev/zero" (string-append "of=" luks-dev) "status=progress"))))))
 
 (define (init-cryptdevs keyfile dev-list)
   (map
