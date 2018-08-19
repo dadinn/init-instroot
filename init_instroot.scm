@@ -85,28 +85,28 @@
 	  ((8)
 	   (with-output-to-file "/etc/apt/sources.list.d/backports.list"
 	     (lambda ()
-	       (with-input-from-string
-		   (with-output-to-string
-		     (lambda ()
-		       (with-input-from-file "/etc/apt/sources.list"
-			 (lambda ()
-			   (system* "grep" "-E" "^deb .* jessie main$")))))
-		 (lambda ()
-		   (system* "sed" "-e" "s;jessie main;jessie-backports main contrib;")))))
+	       (call-with-input-file "/etc/apt/sources.list"
+		 (lambda (port)
+		   (let* ((result (rdelim:read-string port))
+			  (pattern (make-regexp "^deb (.*) jessie main$" regexp/newline))
+			  (result (regex:match:substring (regexp-exec pattern result) 1)))
+		     (utils:println "deb" result "stretch" "main" "contrib"))))))
 	   (system* "apt" "update")
 	   (system* "apt" "install" "-y" "-t" "jessie-backports" "zfs-dkms"))
 	  ((9)
-	   (system* "sed" "-i" "-re" "s;^deb (.+) stretch main$;deb \\1 stretch main contrib;" "/etc/apt/sources.list.d/base.list")
+	   (system* "sed" "-i" "-re" "s;^deb (.+) stretch main$;deb \\1 stretch main contrib;"
+		    "/etc/apt/sources.list.d/base.list")
 	   (system* "apt" "update")
 	   (system* "apt" "install" "-y" "zfs-dkms"))
 	  (else
 	   (error "Debian version is not supported" release)))))
      (else
-      (error "Necessary binaries are missing! Please make sure ZFS kernel modules are loaded and CLI commands *zpool* and *zfs* are available.")))
-    (if (eqv? 0 (system* "modprobe" "zfs"))
-	(utils:println "ZFS kernel modules are loaded!")
-	(error "ZFS kernel modules are missing!"))
-    (system* "touch" ".deps_zfs")))
+      (error "Necessary binaries are missing, and unable to install them! Please make sure ZFS kernel modules are loaded and CLI commands are available (i.e. zpool and zfs)!")))
+    (when (not (eqv? 0 (system* "modprobe" "zfs")))
+      (error "ZFS kernel modules are missing!"))
+    (utils:println "ZFS kernel modules are loaded!")
+    (with-output-to-file ".deps_zfs"
+      (lambda () (display "")))))
 
 (define* (init-boot-parts boot-dev #:key uefi?)
     (cond
