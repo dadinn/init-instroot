@@ -205,13 +205,13 @@
 (define* (init-zfsroot zpool rootfs swap-size #:key swapfiles dir-list)
   (with-output-to-file "/dev/null"
     (lambda ()
-      (if (system* "zpool" "list" zpool)
+      (if (not (eqv? 0 (system* "zpool" "list" zpool)))
 	  (system* "zpool" "import" zpool)
 	  (error "could not find or import ZFS pool:" zpool))))
   (let* ((root-dataset (mkpath zpool rootfs))
 	 (swap-dataset (mkpath root-dataset "swap"))
 	 (swap-zvol (mkpath "/dev" "zvol" swap-dataset)))
-    (when (system* "zfs" "list" root-dataset)
+    (when (not (eqv? 0 (system* "zfs" "list" root-dataset)))
       (error "root dataset already exists!" root-dataset))
     (system* "zfs" "create" "-o compression=lz4" "-o canmount=off" root-dataset)
     (map
