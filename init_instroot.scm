@@ -355,6 +355,8 @@
      (single-char #\l)
      (description
       "LUKS encrypted device name for root")
+     (predicate
+      ,(lambda (s) (regex:string-match "^[[:alnum:]_]+$" s)))
      (default "crypt_root")
      (value-arg "label")
      (value #t))
