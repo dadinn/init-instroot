@@ -28,19 +28,22 @@
 	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
 
 (define (partuuid path n)
-  (if (eq? 'block-special (stat:type (stat path)))
-      (let ((match
+  (if (utils:block-device? path)
+      (let ((matches
 	     (regex:string-match
 	      "Partition unique GUID: ([0-9A-F-]+)"
 	      (utils:system->string* "sgdisk" "-i" (number->string n) path))))
-	(if match (regex:match:substring match 1) #f))
-      (error (string-append "Not a block device: " path))))
+	(if matches (regex:match:substring matches 1) #f))
+      (error "Not a block device:" path)))
 
 (define (fsuuid path)
-  (let ((res (utils:system->string* "blkid" "-s UUID" "-o value" path)))
-    (regex:match:substring
-     (regex:string-match "[^\n]+?" res)
-     0)))
+  (if (utils:block-device? path)
+      (let ((matches
+	     (regex:string-match
+	      "[^\n]+?"
+	      (utils:system->string* "blkid" "-s UUID" "-o value" path))))
+	(if matches (regex:match:substring matches 0) #f))
+      (error "Not a block device:" path)))
 
 (define (which* acc args)
   (if (not (null? args))
