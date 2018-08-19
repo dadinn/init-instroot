@@ -225,8 +225,9 @@
 	     "-o logbias=throughput"
 	     swap-dataset)
     (utils:system->devnull* "mkswap" swap-zvol)
-    (utils:system->devnull* "swapon" swap-zvol)
-    (utils:system->devnull* "swapoff" swap-zvol)
+    (if (eqv? 0 (utils:system->devnull* "swapon" swap-zvol))
+	(utils:system->devnull* "swapoff" swap-zvol)
+	(utils:println "WARNING:" "failed to swapon" swap-zvol))
     (utils:println "Finished setting up ZFS pool:" zpool)))
 
 (define* (get-swapfile-args swap-size swapfiles)
@@ -263,8 +264,8 @@
 		 (system* "pv" "-Ss" size)))))
 	 (chmod swapfile #o600)
 	 (utils:system->devnull* "mkswap" swapfile)
-	 (if (eqv? 0 (system* "swapon" swapfile))
-	     (system* "swapoff" swapfile)
+	 (if (eqv? 0 (utils:system->devnull* "swapon" swapfile))
+	     (utils:system->devnull* "swapoff" swapfile)
 	     (utils:println "WARNING:" swapfile "failed to swap on!"))))
      swapfile-args)))
 
