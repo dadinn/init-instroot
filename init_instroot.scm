@@ -207,22 +207,27 @@
     (lambda ()
       (if (system* "zpool" "list" zpool)
 	  (system* "zpool" "import" zpool)
-	  (error "could not find ZFS pool" zpool))
-      (when (system* "zfs" "list" (mkpath zpool rootfs))
-	(error "root dataset already exists!" (mkpath zpool rootfs)))))
-  (utils:println "Creating ZFS volume for swap device...")
-  (let* ((swap-dataset (mkpath zpool rootfs "swap"))
+	  (error "could not find or import ZFS pool:" zpool))))
+  (let* ((root-dataset (mkpath zpool rootfs))
+	 (swap-dataset (mkpath root-dataset "swap"))
 	 (swap-zvol (mkpath "/dev" "zvol" swap-dataset)))
+    (when (system* "zfs" "list" root-dataset)
+      (error "root dataset already exists!" root-dataset))
+    (system* "zfs" "create" "-o compression=lz4" "-o canmount=off" root-dataset)
+    (map
+     (lambda (dir-name)
+       (system* "zfs" "create" (mkpath root-dataset dir-name)))
+     dir-list)
+    (utils:println "Creating ZFS volume for swap device...")
     (system* "zfs" "create" "-V" swap-size
 	     "-o sync=always"
 	     "-o primary=cache=metadata"
 	     "-o logbias=throughput"
 	     swap-dataset)
-    (with-output-to-file "/dev/null"
-      (lambda ()
-	(system* "mkswap" swap-zvol)
-	(system* "swapon" swap-zvol)
-	(system* "swapoff" swap-zvol)))))
+    (utils:system->devnull* "mkswap" swap-zvol)
+    (utils:system->devnull* "swapon" swap-zvol)
+    (utils:system->devnull* "swapoff" swap-zvol)
+    (utils:println "Finished setting up ZFS pool:" zpool)))
 
 (define* (get-swapfile-args swap-size swapfiles)
   (let* ((swapsize-num (regex:match:substring
