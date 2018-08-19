@@ -613,20 +613,61 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
-     (else
-      (when (not (utils:root-user?))
-	(error "This script must be run as root!"))
-      (when (not swap-size)
-	(error "Swap size must be specified!"))
-      (when (and dev-list (not keyfile))
-	(error "Keyfile must be specified to unlock encrypted devices!"))
-      (utils:write-lastrun ".lastrun" options)
-      (install-deps-base)
+     ((utils:root-user?)
       (cond
-       (root-dev
-	(let* ((parts (init-root-parts root-dev))
-	       (boot-partdev (vector-ref parts 0))
-	       (root-partdev (vector-ref parts 1)))
-	  (init-cryptroot root-partdev luks-label)))
+       (initdeps?
+	(install-deps-base)
+	(install-deps-zfs)
+	(utils:println "Finished installing all package dependencies!"))
        (else
-	(error "Block device must me specified for root filesystem!")))))))
+	(when (not swap-size)
+	  (error "Swap size must be specified!"))
+	(when (and dev-list (not keyfile))
+	  (error "Keyfile must be specified to unlock encrypted devices!"))
+	(utils:write-lastrun ".lastrun" options)
+	(install-deps-base)
+	(cond
+	 (root-dev
+	  (cond
+	   (boot-dev
+	    (error "Separate boot device is not supported!"))
+	   (else
+	    (cond
+	     (uefiboot?
+	      (error "UEFI boot is not yet supported!"))
+	     (else
+	      (let* ((parts (init-root-parts root-dev))
+		     (boot-partdev (vector-ref parts 0))
+		     (root-partdev (vector-ref parts 1)))
+		(init-cryptroot root-partdev luks-label)
+		(cond
+		 (zpool
+		  (when (and keyfile dev-list)
+		    (init-cryptdevs keyfile dev-list))
+		  (install-deps-zfs)
+		  (init-zfsroot zpool rootfs swap-size
+				#:swapfiles swapfiles
+				#:dir-list dir-list)
+		  (init-instroot-zfs
+		   target boot-partdev
+		   root-partdev luks-label
+		   swap-size
+		   #:swapfiles swapfiles
+		   #:dir-list dir-list
+		   #:keyfile keyfile
+		   #:dev-list dev-list
+		   #:zpool zpool))
+		 ((< 0 swapfiles)
+		  (init-instroot-swapfile
+		   target boot-partdev root-partdev luks-label
+		   swap-size swapfiles))
+		 (else
+		  (init-instroot-lvm
+		   target boot-partdev root-partdev luks-label
+		   swap-size)))))))))
+	 (else
+	  (error "Block device must me specified for root filesystem!")))))
+      (copy-file ".lastrun" (mkpath target "CONFIG_ME"))
+      (utils:println "Finished setting up installation root" target))
+     (else
+      (error "This script must be run as root!")))))
