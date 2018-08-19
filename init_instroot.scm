@@ -21,12 +21,6 @@
 	(regex:match:substring dev-size 0)
 	(error "Could not calculate device size" dev))))
 
-(define (create-keyfile f)
-  (let ((fname (basename f)))
-    (if (file-exists? fname)
-	(throw 'file-already-exists fname)
-	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
-
 (define (partuuid path n)
   (if (utils:block-device? path)
       (let ((matches
@@ -578,6 +572,12 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (description
       "This usage help...")
      (single-char #\h))))
+
+(define (create-keyfile f)
+  (let ((fname (basename f)))
+    (if (file-exists? fname)
+	(throw 'file-already-exists fname)
+	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
 
 (define (parse-pairs pair-list)
   (map (lambda (pair) (string-split pair #\:))
