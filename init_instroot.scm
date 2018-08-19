@@ -286,7 +286,7 @@
 	 (lambda (dirfs)
 	   (utils:println (mkpath zpool rootfs dirfs) (string-append "/" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
 	 (string-split dir-list #\,)))
-       ((not (null? swapfile-args))
+       ((and swapfile-args (not (null? swapfile-args)))
 	(newline)
 	(utils:println "#swapfiles")
 	(map
