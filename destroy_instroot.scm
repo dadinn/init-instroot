@@ -104,10 +104,8 @@ Specifying a keyfile is necessary for this feature!")
       (error "This script must be run as root!"))
     (system* "umount" (string-append instroot "/boot"))
     (when boot-dev
-      (with-output-to-file "/dev/null"
-	(lambda ()
-	  (system* "sgdisk" "-Z" boot-dev)
-	  (system* "partprobe" boot-dev))))
+      (utils:system->devnull* "sgdisk" "-Z" boot-dev)
+      (utils:system->devnull* "partprobe" boot-dev))
     (cond
      (zpool
       (system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
@@ -126,10 +124,8 @@ Specifying a keyfile is necessary for this feature!")
       (system* "vgremove" "-f" (string-append luks-label "_vg"))))
     (when root-dev
       (system* "cryptsetup" "luksClose" luks-label)
-      (with-output-to-file "/dev/null"
-	(lambda ()
-	  (system* "sgdisk" "-Z" root-dev)
-	  (system* "partprobe" root-dev))))
+      (utils:system->devnull* "sgdisk" "-Z" root-dev)
+      (utils:system->devnull* "partprobe" root-dev))
     (when (and (file-exists? instroot)
 	       (eq? 'directory (stat:type (stat instroot))))
       (rmdir instroot)
