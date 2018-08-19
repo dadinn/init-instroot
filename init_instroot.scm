@@ -43,7 +43,7 @@
   (string-join (cons head tail) "/"))
 
 (define (install-deps-base)
-  (let ((missing (utils:which "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
+  (let ((missing (utils:which* "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
     (if (not (null? missing))
 	(if (file-exists? "/etc/debian_version")
 	    (begin
