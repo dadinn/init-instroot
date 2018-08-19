@@ -106,24 +106,25 @@ Specifying a keyfile is necessary for this feature!")
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
       (utils:system->devnull* "partprobe" boot-dev))
-    (cond
-     (zpool
-      (system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
-      (system* "zpool" "export" zpool)
-      (system* "umount" instroot)
-      (map
-       (lambda (dev)
-	 (let* ((split (string-split dev #\:))
-		(device (car split))
-		(label (cdr split)))
-	   (system* "cryptsetup" "luksClose" label)))))
-     (swapfiles
-      (system* "umount" instroot))
-     (else
-      (system* "umount" instroot)
-      (system* "vgremove" "-f" (string-append luks-label "_vg"))))
     (when root-dev
-      (system* "cryptsetup" "luksClose" luks-label)
+      (cond
+       (zpool
+	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+	(system* "zpool" "export" zpool)
+	(system* "umount" instroot)
+	(map
+	 (lambda (dev)
+	   (let* ((split (string-split dev #\:))
+		  (device (car split))
+		  (label (cdr split)))
+	     (system* "cryptsetup" "luksClose" label)))))
+       ((< 0 swapfiles)
+	(system* "umount" instroot)
+	(system* "cryptsetup" "luksClose" luks-label))
+       (else
+	(system* "umount" instroot)
+	(system* "vgremove" "-f" (string-append luks-label "_vg"))
+	(system* "cryptsetup" "luksClose" luks-label)))
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
     (when (and (file-exists? instroot)
