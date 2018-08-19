@@ -297,8 +297,8 @@
 	 swapfile-args))
        (else
 	(let* ((vg-name (string-append luks-label "_vg"))
-	       (lv-root (string-append vg-name "-root"))
-	       (lv-swap (string-append vg-name "-swap")))
+q	       (lv-root (string-append "/dev/mapper/" vg-name "-root"))
+	       (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
 	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
 
 (define* (backup-header headers-dir device label)
