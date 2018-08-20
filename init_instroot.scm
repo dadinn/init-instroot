@@ -568,7 +568,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
        (string-split pair-list #\,)))
 
 (define (main args)
-  (let* ((lastrun-map (utils:get-lastrun ".lastrun"))
+  (let* ((lastrun-map (utils:read-lastrun ".lastrun"))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))

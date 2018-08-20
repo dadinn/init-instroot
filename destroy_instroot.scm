@@ -74,7 +74,7 @@ Specifying a keyfile is necessary for this feature!")
      (single-char #\h))))
 
 (define (main args)
-  (let* ((lastrun-map (utils:get-lastrun ".lastrun"))
+  (let* ((lastrun-map (utils:read-lastrun ".lastrun"))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 
 	 (instroot (hash-ref options 'target))
