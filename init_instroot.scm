@@ -9,7 +9,6 @@
  ((common utils) #:prefix utils:)
  ((ice-9 readline))
  ((ice-9 format))
- ((ice-9 hash-table) #:prefix hash:)
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 rdelim) #:prefix rdelim:)
  ((ice-9 popen) #:prefix popen:))
