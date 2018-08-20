@@ -590,6 +590,16 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
+      (utils:println
+       "
+USAGE:
+
+init_instroot.scm [OPTIONS]
+
+Initialise and mount root filesystem. Uses LUKS encryption for root partition, and allows choice between LVM or swapfiles for swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume. Also, allows configuring separate boot device, either BIOS or UEFI.
+
+Valid options are:
+")
       (display (utils:usage options-spec lastrun-map))
       (newline))
      (new-keyfile

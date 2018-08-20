@@ -93,7 +93,22 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (if swapfiles (string->number swapfiles) 0))
 	 (uefiboot? (hash-ref options 'uefiboot))
-	 (initdeps? (hash-ref options 'initdeps)))
+	 (initdeps? (hash-ref options 'initdeps))
+	 (help? (hash-ref options 'help)))
+    ;; todo fix these imperative whens
+    (when help?
+      (utils:println "
+USAGE:
+
+destroy_instroot.scm [OPTIONS]
+
+Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables defined in .lastrun file.
+
+Valid options are:
+")
+      (display (utils:usage options-spec lastrun-map))
+      (newline)
+      (exit 0))
     (when (not root-dev)
       (error "Root device is not specified!"))
     (when (not luks-label)
