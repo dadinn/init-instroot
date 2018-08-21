@@ -614,10 +614,10 @@ Valid options are:
 		 (else
 		  (init-instroot-lvm
 		   target boot-partdev root-partdev luks-label
-		   swap-size)))))))))
+		   swap-size))))
+	      (copy-file ".lastrun" (utils:path target "CONFIG_ME"))
+	      (utils:println "Finished setting up installation root" target))))))
 	 (else
-	  (error "Block device must me specified for root filesystem!")))))
-      (copy-file ".lastrun" (utils:path target "CONFIG_ME"))
-      (utils:println "Finished setting up installation root" target))
+	  (error "Block device must me specified for root filesystem!"))))))
      (else
       (error "This script must be run as root!")))))
