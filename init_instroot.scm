@@ -280,7 +280,10 @@
 		(string-split s #\:))
 	      (string-split dev-list #\,)))))))))
 
-(define* (init-instroot-zfs instroot boot-partdev luks-partdev luks-label swap-size #:key keyfile dev-list zpool rootfs dir-list swapfiles)
+(define* (init-instroot-zfs
+	  instroot boot-partdev luks-partdev luks-label
+	  zpool rootfs dir-list swap-size swapfiles
+	  #:key keyfile dev-list)
   (when (file-exists? instroot)
     (error "Target" instroot "already exists!"))
   (when (not (utils:block-device? boot-partdev))
@@ -289,10 +292,10 @@
     (error "Cannot find device" luks-partdev "for root partition!"))
   (when (not (utils:block-device? (string-append "/dev/mapper/" luks-label)))
     (error "Cannot find LUKS device" luks-label))
-  (when (utils:system->devnull* "zpool" "list" zpool)
+  (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "zpool" zpool "not available!"))
   (let ((systemfs (utils:path zpool rootfs)))
-    (when (utils:system->devnull* "zfs" "list" systemfs)
+    (when (not (zero? (utils:system->devnull* "zfs" "list" systemfs)))
       (error "ZFS dataset" systemfs "does not exist!"))
     ;; BEGIN
     (mkdir instroot)
@@ -596,12 +599,10 @@ Valid options are:
 		  (init-instroot-zfs
 		   target boot-partdev
 		   root-partdev luks-label
-		   swap-size
-		   #:swapfiles swapfiles
-		   #:dir-list dir-list
-		   #:keyfile keyfile
+		   zpool rootfs dir-list
+		   swap-size swapfiles
 		   #:dev-list dev-list
-		   #:zpool zpool))
+		   #:keyfile keyfile))
 		 ((< 0 swapfiles)
 		  (init-instroot-swapfile
 		   target boot-partdev root-partdev luks-label
