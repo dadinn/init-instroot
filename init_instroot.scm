@@ -174,16 +174,19 @@
   (let* ((swapsize-num (regex:match:substring
 			(regex:string-match "^([0-9]+)[KMGT]?$" swap-size) 1))
 	 (swapsize-num (string->number swapsize-num))
-	 (swapsize-unit (regex:match:substring
-			 (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1))
-	 (swapfile-size (quotient swapsize-num swapfiles))
-	 (swapfile-size (number->string swapfile-size))
-	 (swapfile-size (string-append swapfile-size swapsize-unit)))
-    (map
-     (lambda (idx)
-       (let ((filename (string-append "file" (format #f "~4,'0d" idx) "_" swapfile-size)))
-	 (list filename swapfile-size)))
-     (cdr (iota (+ 1 swapfiles))))))
+	 (swapsize-unit
+	  (regex:match:substring
+	   (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1)))
+    (if (< 0 swapfiles)
+	(let* ((swapfile-size (quotient swapsize-num swapfiles))
+	       (swapfile-size (number->string swapfile-size))
+	       (swapfile-size (string-append swapfile-size swapsize-unit)))
+	  (map
+	   (lambda (idx)
+	     (let ((filename (string-append "file" (format #f "~4,'0d" idx) "_" swapfile-size)))
+	       (list filename swapfile-size)))
+	   (cdr (iota (+ 1 swapfiles)))))
+	'())))
 
 (define* (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
