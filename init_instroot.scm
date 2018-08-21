@@ -35,7 +35,7 @@
       (let ((matches
 	     (regex:string-match
 	      "[^\n]+?"
-	      (utils:system->string* "blkid" "-s UUID" "-o value" path))))
+	      (utils:system->string* "blkid" "-s" "UUID" "-o" "value" path))))
 	(if matches (regex:match:substring matches 0) #f))
       (error "Not a block device:" path)))
 
@@ -53,8 +53,8 @@
     (cond
      (uefi?
       (system* "sgdisk" boot-dev "-Z"
-	       "-N 1"
-	       "-t 1:ef00")
+	       "-N" "1"
+	       "-t" "1:ef00")
       (system* "partprobe" boot-dev)
       (let ((boot-partdev (string-append boot-dev "1")))
 	(system* "mkfs.fat" "-F32" boot-partdev)
@@ -62,20 +62,20 @@
 	boot-partdev))
      (else
       (system* "sgdisk" boot-dev "-Z"
-	       "-n 1:0:+2M"
-	       "-t 1:ef02"
-	       "-N 2"
-	       "-t 2:8300")
+	       "-n" "1:0:+2M"
+	       "-t" "1:ef02"
+	       "-N" "2"
+	       "-t" "2:8300")
       (system* "partprobe" boot-dev)
       (let ((boot-partdev (string-append boot-dev "2")))
-	(system* "mkfs.ext4 -q -m 0 -j" boot-partdev)
+	(system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
 	(utils:println "Finished setting up partitions on:" boot-dev)
 	boot-partdev))))
 
 (define* (init-root-parts root-dev #:key boot-dev uefi?)
   (cond
    (boot-dev
-    (system* "sgdisk" root-dev "-Z" "-N 1" "-t 1:8300")
+    (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (system* "partprobe" root-dev)
     (vector
      (init-boot-parts boot-dev #:uefi? uefi?)
@@ -84,22 +84,22 @@
     (cond
      (uefi?
       (system* "sgdisk" root-dev "-Z"
-	       "-n 1:0:+500M"
-	       "-N 2"
-	       "-t 1:ef00"
-	       "-t 2:8300")
+	       "-n" "1:0:+500M"
+	       "-N" "2"
+	       "-t" "1:ef00"
+	       "-t" "2:8300")
       (system* "partprobe" root-dev)
       (vector
        (string-append root-dev "1")
        (string-append root-dev "2")))
      (else
       (system* "sgdisk" root-dev "-Z"
-	       "-n 1:0:+2M"
-	       "-n 2:0:+500M"
-	       "-N 3"
-	       "-t 1:ef02"
-	       "-t 2:8300"
-	       "-t 3:8300")
+	       "-n" "1:0:+2M"
+	       "-n" "2:0:+500M"
+	       "-N" "3"
+	       "-t" "1:ef02"
+	       "-t" "2:8300"
+	       "-t" "3:8300")
       (system* "partprobe" root-dev)
       (vector
        (string-append root-dev "2")
@@ -146,18 +146,24 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
-    (utils:system->devnull* "zfs" "create" "-o compression=lz4" "-o canmount=off" root-dataset)
+    (utils:system->devnull*
+     "zfs" "create"
+     "-o" "compression=lz4"
+     "-o" "canmount=off"
+     root-dataset)
     (map
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
      dir-list)
     (when (not swapfiles)
       (utils:println "Creating ZFS volume for swap device...")
-      (system* "zfs" "create" "-V" swap-size
-	       "-o sync=always"
-	       "-o primary=cache=metadata"
-	       "-o logbias=throughput"
-	       swap-dataset)
+      (utils:system->devnull*
+       "zfs" "create"
+       "-V" swap-size
+       "-o" "sync=always"
+       "-o" "primary=cache=metadata"
+       "-o" "logbias=throughput"
+       swap-dataset)
       (utils:system->devnull* "mkswap" swap-zvol)
       (if (zero? (utils:system->devnull* "swapon" swap-zvol))
 	  (utils:system->devnull* "swapoff" swap-zvol)
@@ -346,7 +352,7 @@
       (error "Failed to mount" luks-dev "as" instroot)))
   (let ((boot-dir (utils:path instroot "boot")))
     (mkdir boot-dir)
-    (utils:system->devnull* "mkfs.ext4" "-m 0" "-j" boot-partdev)
+    (utils:system->devnull* "mkfs.ext4" "-m" "0" "-j" boot-partdev)
     (when (not (zero? (system* "mount" boot-partdev boot-dir)))
       (error "Failed to mount" boot-partdev "as" boot-dir)))
   (let ((etc-dir (utils:path instroot "etc"))
