@@ -138,20 +138,18 @@
    (string-split dev-list #\,)))
 
 (define* (init-zfsroot zpool rootfs swap-size #:key swapfiles dir-list)
-  (with-output-to-file "/dev/null"
-    (lambda ()
-      (if (not (zero? (system* "zpool" "list" zpool)))
-	  (system* "zpool" "import" zpool)
-	  (error "could not find or import ZFS pool:" zpool))))
+  (utils:system->devnull* "zpool" "import" zpool)
+  (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
+    (error "could not find or import ZFS pool:" zpool))
   (let* ((root-dataset (utils:path zpool rootfs))
 	 (swap-dataset (utils:path root-dataset "swap"))
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
-    (when (not (zero? (system* "zfs" "list" root-dataset)))
+    (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
-    (system* "zfs" "create" "-o compression=lz4" "-o canmount=off" root-dataset)
+    (utils:system->devnull* "zfs" "create" "-o compression=lz4" "-o canmount=off" root-dataset)
     (map
      (lambda (dir-name)
-       (system* "zfs" "create" (utils:path root-dataset dir-name)))
+       (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
      dir-list)
     (utils:println "Creating ZFS volume for swap device...")
     (system* "zfs" "create" "-V" swap-size
