@@ -226,8 +226,8 @@
 	(utils:println "# systemd specific legacy mounts of ZFS datasets")
 	(map
 	 (lambda (dirfs)
-	   (utils:println (utils:path zpool rootfs dirfs) (string-append "/" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
-	 (string-split dir-list #\,)))
+	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
+	 dir-list))
        ((and swapfile-args (not (null? swapfile-args)))
 	(newline)
 	(utils:println "#swapfiles")
