@@ -65,7 +65,6 @@ Specifying a keyfile is necessary for this feature!")
      (value #t))
     (swapfiles
      (single-char #\S)
-     (default "0")
      (description
       "Flag that a swapfile has been used instead of LVM or ZFS volume"))
     (help
@@ -91,7 +90,6 @@ Specifying a keyfile is necessary for this feature!")
 	 (dev-list (if dev-list (string-split dev-list #\,) #f))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
-	 (swapfiles (if swapfiles (string->number swapfiles) 0))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
@@ -134,7 +132,7 @@ Valid options are:
 		  (device (car split))
 		  (label (cdr split)))
 	     (system* "cryptsetup" "luksClose" label)))))
-       ((< 0 swapfiles)
+       (swapfiles
 	(system* "umount" instroot)
 	(system* "cryptsetup" "luksClose" luks-label))
        (else
