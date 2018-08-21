@@ -342,7 +342,7 @@
        #:dev-list dev-list))
 
     (utils:println "Mounting all ZFS root directories...")
-    (system* "zfs" "set" (string-append "mountpoint=" instroot systemfs))))
+    (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs)))
 
 (define* (init-instroot-swapfile
 	  instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
