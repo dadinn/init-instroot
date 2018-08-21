@@ -522,10 +522,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(throw 'file-already-exists fname)
 	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
 
-(define (parse-pairs pair-list)
-  (map (lambda (pair) (string-split pair #\:))
-       (string-split pair-list #\,)))
-
 (define (main args)
   (let* ((lastrun-map (utils:read-lastrun ".lastrun"))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
@@ -540,7 +536,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
-	 (dev-list (if dev-list (parse-pairs dev-list) #f))
+	 (dev-list (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (string->number swapfiles))
