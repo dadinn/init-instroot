@@ -125,21 +125,20 @@ Valid options are:
        (zpool
 	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
 	(system* "zpool" "export" zpool)
-	(system* "umount" instroot)
 	(when dev-specs
 	  (map
 	   (lambda (spec)
 	     (let* ((device (car spec))
 		    (label (cdr spec)))
 	       (system* "cryptsetup" "luksClose" label)))
-	   dev-specs)))
+	   dev-specs))
+	(system* "umount" instroot))
        (swapfiles
-	(system* "umount" instroot)
-	(system* "cryptsetup" "luksClose" luks-label))
+	(system* "umount" instroot))
        (else
 	(system* "umount" instroot)
-	(system* "vgremove" "-f" (string-append luks-label "_vg"))
-	(system* "cryptsetup" "luksClose" luks-label)))
+	(system* "vgremove" "-f" (string-append luks-label "_vg"))))
+      (system* "cryptsetup" "luksClose" luks-label)
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
     (when (and (file-exists? instroot)
