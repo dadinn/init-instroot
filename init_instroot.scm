@@ -151,16 +151,17 @@
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
      dir-list)
-    (utils:println "Creating ZFS volume for swap device...")
-    (system* "zfs" "create" "-V" swap-size
-	     "-o sync=always"
-	     "-o primary=cache=metadata"
-	     "-o logbias=throughput"
-	     swap-dataset)
-    (utils:system->devnull* "mkswap" swap-zvol)
-    (if (zero? (utils:system->devnull* "swapon" swap-zvol))
-	(utils:system->devnull* "swapoff" swap-zvol)
-	(utils:println "WARNING:" "failed to swapon" swap-zvol))
+    (when (not swapfiles)
+      (utils:println "Creating ZFS volume for swap device...")
+      (system* "zfs" "create" "-V" swap-size
+	       "-o sync=always"
+	       "-o primary=cache=metadata"
+	       "-o logbias=throughput"
+	       swap-dataset)
+      (utils:system->devnull* "mkswap" swap-zvol)
+      (if (zero? (utils:system->devnull* "swapon" swap-zvol))
+	  (utils:system->devnull* "swapoff" swap-zvol)
+	  (utils:println "WARNING:" "failed to swapon" swap-zvol)))
     (utils:println "Finished setting up ZFS pool:" zpool)))
 
 (define* (get-swapfile-args swap-size swapfiles)
