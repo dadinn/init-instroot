@@ -87,7 +87,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
-	 (dev-list (if dev-list (string-split dev-list #\,) #f))
+	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
@@ -126,12 +126,13 @@ Valid options are:
 	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
 	(system* "zpool" "export" zpool)
 	(system* "umount" instroot)
-	(map
-	 (lambda (dev)
-	   (let* ((split (string-split dev #\:))
-		  (device (car split))
-		  (label (cdr split)))
-	     (system* "cryptsetup" "luksClose" label)))))
+	(when dev-specs
+	  (map
+	   (lambda (spec)
+	     (let* ((device (car spec))
+		    (label (cdr spec)))
+	       (system* "cryptsetup" "luksClose" label)))
+	   dev-specs)))
        (swapfiles
 	(system* "umount" instroot)
 	(system* "cryptsetup" "luksClose" luks-label))
