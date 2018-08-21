@@ -211,7 +211,7 @@
 	 (swapsize-num (string->number swapsize-num))
 	 (swapsize-unit (regex:match:substring
 			 (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1))
-	 (swapfile-size (/ swapsize-num swapfiles))
+	 (swapfile-size (quotient swapsize-num swapfiles))
 	 (swapfile-size (number->string swapfile-size))
 	 (swapfile-size (string-append swapfile-size swapsize-unit)))
     (map
@@ -232,11 +232,10 @@
 	      (size (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
 	 (utils:println "Allocating" size "of swap space in" swapfile "...")
-	 (with-output-to-file swapfile
-	   (lambda ()
-	     (with-input-from-file "/dev/zero"
-	       (lambda ()
-		 (system* "pv" "-Ss" size)))))
+	 (system* "dd" "if=/dev/zero"
+		  (string-append "of=" swapfile)
+		  (string-append "bs=" size)
+		  "count=1" "status=progress")
 	 (chmod swapfile #o600)
 	 (utils:system->devnull* "mkswap" swapfile)
 	 (if (zero? (utils:system->devnull* "swapon" swapfile))
