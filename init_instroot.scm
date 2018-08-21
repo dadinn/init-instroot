@@ -216,7 +216,9 @@
     (error "Directory" etc-dir "does not exists!"))
   (with-output-to-file (utils:path etc-dir "fstab")
     (lambda ()
+      (newline)
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
+      (newline)
       (utils:println (string-append "UUID=" (fsuuid luks-partdev)) "/" "ext4" "errors=remount-ro" "0" "1")
       (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "default" "0" "2")
       (cond
@@ -224,6 +226,7 @@
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(newline)
 	(utils:println "# systemd specific legacy mounts of ZFS datasets")
+	(newline)
 	(map
 	 (lambda (dirfs)
 	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
