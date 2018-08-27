@@ -350,6 +350,8 @@
 (define* (init-instroot-swapfile
 	  instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
+  (when (file-exists? instroot)
+    (error "Target" instroot "already exists!"))
   (mkdir instroot)
   (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
   (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
