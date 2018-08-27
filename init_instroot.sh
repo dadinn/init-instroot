@@ -69,31 +69,31 @@ install_deps_zfs () {
 init_parts_joint_bios () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV="$1"
+	local ROOTDEV="$1"
     else
 	ERROR_EXIT "called init_parts_bios with $# args: $@"
     fi
 
-    sgdisk $ROOT_DEV -Z \
+    sgdisk $ROOTDEV -Z \
 	   -n 1:0:+2M -n 2:0:+500M -N 3 \
 	   -t 1:ef02 -t 2:8300 -t 3:8300 -s 2>&1 > /dev/null
-    partprobe $ROOT_DEV 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $ROOT_DEV"
+    partprobe $ROOTDEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $ROOTDEV"
 }
 
 init_parts_joint_efi () {
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV="$1"
+	local ROOTDEV="$1"
     else
 	ERROR_EXIT "called init_parts_efi with $# args: $@"
     fi
 
-    sgdisk $ROOT_DEV -Z \
+    sgdisk $ROOTDEV -Z \
 	   -n 1:0:+500M -N 2 \
 	   -t 1:ef00 -t 2:8300 -s 2>&1 > /dev/null
-    partprobe $ROOT_DEV 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $ROOT_DEV"
+    partprobe $ROOTDEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $ROOTDEV"
 }
 
 init_parts_boot_bios () {
@@ -128,15 +128,15 @@ init_parts_boot_efi () {
 init_parts_root_only(){
     if [ $# -eq 1 ]
     then
-	local ROOT_DEV="$1"
-	[ -b "$ROOT_DEV" ] || ERROR_EXIT "$ROOT_DEV has to be a block device!"
+	local ROOTDEV="$1"
+	[ -b "$ROOTDEV" ] || ERROR_EXIT "$ROOTDEV has to be a block device!"
     else
 	ERROR_EXIT "called init_parts_root with $# args: $@"
     fi
 
-    sgdisk $ROOT_DEV -Z -N 1 -t 1:8300 2>&1 > /dev/null
-    partprobe $ROOT_DEV 2>&1 > /dev/null
-    echo "Finished setting up partitions on $ROOT_DEV"
+    sgdisk $ROOTDEV -Z -N 1 -t 1:8300 2>&1 > /dev/null
+    partprobe $ROOTDEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on $ROOTDEV"
 }
 
 init_cryptroot () {
@@ -610,7 +610,7 @@ SWAPFILES=0
 PREINIT_DEPENDENCIES=0
 
  # make sure root device can only be passed as CLI argument
-unset ROOT_DEV
+unset ROOTDEV
 unset NEW_KEYFILE
 
 usage () {
@@ -688,7 +688,7 @@ do
 	    TARGET=$OPTARG
 	    ;;
 	r)
-	    ROOT_DEV=$OPTARG
+	    ROOTDEV=$OPTARG
 	    ;;
 	b)
 	    BOOTDEV=$OPTARG
@@ -778,7 +778,7 @@ then
     exit 0
 fi
 
-if [ -z "$ROOT_DEV" ]
+if [ -z "$ROOTDEV" ]
 then
     ERROR_EXIT "Block device must be specified for root filesystem!"
 fi
@@ -794,7 +794,7 @@ then
 fi
 
 cat <<EOF | grep -v '^$' > .lastrun
-${ROOT_DEV:+ROOT_DEV=$ROOT_DEV}
+${ROOTDEV:+ROOTDEV=$ROOTDEV}
 ${BOOTDEV:+BOOTDEV=$BOOTDEV}
 ${UEFI_BOOT:+UEFI_BOOT=$UEFI_BOOT}
 ${LUKS_LABEL:+LUKS_LABEL=$LUKS_LABEL}
@@ -815,30 +815,30 @@ then
     if [ "$UEFI_BOOT" -eq 0 ]
     then
 	echo "Setting up partitions..."
-	init_parts_joint_bios $ROOT_DEV
-	BOOT_PARTDEV="${ROOT_DEV}2"
-	LUKS_PARTDEV="${ROOT_DEV}3"
+	init_parts_joint_bios $ROOTDEV
+	BOOT_PARTDEV="${ROOTDEV}2"
+	LUKS_PARTDEV="${ROOTDEV}3"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
 	echo "Setting up partitions..."
-	init_parts_joint_efi $ROOT_DEV
-	BOOT_PARTDEV="${ROOT_DEV}1"
-	LUKS_PARTDEV="${ROOT_DEV}2"
+	init_parts_joint_efi $ROOTDEV
+	BOOT_PARTDEV="${ROOTDEV}1"
+	LUKS_PARTDEV="${ROOTDEV}2"
 	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
     fi
 else
     if [ "$UEFI_BOOT" -eq 0 ]
     then
 	echo "Setting up partitions..."
-	init_parts_root_only $ROOT_DEV
-	LUKS_PARTDEV="${ROOT_DEV}1"
+	init_parts_root_only $ROOTDEV
+	LUKS_PARTDEV="${ROOTDEV}1"
 	init_parts_boot_bios $BOOTDEV
 	BOOT_PARTDEV="${BOOTDEV}2"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
 	echo "Setting up partitions..."
-	init_parts_root_only $ROOT_DEV
-	LUKS_PARTDEV="${ROOT_DEV}1"
+	init_parts_root_only $ROOTDEV
+	LUKS_PARTDEV="${ROOTDEV}1"
 	init_parts_boot_efi $BOOTDEV
 	BOOT_PARTDEV="${BOOTDEV}1"
 	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null

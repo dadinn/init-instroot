@@ -21,7 +21,7 @@ Install root mountpoint ${TARGET:+(default $TARGET)}
 LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
 
 -d DEVICE
-Device with LUKS encrypted root ${ROOT_DEV:+(default $ROOT_DEV)}
+Device with LUKS encrypted root ${ROOTDEV:+(default $ROOTDEV)}
 
 -b DEVICE
 Device for boot partition ${BOOTDEV:+(default $BOOTDEV)}
@@ -54,7 +54,7 @@ do
 	    TARGET=$OPTARG
 	    ;;
 	d)
-	    ROOT_DEV=$OPTARG
+	    ROOTDEV=$OPTARG
 	    ;;
 	b)
 	    BOOTDEV=$OPTARG
@@ -84,7 +84,7 @@ do
     esac
 done
 
-if [ -z "$ROOT_DEV" ]
+if [ -z "$ROOTDEV" ]
 then
     echo "ERROR: Root device is not specified!"
     exit 1
@@ -137,11 +137,11 @@ else
     vgremove -f ${LUKS_LABEL}_vg
 fi
 
-if [ ! -z "$ROOT_DEV" ]
+if [ ! -z "$ROOTDEV" ]
 then
     cryptsetup luksClose $LUKS_LABEL
-    sgdisk -Z $ROOT_DEV 2>&1 > /dev/null
-    partprobe $ROOT_DEV 2>&1 >/dev/null
+    sgdisk -Z $ROOTDEV 2>&1 > /dev/null
+    partprobe $ROOTDEV 2>&1 >/dev/null
 fi
 
 if [ -d $TARGET -a ! $(rmdir $TARGET) ]
