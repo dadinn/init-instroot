@@ -24,7 +24,7 @@ LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
 Device with LUKS encrypted root ${ROOT_DEV:+(default $ROOT_DEV)}
 
 -b DEVICE
-Device for boot partition ${BOOT_DEV:+(default $BOOT_DEV)}
+Device for boot partition ${BOOTDEV:+(default $BOOTDEV)}
 
 -z ZPOOL
 ZFS pool name for system directories and swap device ${ZPOOL:+(default $ZPOOL)}
@@ -57,7 +57,7 @@ do
 	    ROOT_DEV=$OPTARG
 	    ;;
 	b)
-	    BOOT_DEV=$OPTARG
+	    BOOTDEV=$OPTARG
 	    ;;
 	z)
 	    ZPOOL=$OPTARG
@@ -109,10 +109,10 @@ then
 fi
 
 umount $TARGET/boot
-if [ ! -z "$BOOT_DEV" ]
+if [ ! -z "$BOOTDEV" ]
 then
-    sgdisk -Z $BOOT_DEV 2>&1 > /dev/null
-    partprobe $BOOT_DEV 2>&1 > /dev/null
+    sgdisk -Z $BOOTDEV 2>&1 > /dev/null
+    partprobe $BOOTDEV 2>&1 > /dev/null
 fi
 
 if [ ! -z "$ZPOOL" ]

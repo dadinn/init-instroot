@@ -99,30 +99,30 @@ init_parts_joint_efi () {
 init_parts_boot_bios () {
     if [ $# -eq 1 ]
     then
-	local BOOT_DEV="$1"
+	local BOOTDEV="$1"
     else
 	ERROR_EXIT "called init_parts_boot_bios with $# args: $@"
     fi
 
-    sgdisk $BOOT_DEV -Z \
+    sgdisk $BOOTDEV -Z \
 	   -n 1:0:+2M -N 2  \
 	   -t 1:ef02 -t 2:8300 2>&1 > /dev/null
-    partprobe $BOOT_DEV 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $BOOT_DEV"
+    partprobe $BOOTDEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $BOOTDEV"
 }
 
 init_parts_boot_efi () {
     if [ $# -eq 1 ]
     then
-	local BOOT_DEV="$1"
+	local BOOTDEV="$1"
     else
 	ERROR_EXIT "called init_parts_boot_efi with $# args: $@"
     fi
 
-    sgdisk $BOOT_DEV -Z \
+    sgdisk $BOOTDEV -Z \
 	   -N 1 -t 1:ef00 2>&1 > /dev/null
-    partprobe $BOOT_DEV 2>&1 > /dev/null
-    echo "Finished setting up partitions on: $BOOT_DEV"
+    partprobe $BOOTDEV 2>&1 > /dev/null
+    echo "Finished setting up partitions on: $BOOTDEV"
 }
 
 init_parts_root_only(){
@@ -691,10 +691,10 @@ do
 	    ROOT_DEV=$OPTARG
 	    ;;
 	b)
-	    BOOT_DEV=$OPTARG
-	    if [ ! -b "$BOOT_DEV" ]
+	    BOOTDEV=$OPTARG
+	    if [ ! -b "$BOOTDEV" ]
 	    then
-		ERROR_EXIT "$BOOT_DEV is not a valid device"
+		ERROR_EXIT "$BOOTDEV is not a valid device"
 	    fi
 	    ;;
 	z)
@@ -795,7 +795,7 @@ fi
 
 cat <<EOF | grep -v '^$' > .lastrun
 ${ROOT_DEV:+ROOT_DEV=$ROOT_DEV}
-${BOOT_DEV:+BOOT_DEV=$BOOT_DEV}
+${BOOTDEV:+BOOTDEV=$BOOTDEV}
 ${UEFI_BOOT:+UEFI_BOOT=$UEFI_BOOT}
 ${LUKS_LABEL:+LUKS_LABEL=$LUKS_LABEL}
 ${KEYFILE:+KEYFILE=$KEYFILE}
@@ -810,7 +810,7 @@ EOF
 
 install_deps_base
 
-if [ -z "$BOOT_DEV" ]
+if [ -z "$BOOTDEV" ]
 then
     if [ "$UEFI_BOOT" -eq 0 ]
     then
@@ -832,15 +832,15 @@ else
 	echo "Setting up partitions..."
 	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
-	init_parts_boot_bios $BOOT_DEV
-	BOOT_PARTDEV="${BOOT_DEV}2"
+	init_parts_boot_bios $BOOTDEV
+	BOOT_PARTDEV="${BOOTDEV}2"
 	mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
     else
 	echo "Setting up partitions..."
 	init_parts_root_only $ROOT_DEV
 	LUKS_PARTDEV="${ROOT_DEV}1"
-	init_parts_boot_efi $BOOT_DEV
-	BOOT_PARTDEV="${BOOT_DEV}1"
+	init_parts_boot_efi $BOOTDEV
+	BOOT_PARTDEV="${BOOTDEV}1"
 	mkfs.fat -F32 $BOOT_PARTDEV 2>&1 > /dev/null
     fi
 fi
