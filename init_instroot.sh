@@ -256,21 +256,21 @@ init_zfsroot () {
 generate_crypttab_rootdev() {
     if [ $# -eq 3 ]
     then
-	INSTROOT="$1"
+	TARGET="$1"
 	LUKS_PARTDEV="$2"
 	LUKS_LABEL="$3"
     else
 	ERROR_EXIT "called generate_crypttab_rootdev with $# args: $@"
     fi
 
-    echo "Generating entries for ${INSTROOT}/etc/crypttab..."
-    cat >> $INSTROOT/etc/crypttab <<EOF
+    echo "Generating entries for ${TARGET}/etc/crypttab..."
+    cat >> $TARGET/etc/crypttab <<EOF
 # LUKS device containing root filesystem
 $LUKS_LABEL UUID=$(fsuuid $LUKS_PARTDEV) none luks
 
 EOF
 
-    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    ROOTCRYPT_DIR=$TARGET/root/crypt
     if [ ! -d $ROOTCRYPT_DIR/headers ]
     then
 	mkdir -p $ROOTCRYPT_DIR/headers
@@ -287,14 +287,14 @@ EOF
 generate_crypttab_devlist() {
     if [ $# -eq 3 ]
     then
-	INSTROOT="$1"
+	TARGET="$1"
 	KEYFILE="$4"
 	DEVLIST="$5"
     else
 	ERROR_EXIT "called generate_crypttab_devlist with $# args: $@"
     fi
 
-    ROOTCRYPT_DIR=$INSTROOT/root/crypt
+    ROOTCRYPT_DIR=$TARGET/root/crypt
     if [ ! -d $ROOTCRYPT_DIR/headers ]
     then
 	mkdir -p $ROOTCRYPT_DIR/headers
@@ -307,7 +307,7 @@ generate_crypttab_devlist() {
 	cp $KEYFILE $ROOTCRYPT_DIR
 	KEYFILENAME=$(basename $KEYFILE)
 
-	cat >> $INSTROOT/etc/crypttab <<EOF
+	cat >> $TARGET/etc/crypttab <<EOF
 # LUKS devices containing encrypted ZFS vdevs
 
 EOF
@@ -321,7 +321,7 @@ EOF
 	       uuid=$(fsuuid $device)
 
 	       # creating crypttab entries for LUKS encrypted devices of ZFS member vdevs
-	       cat >> $INSTROOT/etc/crypttab <<EOF
+	       cat >> $TARGET/etc/crypttab <<EOF
 $label UUID=${uuid} /root/crypt/${KEYFILENAME} luks
 EOF
 
@@ -339,13 +339,13 @@ EOF
 init_instroot_lvm () {
     if [ $# -eq 5 ]
     then
-	local INSTROOT="$1"
+	local TARGET="$1"
 	local BOOT_PARTDEV="$2"
 	local LUKS_PARTDEV="$3"
 	local LUKS_LABEL="$4"
 	local SWAP_SIZE="$5"
 
-	[ ! -e $INSTROOT ] || ERROR_EXIT "$INSTROOT already exists"
+	[ ! -e $TARGET ] || ERROR_EXIT "$TARGET already exists"
 	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "$BOOT_PARTDEV has to be a block device"
 	[ -b $LUKS_PARTDEV ] || ERROR_EXIT "$LUKS_PARTDEV has to be a block device"
 	[ ! -z $(echo $LUKS_LABEL | grep -E '^[[:alnum:]_]+$') ] || ERROR_EXIT "invalid LUKS label: $LUKS_LABEL"
@@ -364,23 +364,23 @@ init_instroot_lvm () {
     LV_ROOT=/dev/mapper/${VG_NAME}-root
     LV_SWAP=/dev/mapper/${VG_NAME}-swap
 
-    mkdir -p $INSTROOT
+    mkdir -p $TARGET
     echo "Formatting LVM logical volume $LV_ROOT with ext4 to be used as root filesystem..."
     mkfs.ext4 -q $LV_ROOT 2>&1 > /dev/null
-    if ! mount $LV_ROOT $INSTROOT
+    if ! mount $LV_ROOT $TARGET
     then
-	ERROR_EXIT "$LV_ROOT failed to mount as $INSTROOT!"
+	ERROR_EXIT "$LV_ROOT failed to mount as $TARGET!"
     fi
 
-    mkdir $INSTROOT/boot
-    mkdir $INSTROOT/etc
-    mkdir $INSTROOT/root
-    chmod 700 $INSTROOT/root
+    mkdir $TARGET/boot
+    mkdir $TARGET/etc
+    mkdir $TARGET/root
+    chmod 700 $TARGET/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
-    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
+    if ! mount $BOOT_PARTDEV /$TARGET/boot
     then
-	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $INSTROOT/boot!"
+	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $TARGET/boot!"
     fi
 
     echo "Formatting $LV_SWAP to be used as swap space..."
@@ -397,8 +397,8 @@ init_instroot_lvm () {
     ROOT_UUID=$(fsuuid $LV_ROOT)
     SWAP_UUID=$(fsuuid $LV_SWAP)
 
-    echo "Generating entries for ${INSTROOT}/etc/fstab..."
-    cat > $INSTROOT/etc/fstab <<EOF
+    echo "Generating entries for ${TARGET}/etc/fstab..."
+    cat > $TARGET/etc/fstab <<EOF
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
@@ -406,13 +406,13 @@ UUID=$SWAP_UUID none swap sw 0 0
 
 EOF
 
-    generate_crypttab_rootdev $INSTROOT $LUKS_PARTDEV $LUKS_LABEL
+    generate_crypttab_rootdev $TARGET $LUKS_PARTDEV $LUKS_LABEL
 }
 
 init_instroot_zfs () {
     if [ $# -eq 11 ]
     then
-	local INSTROOT="$1"
+	local TARGET="$1"
 	local BOOT_PARTDEV="$2"
 	local LUKS_PARTDEV="$3"
 	local LUKS_LABEL="$4"
@@ -424,7 +424,7 @@ init_instroot_zfs () {
 	local SWAPFILES="$10"
 	local DIRLIST="$11"
 
-	[ ! -e $INSTROOT ] || ERROR_EXIT "target $INSTROOT already exists!"
+	[ ! -e $TARGET ] || ERROR_EXIT "target $TARGET already exists!"
 	[ -b $BOOT_PARTDEV ] || ERROR_EXIT "cannot find boot partition device $BOOT_PARTDEV"
 	[ -b $LUKS_PARTDEV ] || ERROR_EXIT "cannot find root partition device $LUKS_PARTDEV"
 	[ -b /dev/mapper/$LUKS_LABEL ] || ERROR_EXIT "cannot find LUKS device $LUKS_LABEL"
@@ -442,44 +442,44 @@ init_instroot_zfs () {
 	ERROR_EXIT "called init_instroot_zfs with $# args: $@"
     fi
 
-    mkdir -p $INSTROOT
+    mkdir -p $TARGET
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
-    if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    if ! mount /dev/mapper/$LUKS_LABEL $TARGET
     then
-	 ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
+	 ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $TARGET!"
     fi
 
-    mkdir $INSTROOT/boot
-    mkdir $INSTROOT/etc
-    mkdir $INSTROOT/root
-    chmod 700 $INSTROOT/root
+    mkdir $TARGET/boot
+    mkdir $TARGET/etc
+    mkdir $TARGET/root
+    chmod 700 $TARGET/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
-    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
+    if ! mount $BOOT_PARTDEV /$TARGET/boot
     then
-	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $INSTROOT/boot!"
+	ERROR_EXIT "$BOOT_PARTDEV failed to mount as $TARGET/boot!"
     fi
 
     echo "Mounting all ZFS root directories..."
-    zfs set mountpoint=$INSTROOT $ZPOOL/$ROOTFS
+    zfs set mountpoint=$TARGET $ZPOOL/$ROOTFS
 
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
 
-    echo "Generating entries for ${INSTROOT}/etc/fstab..."
-    cat > $INSTROOT/etc/fstab <<EOF
+    echo "Generating entries for ${TARGET}/etc/fstab..."
+    cat > $TARGET/etc/fstab <<EOF
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
 EOF
     if [ "$SWAPFILES" -gt 0 ]
     then
-	mkdir $INSTROOT/root/swap
-	chmod 700 $INSTROOT/root/swap
-	cat >> $INSTROOT/etc/fstab <<EOF
+	mkdir $TARGET/root/swap
+	chmod 700 $TARGET/root/swap
+	cat >> $TARGET/etc/fstab <<EOF
 
 # swapfiles
 EOF
@@ -491,7 +491,7 @@ EOF
 	for count in $(seq 1 $SWAPFILES)
 	do
 	    SWAPFILE_PATH="/root/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
-	    SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
+	    SWAPFILE=${TARGET}${SWAPFILE_PATH}
 	    echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	    pv -Ss $SWAPFILE_SIZE < /dev/zero > $SWAPFILE
 	    chmod 600 $SWAPFILE
@@ -499,38 +499,38 @@ EOF
 	    if swapon $SWAPFILE
 	    then
 		swapoff $SWAPFILE
-		echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+		echo "$SWAPFILE_PATH none swap sw 0 0" >> $TARGET/etc/fstab
 	    else
 		echo "WARNING: $SWAPFILE failed to swap on!" >&2
 	    fi
 	done
     else
-	cat >> $INSTROOT/etc/fstab <<EOF
+	cat >> $TARGET/etc/fstab <<EOF
 /dev/zvol/$ZPOOL/$ROOTFS/swap none swap sw 0 0
 EOF
     fi
 
-    cat >> $INSTROOT/etc/fstab <<EOF
+    cat >> $TARGET/etc/fstab <<EOF
 
 # systemd specific legacy mounts of ZFS datasets
 EOF
 
     for i in $(echo $DIRLIST | tr "," "\n")
     do
-	cat >> $INSTROOT/etc/fstab <<EOF
+	cat >> $TARGET/etc/fstab <<EOF
 # $ZPOOL/$ROOTFS/$i /$i zfs defaults,x-systemd.after=zfs.target 0 0
 EOF
     done
     unset i
 
-    generate_crypttab_rootdev $INSTROOT $LUKS_PARTDEV $LUKS_LABEL
-    generate_crypttab_devlist $INSTROOT "$KEYFILE" "$DEVLIST"
+    generate_crypttab_rootdev $TARGET $LUKS_PARTDEV $LUKS_LABEL
+    generate_crypttab_devlist $TARGET "$KEYFILE" "$DEVLIST"
 }
 
 init_instroot_swapfile() {
     if [ $# -eq 6 ]
     then
-	local INSTROOT="$1"
+	local TARGET="$1"
 	local BOOT_PARTDEV="$2"
 	local LUKS_PARTDEV="$3"
 	local LUKS_LABEL="$4"
@@ -542,32 +542,32 @@ init_instroot_swapfile() {
 
     echo "Setting up installation root with swapfile for swap space..."
 
-    mkdir -p $INSTROOT
+    mkdir -p $TARGET
     echo "Formatting LUKS device $LUKS_LABEL with ext4 to be used as root filesystem..."
     mkfs.ext4 -q /dev/mapper/$LUKS_LABEL 2>&1 > /dev/null
-    if ! mount /dev/mapper/$LUKS_LABEL $INSTROOT
+    if ! mount /dev/mapper/$LUKS_LABEL $TARGET
     then
-	ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $INSTROOT!"
+	ERROR_EXIT "Failed to format and mount LUKS device $LUKS_LABEL as $TARGET!"
     fi
 
-    mkdir $INSTROOT/boot
-    mkdir $INSTROOT/etc
-    mkdir -p $INSTROOT/root/swap
-    chmod -R 700 $INSTROOT/root
+    mkdir $TARGET/boot
+    mkdir $TARGET/etc
+    mkdir -p $TARGET/root/swap
+    chmod -R 700 $TARGET/root
 
     echo "Formatting partition $BOOT_PARTDEV with ext4 to be used as /boot..."
     mkfs.ext4 -q -m 0 -j $BOOT_PARTDEV 2>&1 > /dev/null
-    if ! mount $BOOT_PARTDEV /$INSTROOT/boot
+    if ! mount $BOOT_PARTDEV /$TARGET/boot
     then
-	ERROR_EXIT "Failed to format and mount $BOOT_PARTDEV as $INSTROOT/boot!"
+	ERROR_EXIT "Failed to format and mount $BOOT_PARTDEV as $TARGET/boot!"
     fi
     
     BOOT_UUID=$(fsuuid $BOOT_PARTDEV)
     LUKS_UUID=$(fsuuid $LUKS_PARTDEV)
     ROOT_UUID=$(fsuuid /dev/mapper/$LUKS_LABEL)
 
-    echo "Generating entries for ${INSTROOT}/etc/fstab..."
-    cat <<EOF > $INSTROOT/etc/fstab
+    echo "Generating entries for ${TARGET}/etc/fstab..."
+    cat <<EOF > $TARGET/etc/fstab
 # <file system> <mountpoint> <type> <options> <dump> <pass>
 UUID=$ROOT_UUID / ext4 errors=remount-ro 0 1
 UUID=$BOOT_UUID /boot ext4 defaults 0 2
@@ -582,7 +582,7 @@ EOF
     for count in $(seq 1 $SWAPFILES)
     do
 	SWAPFILE_PATH="/root/swap/file$(printf %04d $count)_${SWAPFILE_SIZE}"
-	SWAPFILE=${INSTROOT}${SWAPFILE_PATH}
+	SWAPFILE=${TARGET}${SWAPFILE_PATH}
 	echo "Allocating $SWAPFILE_SIZE of swap space in $SWAPFILE..."
 	pv -Ss $SWAPFILE_SIZE < /dev/zero > $SWAPFILE
 	chmod 600 $SWAPFILE
@@ -590,13 +590,13 @@ EOF
 	if swapon $SWAPFILE
 	then
 	    swapoff $SWAPFILE
-	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $INSTROOT/etc/fstab
+	    echo "$SWAPFILE_PATH none swap sw 0 0" >> $TARGET/etc/fstab
 	else
 	    echo "WARNING: $SWAPFILE failed to swap on!" >&2
 	fi
     done
 
-    generate_crypttab_rootdev $INSTROOT $LUKS_PARTDEV $LUKS_LABEL
+    generate_crypttab_rootdev $TARGET $LUKS_PARTDEV $LUKS_LABEL
 }
 
 # DEFAULTS
@@ -604,7 +604,7 @@ EOF
 LUKS_LABEL=crypt_root
 ROOTFS=system
 DIRLIST="home,var,gnu"
-INSTROOT=/mnt/instroot
+TARGET=/mnt/instroot
 UEFI_BOOT=0
 SWAPFILES=0
 PREINIT_DEPENDENCIES=0
@@ -623,7 +623,7 @@ $0 [OPTIONS] DEVICE
 Valid options are:
 
 -m PATH
-Install root mountpoint (default $INSTROOT)
+Install root mountpoint (default $TARGET)
 
 -l LABEL
 LUKS encrypted device name (default $LUKS_LABEL)
@@ -685,7 +685,7 @@ do
 	    LUKS_LABEL=$OPTARG
 	    ;;
 	m)
-	    INSTROOT=$OPTARG
+	    TARGET=$OPTARG
 	    ;;
 	r)
 	    ROOT_DEV=$OPTARG
@@ -805,7 +805,7 @@ ${ROOTFS:+ROOTFS=$ROOTFS}
 ${DIRLIST:+DIRLIST=$DIRLIST}
 ${SWAPSIZE:+SWAPSIZE=$SWAPSIZE}
 ${SWAPFILES:+SWAPFILES=$SWAPFILES}
-${INSTROOT:+INSTROOT=$INSTROOT}
+${TARGET:+TARGET=$TARGET}
 EOF
 
 install_deps_base
@@ -855,15 +855,15 @@ then
     fi
     install_deps_zfs
     init_zfsroot $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
-    init_instroot_zfs $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
+    init_instroot_zfs $TARGET $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL "$KEYFILE" "$DEVLIST" $ZPOOL $ROOTFS $SWAPSIZE $SWAPFILES "$DIRLIST"
 else
     if [ "$SWAPFILES" -gt 0 ]
     then
-	init_instroot_swapfile $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE $SWAPFILES
+	init_instroot_swapfile $TARGET $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE $SWAPFILES
     else
-	init_instroot_lvm $INSTROOT $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
+	init_instroot_lvm $TARGET $BOOT_PARTDEV $LUKS_PARTDEV $LUKS_LABEL $SWAPSIZE
     fi
 fi
 
-cp .lastrun $INSTROOT/CONFIG_ME
-echo "Finished setting up installation root $INSTROOT"
+cp .lastrun $TARGET/CONFIG_ME
+echo "Finished setting up installation root $TARGET"

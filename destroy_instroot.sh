@@ -15,7 +15,7 @@ By default uses options from variables defined in .lastrun
 Valid options are:
 
 -m PATH
-Install root mountpoint ${INSTROOT:+(default $INSTROOT)}
+Install root mountpoint ${TARGET:+(default $TARGET)}
 
 -l LABEL
 LUKS encrypted root device name ${LUKS_LABEL:+(default $LUKS_LABEL)}
@@ -51,7 +51,7 @@ do
 	    LUKS_LABEL=$OPTARG
 	    ;;
 	m)
-	    INSTROOT=$OPTARG
+	    TARGET=$OPTARG
 	    ;;
 	d)
 	    ROOT_DEV=$OPTARG
@@ -96,7 +96,7 @@ then
     exit 1
 fi
 
-if [ -z "$INSTROOT" ]
+if [ -z "$TARGET" ]
 then
     echo "ERROR: Mounted root directory is not specified."
     exit 1
@@ -108,7 +108,7 @@ then
     exit 1
 fi
 
-umount $INSTROOT/boot
+umount $TARGET/boot
 if [ ! -z "$BOOT_DEV" ]
 then
     sgdisk -Z $BOOT_DEV 2>&1 > /dev/null
@@ -120,7 +120,7 @@ then
     zfs destroy -r $ZPOOL/$ROOTFS
     zpool export $ZPOOL
 
-    umount $INSTROOT
+    umount $TARGET
 
     for i in $(echo "$DEVLIST" | tr "," "\n")
     do
@@ -131,9 +131,9 @@ then
     done
 elif [ "${SWAPFILES:-0}" -gt 0 ]
 then
-    umount $INSTROOT
+    umount $TARGET
 else
-    umount $INSTROOT
+    umount $TARGET
     vgremove -f ${LUKS_LABEL}_vg
 fi
 
@@ -144,18 +144,18 @@ then
     partprobe $ROOT_DEV 2>&1 >/dev/null
 fi
 
-if [ -d $INSTROOT -a ! $(rmdir $INSTROOT) ]
+if [ -d $TARGET -a ! $(rmdir $TARGET) ]
 then
-    read -p "Directory $INSTROOT is not empty. Would you still like to remove it? [y/N]" delinstroot
+    read -p "Directory $TARGET is not empty. Would you still like to remove it? [y/N]" delinstroot
     case $delinstroot in
 	[yY])
-	    echo "Removing directory $INSTROOT with its content..."
-	    rm -rf $INSTROOT
+	    echo "Removing directory $TARGET with its content..."
+	    rm -rf $TARGET
 	    ;;
 	*)
-	    echo "Skipped removing $INSTROOT directory."
+	    echo "Skipped removing $TARGET directory."
 	    ;;
     esac
 fi
 
-echo "Finished destroying initialized root structure: $INSTROOT"
+echo "Finished destroying initialized root structure: $TARGET"
