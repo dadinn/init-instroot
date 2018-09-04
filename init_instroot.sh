@@ -865,5 +865,5 @@ else
     fi
 fi
 
-cp .lastrun $TARGET/CONFIG_ME
+cp .lastrun $TARGET/CONFIG_VARS.sh
 echo "Finished setting up installation root $TARGET"
