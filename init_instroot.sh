@@ -622,7 +622,7 @@ $0 [OPTIONS] DEVICE
 
 Valid options are:
 
--m PATH
+-t PATH
 Install root mountpoint (default $TARGET)
 
 -l LABEL
@@ -678,13 +678,13 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:r:b:z:f:d:K:k:v:S:s:EZh' opt
+while getopts 'l:t:r:b:z:f:d:K:k:v:S:s:EZh' opt
 do
     case $opt in
 	l)
 	    LUKS_LABEL=$OPTARG
 	    ;;
-	m)
+	t)
 	    TARGET=$OPTARG
 	    ;;
 	r)

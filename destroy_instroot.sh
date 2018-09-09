@@ -14,7 +14,7 @@ By default uses options from variables defined in .lastrun
 
 Valid options are:
 
--m PATH
+-t PATH
 Install root mountpoint ${TARGET:+(default $TARGET)}
 
 -l LABEL
@@ -44,13 +44,13 @@ This usage help...
 EOF
 }
 
-while getopts 'l:m:r:b:z:c:d:f:Sh' opt
+while getopts 'l:t:r:b:z:c:d:f:Sh' opt
 do
     case $opt in
 	l)
 	    LUKS_LABEL=$OPTARG
 	    ;;
-	m)
+	t)
 	    TARGET=$OPTARG
 	    ;;
 	r)
