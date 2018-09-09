@@ -625,9 +625,9 @@ Valid options are:
 		  (init-instroot-lvm
 		   target boot-partdev root-partdev luks-label
 		   swap-size))))
-	      (copy-file ".lastrun" (utils:path target "CONFIG_ME"))
-	      ;; to support backwards compatibility with debconf shell script
-	      (utils:write-lastrun-vars (utils:path target "CONFIG_ME.sh") options)
+	      (copy-file ".lastrun" (utils:path target "CONFIG_VARS.scm"))
+	      ;; to support backwards compatibility with debconf.sh shell script
+	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
 	      (utils:println "Finished setting up installation root" target))))))
 	 (else
 	  (error "Block device must me specified for root filesystem!"))))))
