@@ -539,7 +539,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun ".lastrun"))
+  (let* ((lastrun-map (utils:read-lastrun ".lastrun.scm"))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
@@ -586,7 +586,7 @@ Valid options are:
 	  (error "Swap size must be specified!"))
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
-	(utils:write-lastrun ".lastrun" options)
+	(utils:write-lastrun ".lastrun.scm" options)
 	(install-deps-base)
 	(cond
 	 (root-dev
@@ -625,7 +625,7 @@ Valid options are:
 		  (init-instroot-lvm
 		   target boot-partdev root-partdev luks-label
 		   swap-size))))
-	      (copy-file ".lastrun" (utils:path target "CONFIG_VARS.scm"))
+	      (utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
 	      ;; to support backwards compatibility with debconf.sh shell script
 	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
 	      (utils:println "Finished setting up installation root" target))))))
