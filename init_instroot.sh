@@ -618,7 +618,9 @@ usage () {
 
 USAGE:
 
-$0 [OPTIONS] DEVICE
+$0 [OPTIONS]
+
+Initialise and mount root filesystem. Uses LUKS encryption for root partition, and allows choice between LVM or swapfiles for swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume. Also, allows configuring separate boot device, either BIOS or UEFI.
 
 Valid options are:
 

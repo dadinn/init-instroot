@@ -9,8 +9,7 @@ USAGE:
 
 $0 [OPTIONS]
 
-Destroys installation root folder set up previously by init_instroot script.
-By default uses options from variables defined in .lastrun
+Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables defined in .lastrun file.
 
 Valid options are:
 
