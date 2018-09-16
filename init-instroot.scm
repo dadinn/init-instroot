@@ -40,14 +40,17 @@
       (error "Not a block device:" path)))
 
 (define (install-deps-base)
-  (let ((missing (utils:which* "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
-    (if (not (null? missing))
-	(if (file-exists? "/etc/debian_version")
-	    (begin
-	      (display "Installing necessary packages...")
-	      (system "apt update")
-	      (system "apt install -y gdisk parted cryptsetup lvm2"))
-	    (error "Necessary binaries are missing" missing)))))
+  (when (not (file-exists? ".deps_base"))
+    (let ((missing (utils:which* "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
+      (if (not (null? missing))
+	  (if (file-exists? "/etc/debian_version")
+	      (begin
+		(display "Installing necessary packages...")
+		(system "apt update")
+		(system "apt install -y gdisk parted cryptsetup lvm2"))
+	      (error "Necessary binaries are missing" missing))))
+    (with-output-to-file ".deps_base"
+      (lambda () (display "")))))
 
 (define* (init-boot-parts boot-dev #:key uefi?)
     (cond
