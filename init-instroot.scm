@@ -214,7 +214,7 @@
 	     (utils:println "WARNING:" swapfile "failed to swap on!"))))
      swapfile-args)))
 
-(define* (gen-fstab etc-dir #:key boot-partdev luks-partdev luks-label swapfile-args zpool rootfs dir-list)
+(define* (gen-fstab etc-dir #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
   (when (not (file-exists? etc-dir))
     (error "Directory" etc-dir "does not exists!"))
   (with-output-to-file (utils:path etc-dir "fstab")
@@ -222,7 +222,7 @@
       (newline)
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
-      (utils:println (string-append "UUID=" (fsuuid luks-partdev)) "/" "ext4" "errors=remount-ro" "0" "1")
+      (utils:println (string-append "UUID=" (fsuuid (utils:path "/dev/mapper" luks-label))) "/" "ext4" "errors=remount-ro" "0" "1")
       (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "default" "0" "2")
       (cond
        (zpool
@@ -335,7 +335,7 @@
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
-       #:luks-partdev luks-partdev
+       #:luks-label luks-label
        #:swapfile-args swapfile-args
        #:zpool zpool
        #:rootfs rootfs
@@ -375,7 +375,7 @@
     (gen-fstab
      etc-dir
      #:boot-partdev boot-partdev
-     #:luks-partdev luks-partdev
+     #:luks-label luks-label
      #:swapfile-args swapfile-args)
     (gen-crypttab
      etc-dir root-dir
@@ -420,7 +420,6 @@
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
-       #:luks-partdev luks-partdev
        #:luks-label luks-label)
       (gen-crypttab
        etc-dir root-dir
