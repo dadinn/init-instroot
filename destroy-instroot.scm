@@ -7,6 +7,7 @@
 
 (use-modules
  ((common utils) #:prefix utils:)
+ ((ice-9 regex) #:prefix regex:)
  ((ice-9 readline)))
 
 (define options-spec
