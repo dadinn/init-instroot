@@ -223,7 +223,7 @@
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
       (utils:println (string-append "UUID=" (fsuuid (utils:path "/dev/mapper" luks-label))) "/" "ext4" "errors=remount-ro" "0" "1")
-      (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "default" "0" "2")
+      (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "defaults" "0" "2")
       (cond
        (zpool
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
@@ -232,7 +232,7 @@
 	(newline)
 	(map
 	 (lambda (dirfs)
-	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "default,x-systemd.after=zfs.target" "0" "0"))
+	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	 dir-list))
        ((and swapfile-args (not (null? swapfile-args)))
 	(newline)
