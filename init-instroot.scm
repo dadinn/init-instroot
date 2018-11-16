@@ -631,6 +631,6 @@ Valid options are:
 	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
 	      (utils:println "Finished setting up installation root" target))))))
 	 (else
-	  (error "Block device must me specified for root filesystem!"))))))
+	  (error "Block device must be specified for root filesystem!"))))))
      (else
       (error "This script must be run as root!")))))
