@@ -324,7 +324,6 @@
 
     (let ((boot-dir (utils:path instroot "boot")))
       (mkdir boot-dir)
-      (utils:system->devnull* "mkfs.ext4" "-m 0" "-j" boot-partdev)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir)))
 
@@ -365,7 +364,6 @@
       (error "Failed to mount" luks-dev "as" instroot)))
   (let ((boot-dir (utils:path instroot "boot")))
     (mkdir boot-dir)
-    (utils:system->devnull* "mkfs.ext4" "-m" "0" "-j" boot-partdev)
     (when (not (zero? (system* "mount" boot-partdev boot-dir)))
       (error "Failed to mount" boot-partdev "as" boot-dir)))
   (let ((etc-dir (utils:path instroot "etc"))
@@ -409,7 +407,6 @@
       (when (not (zero? (system* "mount" lv-root instroot)))
 	(error "Failed to mount" instroot))
       (mkdir boot-dir)
-      (utils:println "Formatting partition" boot-partdev "with ext4 to be used as /boot...")
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-dir))
       (mkdir etc-dir)
