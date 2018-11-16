@@ -316,8 +316,8 @@
       (error "ZFS dataset" systemfs "does not exist!"))
     ;; BEGIN
     (mkdir instroot)
-    (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
     (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
+      (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
       (utils:system->devnull* "mkfs.ext4" luks-dev)
       (when (not (zero? (system* "mount" luks-dev instroot)))
 	(error "Failed to mount" luks-dev "as" instroot)))
