@@ -52,9 +52,9 @@
     (with-output-to-file ".deps_base"
       (lambda () (display "")))))
 
-(define* (init-boot-parts boot-dev #:key uefi?)
+(define* (init-boot-parts boot-dev #:key uefiboot?)
     (cond
-     (uefi?
+     (uefiboot?
       (system* "sgdisk" boot-dev "-Z"
 	       "-N" "1"
 	       "-t" "1:ef00")
@@ -77,17 +77,17 @@
 	(utils:println "Finished setting up partitions on:" boot-dev)
 	boot-partdev))))
 
-(define* (init-root-parts root-dev #:key boot-dev uefi?)
+(define* (init-root-parts root-dev #:key boot-dev uefiboot?)
   (cond
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (system* "partprobe" root-dev)
     (vector
-     (init-boot-parts boot-dev #:uefi? uefi?)
+     (init-boot-parts boot-dev #:uefiboot? uefiboot?)
      (string-append root-dev "1")))
    (else
     (cond
-     (uefi?
+     (uefiboot?
       (system* "sgdisk" root-dev "-Z"
 	       "-n" "1:0:+500M"
 	       "-N" "2"
