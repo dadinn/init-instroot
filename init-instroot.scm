@@ -408,7 +408,7 @@
 	(error "Failed to mount" instroot))
       (mkdir boot-dir)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
-	(error "Failed to mount" boot-dir))
+	(error "Failed to mount" boot-partdev "as" boot-dir))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
       (utils:println "Formatting" lv-swap "to be used as swap space...")
