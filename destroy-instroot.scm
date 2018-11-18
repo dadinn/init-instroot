@@ -116,8 +116,6 @@ Valid options are:
       (error "This script must be run as root!"))
     (when (not instroot)
       (error "Mounted root directory is not specified!"))
-    (when (not root-dev)
-      (error "Root device is not specified!"))
     (when (not luks-label)
       (error "LUKS label is not specified!"))
     (deps:install-deps-base lockfile-deps-base)
@@ -127,7 +125,8 @@ Valid options are:
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
       (utils:system->devnull* "partprobe" boot-dev))
-    (when root-dev
+    (cond
+     (root-dev
       (cond
        (zpool
 	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
@@ -148,6 +147,11 @@ Valid options are:
       (system* "cryptsetup" "luksClose" luks-label)
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
+     (zpool
+      (system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+      (system* "zpool" "export" zpool))
+     (else
+      (error "Either a root device, and/or a ZFS pool name must be specified!")))
     (when (utils:directory? instroot)
       (catch #t
        (lambda () (rmdir instroot))
@@ -158,5 +162,5 @@ Valid options are:
 	    (utils:println "Removing directory" instroot " with its content...")
 	    (system* "rm" "-rf" instroot))
 	   (else
-	    (utils:println "Skipped removing" instroot "directory."))))))
-      (utils:println "Finished destroying initialized root structure:" instroot))))
+	    (utils:println "Skipped removing" instroot "directory.")))))))
+    (utils:println "Finished destroying initialized root structure:" instroot)))
