@@ -275,11 +275,13 @@
     (when (not (file-exists? headers-dir))
       (mkdir headers-dir))
     ;; ROOOTDEV
+    (when luks-partdev
     (with-output-to-file crypttab-file
       (lambda ()
 	(utils:println "# LUKS device containing root filesystem")
 	(utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")))
     (backup-header headers-dir luks-partdev luks-label)
+    )
     ;; DEVLISTS
     (when keyfile
       (let ((keyfile-name (basename keyfile)))
