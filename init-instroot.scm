@@ -150,7 +150,6 @@
     (utils:system->devnull*
      "zfs" "create"
      "-o" "compression=lz4"
-     "-o" "canmount=off"
      root-dataset)
     (map
      (lambda (dir-name)
@@ -307,17 +306,13 @@
 	      (string-split dev-list #\,)))))))))
 
 (define* (init-instroot-zfs
-	  instroot boot-partdev luks-partdev luks-label
+	  instroot boot-partdev
 	  zpool rootfs dir-list swap-size swapfiles
-	  #:key keyfile dev-list)
+	  #:key keyfile dev-list luks-partdev luks-label)
   (when (file-exists? instroot)
     (error "Target" instroot "already exists!"))
   (when (not (utils:block-device? boot-partdev))
     (error "Cannot find device" boot-partdev "for boot partition!"))
-  (when (not (utils:block-device? luks-partdev))
-    (error "Cannot find device" luks-partdev "for root partition!"))
-  (when (not (utils:block-device? (string-append "/dev/mapper/" luks-label)))
-    (error "Cannot find LUKS device" luks-label))
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "zpool" zpool "not available!"))
   (let ((systemfs (utils:path zpool rootfs)))
@@ -325,17 +320,28 @@
       (error "ZFS dataset" systemfs "does not exist!"))
     ;; BEGIN
     (mkdir instroot)
-    (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
+    (cond
+     (luks-partdev
+      (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
+      (when (not (utils:block-device? luks-dev))
+        (error "Cannot find LUKS device" luks-label))
       (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
       (utils:system->devnull* "mkfs.ext4" luks-dev)
+      (utils:println "Mounting LUKS root filesystem...")
       (when (not (zero? (system* "mount" luks-dev instroot)))
 	(error "Failed to mount" luks-dev "as" instroot)))
-
+      (utils:println "Mounting all ZFS root directories...")
+      (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs))
+     (zpool
+      (utils:println "Mounting ZFS root...")
+      (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
+      (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs))
+     (else
+      (error "Either LUKS device or zfs pool must have been specified!")))
     (let ((boot-dir (utils:path instroot "boot")))
       (mkdir boot-dir)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir)))
-
     (let ((etc-dir (utils:path instroot "etc"))
 	  (root-dir (utils:path instroot "root"))
 	  (swapfile-args (get-swapfile-args swap-size swapfiles)))
@@ -355,10 +361,7 @@
        #:luks-partdev luks-partdev
        #:luks-label luks-label
        #:keyfile keyfile
-       #:dev-list dev-list))
-
-    (utils:println "Mounting all ZFS root directories...")
-    (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs)))
+       #:dev-list dev-list))))
 
 (define* (init-instroot-swapfile
 	  instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
@@ -624,9 +627,10 @@ Valid options are:
 				#:dir-list dir-list)
 		  (init-instroot-zfs
 		   target boot-partdev
-		   root-partdev luks-label
 		   zpool rootfs dir-list
 		   swap-size swapfiles
+		   #:root-partdev root-partdev
+		   #:luks-label luks-label
 		   #:dev-list dev-list
 		   #:keyfile keyfile))
 		 ((< 0 swapfiles)
@@ -641,7 +645,22 @@ Valid options are:
 	      ;; to support backwards compatibility with debconf.sh shell script
 	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
 	      (utils:println "Finished setting up installation root" target))))))
+	 (zpool
+	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
+	    (init-zfsroot
+	     zpool rootfs swap-size
+	     #:swapfiles swapfiles
+	     #:dir-list dir-list)
+	    (init-instroot-zfs
+	     target boot-partdev
+	     zpool rootfs dir-list
+	     swap-size swapfiles
+	     #:dev-list dev-list
+	     #:keyfile keyfile)
+	    (utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
+	    ;; to support backwards compatibility with debconf.sh shell script
+	    (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)))
 	 (else
-	  (error "Block device must be specified for root filesystem!"))))))
+	  (error "Separate block device must be specified for boot partition!"))))))
      (else
       (error "This script must be run as root!")))))
