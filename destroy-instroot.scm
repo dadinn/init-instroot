@@ -142,10 +142,10 @@ Valid options are:
       (system* "cryptsetup" "luksClose" luks-label)
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
-    (when (and (file-exists? instroot)
-	       (eq? 'directory (stat:type (stat instroot))))
-      (rmdir instroot)
-      (when (file-exists? instroot)
+    (when (utils:directory? instroot)
+      (catch #t
+       (lambda () (rmdir instroot))
+       (lambda* (key #:rest args)
 	(let ((delinstroot (readline (string-append "Directory " instroot " is not empty. Would you still like te remove it? [y/N]"))))
 	  (cond
 	   ((regex:string-match "[yY]" delinstroot)
@@ -153,4 +153,4 @@ Valid options are:
 	    (system* "rm" "-rf" instroot))
 	   (else
 	    (utils:println "Skipped removing" instroot "directory."))))))
-    (utils:println "Finished destroying initialized root structure:" instroot)))
+      (utils:println "Finished destroying initialized root structure:" instroot))))
