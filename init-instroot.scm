@@ -349,7 +349,13 @@
      (zpool
       (utils:println "Mounting ZFS root...")
       (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
-      (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs))
+      (system* "mount" "-t" "zfs" systemfs instroot)
+      (map
+       (lambda (dirfs)
+	 (let ((mount-path (utils:path instroot dirfs)))
+	   (mkdir mount-path)
+	   (system* "mount" "-t" "zfs" (utils:path systemfs dirfs) mount-path)))
+       dir-list))
      (else
       (error "Either LUKS device or zfs pool must have been specified!")))
     (let ((boot-dir (utils:path instroot "boot")))
