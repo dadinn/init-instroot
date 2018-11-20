@@ -227,6 +227,8 @@
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
       (cond
+       (luks-label
+      (cond
        (zpool
 	(fstab-entry-root (utils:path "/dev/mapper" luks-label))
 	(fstab-entry-boot boot-partdev)
@@ -256,7 +258,18 @@
 	       (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
 	  (fstab-entry-root lv-root)
 	  (fstab-entry-boot boot-partdev)
-	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
+	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0"))))
+      )
+       (zpool
+	(utils:println (utils:path zpool rootfs) "/" "zfs" "defaults" "0" "1")
+	(map
+	 (lambda (dirfs)
+	   (utils:println
+	    (utils:path zpool rootfs dirfs)
+	    (utils:path "" dirfs)
+	    "zfs" "defaults" "0" "0"))
+	 dir-list)
+	(fstab-entry-boot boot-partdev))))))
 
 (define* (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
