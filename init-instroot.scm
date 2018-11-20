@@ -150,6 +150,7 @@
     (utils:system->devnull*
      "zfs" "create"
      "-o" "compression=lz4"
+     "-o" "mountpoint=legacy"
      root-dataset)
     (map
      (lambda (dir-name)
