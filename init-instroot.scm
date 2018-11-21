@@ -162,7 +162,8 @@
        "zfs" "create"
        "-V" swap-size
        "-o" "sync=always"
-       "-o" "primary=cache=metadata"
+       "-o" "primarycache=metadata"
+       "-o" "secondarycache=none"
        "-o" "logbias=throughput"
        swap-dataset)
       (utils:system->devnull* "mkswap" swap-zvol)
