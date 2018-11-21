@@ -270,6 +270,7 @@
 	    (utils:path "" dirfs)
 	    "zfs" "defaults" "0" "0"))
 	 dir-list)
+	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(fstab-entry-boot boot-partdev))))))
 
 (define* (backup-header headers-dir device label)
