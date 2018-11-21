@@ -138,7 +138,7 @@
 	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
    (string-split dev-list #\,)))
 
-(define* (init-zfsroot zpool rootfs swap-size #:key swapfiles dir-list)
+(define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
   (utils:system->devnull* "zpool" "import" zpool)
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "could not find or import ZFS pool:" zpool))
@@ -156,7 +156,7 @@
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
      dir-list)
-    (when (not swapfiles)
+    (when swap-size
       (utils:println "Creating ZFS volume for swap device...")
       (utils:system->devnull*
        "zfs" "create"
@@ -643,9 +643,7 @@ Valid options are:
 		  (when (and keyfile dev-list)
 		    (init-cryptdevs keyfile dev-list))
 		  (deps:install-deps-zfs lockfile-deps-zfs)
-		  (init-zfsroot zpool rootfs swap-size
-				#:swapfiles swapfiles
-				#:dir-list dir-list)
+		  (init-zfsroot zpool rootfs #:dir-list dir-list)
 		  (init-instroot-zfs
 		   target boot-partdev
 		   zpool rootfs dir-list
@@ -669,8 +667,8 @@ Valid options are:
 	 (zpool
 	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
 	    (init-zfsroot
-	     zpool rootfs swap-size
-	     #:swapfiles swapfiles
+	     zpool rootfs
+	     #:swap-size swap-size
 	     #:dir-list dir-list)
 	    (init-instroot-zfs
 	     target boot-partdev
