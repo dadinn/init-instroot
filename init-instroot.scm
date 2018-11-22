@@ -666,6 +666,8 @@ Valid options are:
 	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
 	      (utils:println "Finished setting up installation root" target))))))
 	 (zpool
+	  (when (not boot-dev)
+	    (error "Separate boot device must be specified when using ZFS as root!"))
 	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
 	    (init-zfsroot
 	     zpool rootfs
