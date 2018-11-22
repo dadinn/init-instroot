@@ -495,7 +495,7 @@
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
-     (default "home,var,gnu")
+     (default "home,var,var/lib,gnu")
      (value-arg "dirlist")
      (value #t))
     (devlst
