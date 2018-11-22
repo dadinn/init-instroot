@@ -150,7 +150,6 @@
     (utils:system->devnull*
      "zfs" "create"
      "-o" "compression=lz4"
-     "-o" "mountpoint=legacy"
      root-dataset)
     (map
      (lambda (dir-name)
@@ -262,14 +261,6 @@
 	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0"))))
       )
        (zpool
-	(utils:println (utils:path zpool rootfs) "/" "zfs" "defaults" "0" "1")
-	(map
-	 (lambda (dirfs)
-	   (utils:println
-	    (utils:path zpool rootfs dirfs)
-	    (utils:path "" dirfs)
-	    "zfs" "defaults" "0" "0"))
-	 dir-list)
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(fstab-entry-boot boot-partdev))))))
 
@@ -351,13 +342,10 @@
      (zpool
       (utils:println "Mounting ZFS root...")
       (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
-      (system* "mount" "-t" "zfs" systemfs instroot)
-      (map
-       (lambda (dirfs)
-	 (let ((mount-path (utils:path instroot dirfs)))
-	   (mkdir mount-path)
-	   (system* "mount" "-t" "zfs" (utils:path systemfs dirfs) mount-path)))
-       dir-list))
+      (system* "zfs" "umount" "-a")
+      (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs)
+      (system* "zfs" "mount" "-a")
+      (system* "mount" "-o" "remount,exec,dev" instroot))
      (else
       (error "Either LUKS device or zfs pool must have been specified!")))
     (let ((boot-dir (utils:path instroot "boot")))
