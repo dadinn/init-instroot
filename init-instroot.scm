@@ -668,6 +668,7 @@ Valid options are:
 	 (zpool
 	  (when (not boot-dev)
 	    (error "Separate boot device must be specified when using ZFS as root!"))
+	  (deps:install-deps-zfs lockfile-deps-zfs)
 	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
 	    (init-zfsroot
 	     zpool rootfs
