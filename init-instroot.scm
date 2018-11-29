@@ -52,30 +52,35 @@
     (with-output-to-file ".deps_base"
       (lambda () (display "")))))
 
+(define* (init-boot-parts-bios boot-dev)
+  (system* "sgdisk" boot-dev "-Z"
+	   "-n" "1:0:+2M"
+	   "-t" "1:ef02"
+	   "-N" "2"
+	   "-t" "2:8300")
+  (system* "partprobe" boot-dev)
+  (let ((boot-partdev (string-append boot-dev "2")))
+    (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
+    (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
+    boot-partdev))
+
+(define* (init-boot-parts-uefi boot-dev)
+  (system* "sgdisk" boot-dev "-Z"
+	   "-N" "1"
+	   "-t" "1:ef00")
+  (system* "partprobe" boot-dev)
+  (let ((boot-partdev (string-append boot-dev "1")))
+    (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
+    (system* "mkfs.fat" "-F32" boot-partdev)
+    boot-partdev))
+
 (define* (init-boot-parts boot-dev #:key uefiboot?)
-    (cond
-     (uefiboot?
-      (system* "sgdisk" boot-dev "-Z"
-	       "-N" "1"
-	       "-t" "1:ef00")
-      (system* "partprobe" boot-dev)
-      (let ((boot-partdev (string-append boot-dev "1")))
-	(utils:println "Formatting boot partition device:" boot-partdev)
-	(system* "mkfs.fat" "-F32" boot-partdev)
-	(utils:println "Finished setting up partitions on:" boot-dev)
-	boot-partdev))
-     (else
-      (system* "sgdisk" boot-dev "-Z"
-	       "-n" "1:0:+2M"
-	       "-t" "1:ef02"
-	       "-N" "2"
-	       "-t" "2:8300")
-      (system* "partprobe" boot-dev)
-      (let ((boot-partdev (string-append boot-dev "2")))
-	(utils:println "Formatting boot partition device:" boot-partdev)
-	(system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
-	(utils:println "Finished setting up partitions on:" boot-dev)
-	boot-partdev))))
+  (let ((boot-partdev
+	 (if uefiboot?
+	     (init-boot-parts-uefi boot-dev)
+	     (init-boot-parts-bios boot-dev))))
+    (utils:println "Finished setting up partitions on:" boot-dev)
+    boot-partdev))
 
 (define* (init-root-parts root-dev #:key boot-dev uefiboot?)
   (cond
