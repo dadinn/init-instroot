@@ -99,9 +99,11 @@
 	       "-t" "1:ef00"
 	       "-t" "2:8300")
       (system* "partprobe" root-dev)
-      (vector
-       (string-append root-dev "1")
-       (string-append root-dev "2")))
+      (let ((boot-partdev (string-append root-dev "1"))
+	    (root-partdev (string-append root-dev "2")))
+	(utils:println "Formatting boot partition device as FAT32:" boot-partdev)
+	(system* "mkfs.fat" "-F32" boot-partdev)
+	(vector boot-partdev root-partdev)))
      (else
       (system* "sgdisk" root-dev "-Z"
 	       "-n" "1:0:+2M"
@@ -111,9 +113,11 @@
 	       "-t" "2:8300"
 	       "-t" "3:8300")
       (system* "partprobe" root-dev)
-      (vector
-       (string-append root-dev "2")
-       (string-append root-dev "3")))))))
+      (let ((boot-partdev (string-append root-dev "2"))
+	    (root-partdev (string-append root-dev "3")))
+	(utils:println "Formatting boot partition device as EXT4:" boot-partdev)
+	(system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
+	(vector boot-partdev root-partdev)))))))
 
 (define (init-cryptroot partdev label)
   (utils:println "formatting" partdev "to be used as LUKS device...")
