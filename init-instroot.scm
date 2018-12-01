@@ -39,19 +39,6 @@
 	(if matches (regex:match:substring matches 0) #f))
       (error "Not a block device:" path)))
 
-(define (install-deps-base lockfile-path)
-  (when (not (file-exists? lockfile-path))
-    (let ((missing (utils:which* "sgdisk" "partprobe" "cryptsetup" "pvcreate" "vgcreate" "lvcreate")))
-      (if (not (null? missing))
-	  (if (file-exists? "/etc/debian_version")
-	      (begin
-		(display "Installing necessary packages...")
-		(system "apt update")
-		(system "apt install -y gdisk parted cryptsetup lvm2"))
-	      (error "Necessary binaries are missing" missing))))
-    (with-output-to-file lockfile-path
-      (lambda () (display "")))))
-
 (define* (init-boot-parts-bios boot-dev)
   (system* "sgdisk" boot-dev "-Z"
 	   "-n" "1:0:+2M"
@@ -590,8 +577,8 @@ Valid options are:
      ((utils:root-user?)
       (cond
        (initdeps?
-	(install-deps-base lockfile-deps-base)
-	(deps:install-deps-zfs)
+	(deps:install-deps-base lockfile-deps-base)
+	(deps:install-deps-zfs lockfile-deps-zfs)
 	(utils:println "Finished installing all package dependencies!"))
        (else
 	(when (not swap-size)
@@ -599,7 +586,7 @@ Valid options are:
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
 	(utils:write-lastrun ".lastrun.scm" options)
-	(install-deps-base lockfile-deps-base)
+	(deps:install-deps-base lockfile-deps-base)
 	(cond
 	 (root-dev
 	  (cond
@@ -618,7 +605,7 @@ Valid options are:
 		 (zpool
 		  (when (and keyfile dev-list)
 		    (init-cryptdevs keyfile dev-list))
-		  (deps:install-deps-zfs)
+		  (deps:install-deps-zfs lockfile-deps-zfs)
 		  (init-zfsroot zpool rootfs swap-size
 				#:swapfiles swapfiles
 				#:dir-list dir-list)
