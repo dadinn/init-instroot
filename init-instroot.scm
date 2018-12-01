@@ -107,7 +107,7 @@
 	(vector boot-partdev root-partdev)))))))
 
 (define (init-cryptroot partdev label)
-  (utils:println "formatting" partdev "to be used as LUKS device...")
+  (utils:println "Formatting" partdev "to be used as LUKS device...")
   (when (not (zero? (system* "cryptsetup" "luksFormat" partdev)))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
@@ -121,7 +121,7 @@
   (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [Y/n]")))
     (cond
      ((regex:string-match "[nN]" shred-prompt)
-      (utils:println "Skipping shredding of LUKS device."))
+      (utils:println "Skipped shredding of LUKS device."))
      (else
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
