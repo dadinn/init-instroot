@@ -7,7 +7,7 @@
 
 (use-modules
  ((common utils) #:prefix utils:)
- ((common zfs) #:prefix zfs:)
+ ((common deps) #:prefix deps:)
  ((ice-9 readline))
  ((ice-9 format))
  ((ice-9 regex) #:prefix regex:)
@@ -589,7 +589,7 @@ Valid options are:
       (cond
        (initdeps?
 	(install-deps-base)
-	(zfs:install-deps-zfs)
+	(deps:install-deps-zfs)
 	(utils:println "Finished installing all package dependencies!"))
        (else
 	(when (not swap-size)
@@ -616,7 +616,7 @@ Valid options are:
 		 (zpool
 		  (when (and keyfile dev-list)
 		    (init-cryptdevs keyfile dev-list))
-		  (zfs:install-deps-zfs)
+		  (deps:install-deps-zfs)
 		  (init-zfsroot zpool rootfs swap-size
 				#:swapfiles swapfiles
 				#:dir-list dir-list)
