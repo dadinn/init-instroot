@@ -7,6 +7,7 @@
 
 (use-modules
  ((common utils) #:prefix utils:)
+ ((common deps) #:prefix deps:)
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 readline)))
 
@@ -93,7 +94,9 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
-	 (help? (hash-ref options 'help)))
+	 (help? (hash-ref options 'help))
+	 (lockfile-deps-base ".deps_base")
+	 (lockfile-deps-zfs ".deps_zfs"))
     ;; todo fix these imperative whens
     (when help?
       (utils:println
@@ -116,7 +119,10 @@ Valid options are:
     (when (not instroot)
       (error "Mounted root directory is not specified!"))
     (when (not (eqv? 0 (getuid)))
-      (error "This script must be run as root!"))
+	  (error "This script must be run as root!"))
+    (deps:install-deps-base lockfile-deps-base)
+    (when zpool
+     (deps:install-deps-zfs lockfile-deps-zfs))
     (system* "umount" (string-append instroot "/boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
