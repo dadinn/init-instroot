@@ -648,11 +648,7 @@ Valid options are:
 		 (else
 		  (init-instroot-lvm
 		   target boot-partdev root-partdev luks-label
-		   swap-size))))
-	      (utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
-	      ;; to support backwards compatibility with debconf.sh shell script
-	      (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
-	      (utils:println "Finished setting up installation root" target))))))
+		   swap-size)))))))))
 	 (zpool
 	  (when (not boot-dev)
 	    (error "Separate boot device must be specified when using ZFS as root!"))
@@ -667,11 +663,12 @@ Valid options are:
 	     zpool rootfs dir-list
 	     swap-size swapfiles
 	     #:dev-list dev-list
-	     #:keyfile keyfile)
-	    (utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
-	    ;; to support backwards compatibility with debconf.sh shell script
-	    (utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)))
+	     #:keyfile keyfile)))
 	 (else
-	  (error "Separate block device must be specified for boot partition!"))))))
+	  (error "Separate block device must be specified for boot partition!")))
+	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
+	;; to support backwards compatibility with debconf.sh shell script
+	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
+	(utils:println "Finished setting up installation root" target))))
      (else
       (error "This script must be run as root!")))))
