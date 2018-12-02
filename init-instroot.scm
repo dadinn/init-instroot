@@ -260,7 +260,8 @@
       )
        (zpool
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
-	(fstab-entry-boot boot-partdev))))))
+	(fstab-entry-boot boot-partdev)))
+      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
 (define* (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
