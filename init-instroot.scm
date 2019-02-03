@@ -21,6 +21,15 @@
 	(regex:match:substring dev-size 0)
 	(error "Could not calculate device size" dev))))
 
+(define (partdev device part-id)
+  (cond
+   ((regex:string-match "/dev/[hsv]d[a-z]+" device)
+    (string-append device part-id))
+   ((or (regex:string-match "/dev/nvme[0-9]+n[0-9]+" device)
+	(regex:string-match "/dev/mmcblk[0-9]+" device))
+    (string-append device "p" part-id))
+   (else (error "Unsupported device type:" device))))
+
 (define (partuuid path n)
   (if (utils:block-device? path)
       (let ((matches
@@ -46,7 +55,7 @@
 	   "-N" "2"
 	   "-t" "2:8300")
   (system* "partprobe" boot-dev)
-  (let ((boot-partdev (string-append boot-dev "2")))
+  (let ((boot-partdev (partdev boot-dev "2")))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
     (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
     boot-partdev))
@@ -56,7 +65,7 @@
 	   "-N" "1"
 	   "-t" "1:ef00")
   (system* "partprobe" boot-dev)
-  (let ((boot-partdev (string-append boot-dev "1")))
+  (let ((boot-partdev (partdev boot-dev "1")))
     (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
     (system* "mkfs.fat" "-F32" boot-partdev)
     boot-partdev))
@@ -76,7 +85,7 @@
     (system* "partprobe" root-dev)
     (vector
      (init-boot-parts boot-dev #:uefiboot? uefiboot?)
-     (string-append root-dev "1")))
+     (partdev root-dev "1")))
    (uefiboot?
     (system* "sgdisk" root-dev "-Z"
 	     "-n" "1:0:+500M"
@@ -84,8 +93,8 @@
 	     "-t" "1:ef00"
 	     "-t" "2:8300")
     (system* "partprobe" root-dev)
-    (let ((boot-partdev (string-append root-dev "1"))
-	  (root-partdev (string-append root-dev "2")))
+    (let ((boot-partdev (partdev root-dev "1"))
+	  (root-partdev (partdev root-dev "2")))
       (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
       (system* "mkfs.fat" "-F32" boot-partdev)
       (vector boot-partdev root-partdev)))
@@ -98,8 +107,8 @@
 	     "-t" "2:8300"
 	     "-t" "3:8300")
     (system* "partprobe" root-dev)
-    (let ((boot-partdev (string-append root-dev "2"))
-	  (root-partdev (string-append root-dev "3")))
+    (let ((boot-partdev (partdev root-dev "2"))
+	  (root-partdev (partdev root-dev "3")))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
       (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
       (vector boot-partdev root-partdev)))))
