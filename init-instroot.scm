@@ -77,34 +77,32 @@
     (vector
      (init-boot-parts boot-dev #:uefiboot? uefiboot?)
      (string-append root-dev "1")))
+   (uefiboot?
+    (system* "sgdisk" root-dev "-Z"
+	     "-n" "1:0:+500M"
+	     "-N" "2"
+	     "-t" "1:ef00"
+	     "-t" "2:8300")
+    (system* "partprobe" root-dev)
+    (let ((boot-partdev (string-append root-dev "1"))
+	  (root-partdev (string-append root-dev "2")))
+      (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
+      (system* "mkfs.fat" "-F32" boot-partdev)
+      (vector boot-partdev root-partdev)))
    (else
-    (cond
-     (uefiboot?
-      (system* "sgdisk" root-dev "-Z"
-	       "-n" "1:0:+500M"
-	       "-N" "2"
-	       "-t" "1:ef00"
-	       "-t" "2:8300")
-      (system* "partprobe" root-dev)
-      (let ((boot-partdev (string-append root-dev "1"))
-	    (root-partdev (string-append root-dev "2")))
-	(utils:println "Formatting boot partition device as FAT32:" boot-partdev)
-	(system* "mkfs.fat" "-F32" boot-partdev)
-	(vector boot-partdev root-partdev)))
-     (else
-      (system* "sgdisk" root-dev "-Z"
-	       "-n" "1:0:+2M"
-	       "-n" "2:0:+500M"
-	       "-N" "3"
-	       "-t" "1:ef02"
-	       "-t" "2:8300"
-	       "-t" "3:8300")
-      (system* "partprobe" root-dev)
-      (let ((boot-partdev (string-append root-dev "2"))
-	    (root-partdev (string-append root-dev "3")))
-	(utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-	(system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
-	(vector boot-partdev root-partdev)))))))
+    (system* "sgdisk" root-dev "-Z"
+	     "-n" "1:0:+2M"
+	     "-n" "2:0:+500M"
+	     "-N" "3"
+	     "-t" "1:ef02"
+	     "-t" "2:8300"
+	     "-t" "3:8300")
+    (system* "partprobe" root-dev)
+    (let ((boot-partdev (string-append root-dev "2"))
+	  (root-partdev (string-append root-dev "3")))
+      (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
+      (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)
+      (vector boot-partdev root-partdev)))))
 
 (define (init-cryptroot partdev label)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
@@ -618,37 +616,35 @@ Valid options are:
 	  (cond
 	   (boot-dev
 	    (error "Separate boot device is not supported!"))
+	   (uefiboot?
+	    (error "UEFI boot is not yet supported!"))
 	   (else
-	    (cond
-	     (uefiboot?
-	      (error "UEFI boot is not yet supported!"))
-	     (else
-	      (let* ((parts (init-root-parts root-dev))
-		     (boot-partdev (vector-ref parts 0))
-		     (root-partdev (vector-ref parts 1)))
-		(init-cryptroot root-partdev luks-label)
-		(cond
-		 (zpool
-		  (when (and keyfile dev-list)
-		    (init-cryptdevs keyfile dev-list))
-		  (deps:install-deps-zfs lockfile-deps-zfs)
-		  (init-zfsroot zpool rootfs #:dir-list dir-list)
-		  (init-instroot-zfs
-		   target boot-partdev
-		   zpool rootfs dir-list
-		   swap-size swapfiles
-		   #:root-partdev root-partdev
-		   #:luks-label luks-label
-		   #:dev-list dev-list
-		   #:keyfile keyfile))
-		 ((< 0 swapfiles)
-		  (init-instroot-swapfile
-		   target boot-partdev root-partdev luks-label
-		   swap-size swapfiles))
-		 (else
-		  (init-instroot-lvm
-		   target boot-partdev root-partdev luks-label
-		   swap-size)))))))))
+	    (let* ((parts (init-root-parts root-dev))
+		   (boot-partdev (vector-ref parts 0))
+		   (root-partdev (vector-ref parts 1)))
+	      (init-cryptroot root-partdev luks-label)
+	      (cond
+	       (zpool
+		(when (and keyfile dev-list)
+		      (init-cryptdevs keyfile dev-list))
+		(deps:install-deps-zfs lockfile-deps-zfs)
+		(init-zfsroot zpool rootfs #:dir-list dir-list)
+		(init-instroot-zfs
+		 target boot-partdev
+		 zpool rootfs dir-list
+		 swap-size swapfiles
+		 #:root-partdev root-partdev
+		 #:luks-label luks-label
+		 #:dev-list dev-list
+		 #:keyfile keyfile))
+	       ((< 0 swapfiles)
+		(init-instroot-swapfile
+		 target boot-partdev root-partdev luks-label
+		 swap-size swapfiles))
+	       (else
+		(init-instroot-lvm
+		 target boot-partdev root-partdev luks-label
+		 swap-size)))))))
 	 (zpool
 	  (when (not boot-dev)
 	    (error "Separate boot device must be specified when using ZFS as root!"))
