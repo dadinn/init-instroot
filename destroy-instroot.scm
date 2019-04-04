@@ -74,8 +74,11 @@ Specifying a keyfile is necessary for this feature!")
       "This usage help...")
      (single-char #\h))))
 
+(define state-dir ".state")
+(define lastrun-file (utils:path state-dir "lastrun.scm"))
+
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun ".lastrun.scm"))
+  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 
 	 (instroot (hash-ref options 'target))
@@ -105,7 +108,7 @@ USAGE:
 
 " (basename (car args)) " [OPTIONS]
 
-Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables defined in .lastrun.scm file.
+Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables stored in lastrun-file.
 
 Valid options are:
 "))

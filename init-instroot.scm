@@ -569,8 +569,13 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	(throw 'file-already-exists fname)
 	(system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4"))))
 
+(define state-dir ".state")
+(define lastrun-file (utils:path state-dir "lastrun.scm"))
+(define lockfile-deps-base (utils:path state-dir "deps_base"))
+(define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
+
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun ".lastrun.scm"))
+  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
 	 (options (utils:getopt-lastrun args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
@@ -589,9 +594,9 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
-	 (help? (hash-ref options 'help))
-	 (lockfile-deps-base ".deps_base")
-	 (lockfile-deps-zfs ".deps_zfs"))
+	 (help? (hash-ref options 'help)))
+    (if (not (file-exists? state-dir))
+	(mkdir state-dir))
     (cond
      (help?
       (utils:println
@@ -619,7 +624,7 @@ Valid options are:
 	  (error "Swap size must be specified!"))
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
-	(utils:write-lastrun ".lastrun.scm" options)
+	(utils:write-lastrun lastrun-file options)
 	(deps:install-deps-base lockfile-deps-base)
 	(cond
 	 (root-dev
