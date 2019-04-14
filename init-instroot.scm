@@ -212,6 +212,12 @@
 	     (utils:println "WARNING:" swapfile "failed to swap on!"))))
      swapfile-args)))
 
+(define (fstab-entry-root root-dev)
+  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro" "0" "1"))
+
+(define (fstab-entry-boot boot-dev)
+  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults" "0" "2"))
+
 (define* (gen-fstab etc-dir #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
   (when (not (file-exists? etc-dir))
     (error "Directory" etc-dir "does not exists!"))
@@ -220,10 +226,10 @@
       (newline)
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
-      (utils:println (string-append "UUID=" (fsuuid (utils:path "/dev/mapper" luks-label))) "/" "ext4" "errors=remount-ro" "0" "1")
-      (utils:println (string-append "UUID=" (fsuuid boot-partdev)) "/boot" "ext4" "defaults" "0" "2")
       (cond
        (zpool
+	(fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	(fstab-entry-boot boot-partdev)
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(newline)
 	(utils:println "# systemd specific legacy mounts of ZFS datasets")
@@ -233,8 +239,11 @@
 	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	 dir-list))
        ((and swapfile-args (not (null? swapfile-args)))
+	(fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	(fstab-entry-boot boot-partdev)
 	(newline)
 	(utils:println "#swapfiles")
+	(newline)
 	(map
 	 (lambda (args)
 	   (let* ((filename (car args))
@@ -245,6 +254,8 @@
 	(let* ((vg-name (string-append luks-label "_vg"))
 	       (lv-root (string-append "/dev/mapper/" vg-name "-root"))
 	       (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
+	  (fstab-entry-root lv-root)
+	  (fstab-entry-boot boot-partdev)
 	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
 
 (define* (backup-header headers-dir device label)
