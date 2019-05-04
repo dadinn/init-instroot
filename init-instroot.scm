@@ -576,7 +576,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 
 (define (main args)
   (let* ((lastrun-map (utils:read-lastrun lastrun-file))
-	 (options (utils:getopt-lastrun args options-spec lastrun-map))
+	 (options (utils:getopt-extra args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
@@ -657,6 +657,7 @@ Valid options are:
 		 target boot-partdev root-partdev luks-label
 		 swap-size swapfiles))
 	       (else
+		(deps:install-deps-lvm)
 		(init-instroot-lvm
 		 target boot-partdev root-partdev luks-label
 		 swap-size)))))))

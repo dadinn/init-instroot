@@ -79,7 +79,7 @@ Specifying a keyfile is necessary for this feature!")
 
 (define (main args)
   (let* ((lastrun-map (utils:read-lastrun lastrun-file))
-	 (options (utils:getopt-lastrun args options-spec lastrun-map))
+	 (options (utils:getopt-extra args options-spec lastrun-map))
 
 	 (instroot (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
