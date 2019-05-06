@@ -95,6 +95,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
+	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help))
@@ -142,7 +143,7 @@ Valid options are:
 	       (system* "cryptsetup" "luksClose" label)))
 	   dev-specs))
 	(system* "umount" instroot))
-       (swapfiles
+       ((< 0 swapfiles)
 	(system* "umount" instroot))
        (else
 	(system* "umount" instroot)
