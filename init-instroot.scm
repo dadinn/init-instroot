@@ -677,7 +677,7 @@ Valid options are:
 	     #:dev-list dev-list
 	     #:keyfile keyfile)))
 	 (else
-	  (error "Separate block device must be specified for boot partition!")))
+	  (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
 	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
 	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
