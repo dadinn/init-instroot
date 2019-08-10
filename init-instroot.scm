@@ -332,7 +332,7 @@
     (error "zpool" zpool "not available!"))
   (let ((systemfs (utils:path zpool rootfs)))
     (when (not (zero? (utils:system->devnull* "zfs" "list" systemfs)))
-      (error "ZFS dataset" systemfs "does not exist!"))
+      (error "ZFS dataset does not exist:" systemfs))
     ;; BEGIN
     (mkdir instroot)
     (cond
