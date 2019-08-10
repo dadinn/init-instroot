@@ -48,7 +48,7 @@
 	(if matches (regex:match:substring matches 0) #f))
       (error "Not a block device:" path)))
 
-(define* (init-boot-parts-bios boot-dev)
+(define (init-boot-parts-bios boot-dev)
   (system* "sgdisk" boot-dev "-Z"
 	   "-n" "1:0:+2M"
 	   "-t" "1:ef02"
@@ -61,7 +61,7 @@
 	  (error "Failed to create EXT4 filesystem on:" boot-partdev))
     boot-partdev))
 
-(define* (init-boot-parts-uefi boot-dev)
+(define (init-boot-parts-uefi boot-dev)
   (system* "sgdisk" boot-dev "-Z"
 	   "-N" "1"
 	   "-t" "1:ef00")
@@ -182,7 +182,7 @@
 	  (utils:println "WARNING:" "failed to swapon" swap-zvol)))
     (utils:println "Finished setting up ZFS pool:" zpool)))
 
-(define* (get-swapfile-args swap-size swapfiles)
+(define (parse-swapfile-args swap-size swapfiles)
   (let* ((swapsize-num (regex:match:substring
 			(regex:string-match "^([0-9]+)[KMGT]?$" swap-size) 1))
 	 (swapsize-num (string->number swapsize-num))
@@ -200,7 +200,7 @@
 	   (cdr (iota (+ 1 swapfiles)))))
 	'())))
 
-(define* (init-swapfiles root-dir swapfile-args)
+(define (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
     (error "Directory" root-dir "does not exists!"))
   (let ((swap-dir (utils:path root-dir "swap")))
@@ -276,7 +276,7 @@
 	(fstab-entry-boot boot-partdev)))
       (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
-(define* (backup-header headers-dir device label)
+(define (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
     (with-output-to-file "/dev/null"
       (lambda ()
@@ -386,8 +386,7 @@
        #:keyfile keyfile
        #:dev-list dev-list))))
 
-(define* (init-instroot-swapfile
-	  instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
+(define (init-instroot-swapfile instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
   (when (file-exists? instroot)
     (error "Target" instroot "already exists!"))
