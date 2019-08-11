@@ -12,7 +12,8 @@
  ((ice-9 format))
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 rdelim) #:prefix rdelim:)
- ((ice-9 popen) #:prefix popen:))
+ ((ice-9 popen) #:prefix popen:)
+ ((srfi srfi-1) #:prefix srfi1:))
 
 (define (device-size dev)
   (let* ((dev-size (utils:system->string* "blockdev" "--getsize64" dev))
@@ -183,22 +184,17 @@
     (utils:println "Finished setting up ZFS pool:" zpool)))
 
 (define (parse-swapfile-args swap-size swapfiles)
-  (let* ((swapsize-num (regex:match:substring
-			(regex:string-match "^([0-9]+)[KMGT]?$" swap-size) 1))
-	 (swapsize-num (string->number swapsize-num))
-	 (swapsize-unit
-	  (regex:match:substring
-	   (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1)))
-    (if (< 0 swapfiles)
-	(let* ((swapfile-size (quotient swapsize-num swapfiles))
-	       (swapfile-size (number->string swapfile-size))
-	       (swapfile-size (string-append swapfile-size swapsize-unit)))
-	  (map
-	   (lambda (idx)
-	     (let ((filename (string-append "file" (format #f "~4,'0d" idx) "_" swapfile-size)))
-	       (list filename swapfile-size)))
-	   (cdr (iota (+ 1 swapfiles)))))
-	'())))
+  (let* ((swap-bytes (utils:parse-unit-as-bytes swap-size))
+	 (swapfile-bytes (floor (/ swap-bytes swapfiles)))
+	 (swapfile-size (utils:emit-bytes-as-unit swapfile-bytes)))
+    (map
+     (lambda (idx)
+       (list
+	(string-append
+	 "file" (format #f "~4,'0d" idx)
+	 "_" swapfile-size)
+	swapfile-bytes))
+     (srfi1:iota swapfiles 1 1))))
 
 (define (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
@@ -210,6 +206,7 @@
      (lambda (args)
        (let* ((filename (car args))
 	      (size (cadr args))
+	      (size (number->string size))
 	      (swapfile (utils:path swap-dir filename)))
 	 (utils:println "Allocating" size "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
