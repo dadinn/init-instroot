@@ -16,6 +16,10 @@ Configures device `/dev/sda` with two partitions: 500M formatted ext2 for /boot,
 
 Configures device `/dev/sda` with two partitions: 500M formatted ext2 for /boot, and the rest for a [LUKS](https://en.wikipedia.org/wiki/Linux_Unified_Key_Setup) encrypted device formatted ext4 for root. Additionally will look for a ZFS pool named `tank`on which it creates dataset named `system`under which it creates subdatasets home, var, gnu, and a ZFS volume named `swap` with size of 4G. The swap volume is formatted and used as swap device, while the other subdatasets are mounted as directories under the target root of the LUKS encrypted partition. 
 
+    init_instroot.scm -z tank -b /dev/sdb -f system -s 4G
+
+Configures ZFS pool `tank` using dataset `system` as root filesystem, and 4G ZFS volume as swap device. Also, uses `/dev/sdb` as separate boot device.
+
     init_instroot.scm -k mykey -v /dev/sdb:crypt_tank1,/dev/sdc:crypt_tank2 \
     -z tank -r system -d home,var,gnu -s 4G /dev/sda
 
