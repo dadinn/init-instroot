@@ -293,7 +293,7 @@
 	   (label (cadr args)))
        (utils:println label
 		      (string-append "UUID=" (fsuuid device))
-		      (string-append crypt-dir keyfile-name)
+		      (utils:path crypt-dir keyfile-name)
 		      "luks")
        (backup-header headers-dir device label)))
    (parse-dev-list dev-list)))
