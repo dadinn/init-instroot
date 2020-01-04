@@ -286,6 +286,18 @@
 		 "--header-backup-file" file)
 	(chmod file #o400)))))
 
+(define (print-crypttab-dev-list crypt-dir headers-dir keyfile-path dev-list)
+  (map
+   (lambda (args)
+     (let ((device (car args))
+	   (label (cadr args)))
+       (utils:println label
+		      (string-append "UUID=" (fsuuid device))
+		      (string-append crypt-dir keyfile-name)
+		      "luks")
+       (backup-header headers-dir device label)))
+   (parse-dev-list dev-list)))
+
 (define* (gen-crypttab etc-dir root-dir #:key luks-partdev luks-label keyfile dev-list)
   (let* ((crypttab-file (utils:path etc-dir "crypttab"))
 	 (crypt-dir (utils:path root-dir "crypt"))
@@ -307,20 +319,10 @@
 	(chmod keyfile #o400)
 	(copy-file keyfile (utils:path crypt-dir keyfile-name))
 	(with-output-to-file crypttab-file
-	  (lambda ()
-	    (newline)
-	    (utils:println "# LUKS devices containing encrypted ZFS vdevs")
-	    (newline)
-	    (map
-	     (lambda (args)
-	       (let ((device (car args))
-		     (label (cadr args)))
-		 (utils:println label
-				(string-append "UUID=" (fsuuid device))
-				(string-append "/root/crypt/" keyfile-name)
-				"luks")
-		 (backup-header headers-dir device label)))
-	     (parse-dev-list dev-list))))))))
+	  (newline)
+	  (utils:println "# LUKS devices containing encrypted ZFS vdevs")
+	  (newline)
+	  (print-crypttab-dev-list crypt-dir headers-dir keyfile-name dev-list))))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
