@@ -273,6 +273,11 @@
 	(fstab-entry-boot boot-partdev)))
       (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
+(define (parse-dev-list dev-list)
+  (map
+   (lambda (s) (string-split s #\:))
+   (string-split dev-list #\,)))
+
 (define (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
     (with-output-to-file "/dev/null"
@@ -315,10 +320,7 @@
 				(string-append "/root/crypt/" keyfile-name)
 				"luks")
 		 (backup-header headers-dir device label)))
-	     (map
-	      (lambda (s)
-		(string-split s #\:))
-	      (string-split dev-list #\,)))))))))
+	     (parse-dev-list dev-list))))))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
