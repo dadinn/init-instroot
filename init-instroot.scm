@@ -286,14 +286,14 @@
 		 "--header-backup-file" file)
 	(chmod file #o400)))))
 
-(define (print-crypttab-dev-list crypt-dir headers-dir keyfile-path dev-list)
+(define (print-crypttab-dev-list headers-dir keyfile-path dev-list)
   (map
    (lambda (args)
      (let ((device (car args))
 	   (label (cadr args)))
        (utils:println label
 		      (string-append "UUID=" (fsuuid device))
-		      (utils:path crypt-dir keyfile-name)
+		      keyfile-path
 		      "luks")
        (backup-header headers-dir device label)))
    (parse-dev-list dev-list)))
@@ -315,14 +315,14 @@
      (backup-header headers-dir luks-partdev luks-label))
     ;; DEVLISTS
     (when keyfile
-     (let ((keyfile-name (basename keyfile)))
+     (let ((keyfile-path (basename keyfile)))
        (chmod keyfile #o400)
-       (copy-file keyfile (utils:path crypt-dir keyfile-name))
+       (copy-file keyfile (utils:path crypt-dir keyfile-path))
        (with-output-to-file crypttab-file
 	 (newline)
 	 (utils:println "# LUKS devices containing encrypted ZFS vdevs")
 	 (newline)
-	 (print-crypttab-dev-list crypt-dir headers-dir keyfile-name dev-list))))))
+	 (print-crypttab-dev-list headers-dir keyfile-path dev-list))))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
