@@ -281,6 +281,17 @@
 		 "--header-backup-file" file)
 	(chmod file #o400)))))
 
+(define* (backup-headers headers-dir #:key luks-partdev luks-label dev-list)
+  (when luks-label
+   (backup-header headers-dir luks-partdev luks-label))
+  (when dev-list
+   (map
+    (lambda (args)
+      (let ((device (car args))
+	    (label (cadr args)))
+       (backup-header headers-dir device label)))
+    (parse-dev-list dev-list))))
+
 (define (print-crypttab-dev-list headers-dir keyfile-path dev-list)
   (map
    (lambda (args)
