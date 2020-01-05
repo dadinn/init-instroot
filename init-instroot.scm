@@ -313,9 +313,9 @@
      (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
     ;; DEVLISTS
     (when keyfile
-     (let ((keyfile-path (basename keyfile)))
+     (let ((keyfile-path (utils:path crypt-dir (basename keyfile))))
        (chmod keyfile #o400)
-       (copy-file keyfile (utils:path crypt-dir keyfile-path))
+       (copy-file keyfile keyfile-path)
        (newline)
        (utils:println "# LUKS devices containing encrypted ZFS vdevs")
        (newline)
