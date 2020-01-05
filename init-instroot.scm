@@ -304,17 +304,13 @@
    (parse-dev-list dev-list)))
 
 (define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
-  (let* ((crypt-dir (utils:path root-dir "crypt"))
-	 (headers-dir (utils:path crypt-dir "headers")))
+  (let* ((crypt-dir (utils:path root-dir "crypt")))
     (when (not (file-exists? crypt-dir))
       (mkdir crypt-dir))
-    (when (not (file-exists? headers-dir))
-      (mkdir headers-dir))
     ;; ROOOTDEV
     (when luks-partdev
      (utils:println "# LUKS device containing root filesystem")
-     (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")
-     (backup-header headers-dir luks-partdev luks-label))
+     (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
     ;; DEVLISTS
     (when keyfile
      (let ((keyfile-path (basename keyfile)))
