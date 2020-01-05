@@ -369,19 +369,19 @@
 	  (root-dir (utils:path instroot "root")))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
+      (gen-crypttab
+       etc-dir root-dir
+       #:luks-partdev luks-partdev
+       #:luks-label luks-label
+       #:keyfile keyfile
+       #:dev-list dev-list)
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
        #:luks-label luks-label
        #:zpool zpool
        #:rootfs rootfs
-       #:dir-list dir-list)
-      (gen-crypttab
-       etc-dir root-dir
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label
-       #:keyfile keyfile
-       #:dev-list dev-list))))
+       #:dir-list dir-list))))
 
 (define (init-instroot-swapfile instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
@@ -404,15 +404,15 @@
     (mkdir etc-dir)
     (mkdir root-dir #o700)
     (init-swapfiles root-dir swapfile-args)
+    (gen-crypttab
+     etc-dir root-dir
+     #:luks-partdev luks-partdev
+     #:luks-label luks-label)
     (gen-fstab
      etc-dir
      #:boot-partdev boot-partdev
      #:luks-label luks-label
-     #:swapfile-args swapfile-args)
-    (gen-crypttab
-     etc-dir root-dir
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label)))
+     #:swapfile-args swapfile-args)))
 
 (define* (init-instroot-lvm
 	  instroot boot-partdev luks-partdev luks-label swap-size)
@@ -449,13 +449,13 @@
       (if (zero? (utils:system->devnull* "swapon" lv-swap))
 	  (utils:system->devnull* "swapoff" lv-swap)
 	  (utils:println "WARNING:" "failed to swap on" lv-swap))
-      (gen-fstab
-       etc-dir
-       #:boot-partdev boot-partdev
-       #:luks-label luks-label)
       (gen-crypttab
        etc-dir root-dir
        #:luks-partdev luks-partdev
+       #:luks-label luks-label)
+      (gen-fstab
+       etc-dir
+       #:boot-partdev boot-partdev
        #:luks-label luks-label))))
 
 (define options-spec
