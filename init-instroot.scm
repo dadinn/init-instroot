@@ -292,7 +292,7 @@
        (backup-header headers-dir device label)))
     (parse-dev-list dev-list))))
 
-(define (print-crypttab-dev-list headers-dir keyfile-path dev-list)
+(define (print-crypttab-dev-list keyfile-path dev-list)
   (map
    (lambda (args)
      (let ((device (car args))
@@ -300,8 +300,7 @@
        (utils:println label
 		      (string-append "UUID=" (fsuuid device))
 		      keyfile-path
-		      "luks")
-       (backup-header headers-dir device label)))
+		      "luks")))
    (parse-dev-list dev-list)))
 
 (define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
@@ -324,7 +323,7 @@
        (newline)
        (utils:println "# LUKS devices containing encrypted ZFS vdevs")
        (newline)
-       (print-crypttab-dev-list headers-dir keyfile-path dev-list)))))
+       (print-crypttab-dev-list keyfile-path dev-list)))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
