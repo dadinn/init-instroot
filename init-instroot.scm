@@ -298,9 +298,8 @@
        (backup-header headers-dir device label)))
    (parse-dev-list dev-list)))
 
-(define* (gen-crypttab etc-dir root-dir #:key luks-partdev luks-label keyfile dev-list)
-  (let* ((crypttab-file (utils:path etc-dir "crypttab"))
-	 (crypt-dir (utils:path root-dir "crypt"))
+(define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
+  (let* ((crypt-dir (utils:path root-dir "crypt"))
 	 (headers-dir (utils:path crypt-dir "headers")))
     (when (not (file-exists? crypt-dir))
       (mkdir crypt-dir))
@@ -308,21 +307,18 @@
       (mkdir headers-dir))
     ;; ROOOTDEV
     (when luks-partdev
-     (with-output-to-file crypttab-file
-       (lambda ()
-	 (utils:println "# LUKS device containing root filesystem")
-	 (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")))
+     (utils:println "# LUKS device containing root filesystem")
+     (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")
      (backup-header headers-dir luks-partdev luks-label))
     ;; DEVLISTS
     (when keyfile
      (let ((keyfile-path (basename keyfile)))
        (chmod keyfile #o400)
        (copy-file keyfile (utils:path crypt-dir keyfile-path))
-       (with-output-to-file crypttab-file
-	 (newline)
-	 (utils:println "# LUKS devices containing encrypted ZFS vdevs")
-	 (newline)
-	 (print-crypttab-dev-list headers-dir keyfile-path dev-list))))))
+       (newline)
+       (utils:println "# LUKS devices containing encrypted ZFS vdevs")
+       (newline)
+       (print-crypttab-dev-list headers-dir keyfile-path dev-list)))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
@@ -369,12 +365,13 @@
 	  (root-dir (utils:path instroot "root")))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
-      (gen-crypttab
-       etc-dir root-dir
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label
-       #:keyfile keyfile
-       #:dev-list dev-list)
+      (with-output-to-file (utils:path etc-dir "crypttab")
+	(lambda ()
+	  (print-crypttab root-dir
+	   #:luks-partdev luks-partdev
+	   #:luks-label luks-label
+	   #:keyfile keyfile
+	   #:dev-list dev-list)))
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
@@ -404,10 +401,11 @@
     (mkdir etc-dir)
     (mkdir root-dir #o700)
     (init-swapfiles root-dir swapfile-args)
-    (gen-crypttab
-     etc-dir root-dir
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label)
+    (with-output-to-file (utils:path etc-dir "crypttab")
+      (lambda ()
+	(print-crypttab root-dir
+	 #:luks-partdev luks-partdev
+	 #:luks-label luks-label)))
     (gen-fstab
      etc-dir
      #:boot-partdev boot-partdev
@@ -449,10 +447,11 @@
       (if (zero? (utils:system->devnull* "swapon" lv-swap))
 	  (utils:system->devnull* "swapoff" lv-swap)
 	  (utils:println "WARNING:" "failed to swap on" lv-swap))
-      (gen-crypttab
-       etc-dir root-dir
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label)
+      (with-output-to-file (utils:path etc-dir "crypttab")
+	(lambda ()
+	  (print-crypttab root-dir
+	   #:luks-partdev luks-partdev
+	   #:luks-label luks-label)))
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
