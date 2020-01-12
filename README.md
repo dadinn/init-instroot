@@ -1,6 +1,6 @@
 # init-instroot.scm
 
-Root filesystem initializer using LUKS encryption for root partition, and choice between LVM or swapfile based swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume.
+Root filesystem initialiser using LUKS encryption for root partition, and choice between LVM or swapfile based swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume.
 
 ## Examples
 
@@ -25,13 +25,13 @@ Configures ZFS pool `tank` using dataset `system` as root filesystem, and 4G ZFS
 
 Similar to before, except beforehand it additionally uses key-file `mykey`to unlock LUKS devices `/dev/sdb` and `/dev/sdc` with the given labels. These encrypted devices potentially hold the ZFS pool, which will then be accessed as before. The keyfile used to unclock the devices will be placed under `/root/crypt`of the target root directory, and entries for the devices will be generated in `/etc/crypttab`.
 
-In all examples the initialized devices will be mounted by default under `/mnt/instroot`, with `fstab` and `crypttab` entries generated and placed under `/etc`. For all LUKS encrypted devices header backups are saved under `/root/crypt/headers`.
+In all examples the initialised devices will be mounted by default under `/mnt/instroot`, with `fstab` and `crypttab` entries generated and placed under `/etc`. For all LUKS encrypted devices header backups are saved under `/root/crypt/headers`.
 
 See usage help with option `-h` for more details about all options.
 
 # destroy-instroot.scm
 
-After each execution of `init-instroot.scm`a config file `.lastrun.scm` is generated containing the parameters which were used. This allows easy un-initialization of the complete root setup with a single call to `destroy-instroot.scm`. This destroys any content which has since been added to the "initialized" root directory:
+After each execution of `init-instroot.scm`a config file `.lastrun.scm` is generated containing the parameters which were used. This allows easy un-initialisation of the complete root setup with a single call to `destroy-instroot.scm`. This destroys any content which has since been added to the "initialised" root directory:
   * It unmounts all folders,
   * detaches swap devices,
   * removes LVM volumes and volume-groups,
