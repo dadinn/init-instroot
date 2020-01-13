@@ -651,7 +651,9 @@ Valid options are:
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
-     ((utils:root-user?)
+     ((not (utils:root-user?))
+      (error "This script must be run as root!"))
+     (else
       (cond
        (initdeps?
 	(deps:install-deps-base lockfile-deps-base)
@@ -719,6 +721,4 @@ Valid options are:
 	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
 	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
-	(utils:println "Finished setting up installation root" target))))
-     (else
-      (error "This script must be run as root!")))))
+	(utils:println "Finished setting up installation root" target)))))))
