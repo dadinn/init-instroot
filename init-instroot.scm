@@ -164,7 +164,7 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
-    (utils:system->devnull*
+    (system*
      "zfs" "create"
      "-o" "compression=lz4"
      ;; encryption settings
