@@ -167,6 +167,11 @@
     (utils:system->devnull*
      "zfs" "create"
      "-o" "compression=lz4"
+     ;; encryption settings
+     "-o" "encryption=aes-128-gcm"
+     "-o" "keyformat=passphrase"
+     "-o" "keylocation=prompt"
+     "-o" "pbkdf2iters=1000000"
      root-dataset)
     (map
      (lambda (dir-name)
