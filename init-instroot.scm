@@ -164,6 +164,7 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
+    (utils:println "Creating root ZFS dataset" root-dataset "...")
     (when (not (zero?
     (system*
      "zfs" "create"
