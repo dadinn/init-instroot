@@ -323,7 +323,7 @@
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
-	  zpool rootfs dir-list swap-size swapfiles
+	  zpool rootfs dir-list swap-size
 	  #:key keyfile dev-list luks-partdev luks-label)
   (when (file-exists? instroot)
     (error "Target" instroot "already exists!"))
@@ -363,16 +363,13 @@
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir)))
     (let ((etc-dir (utils:path instroot "etc"))
-	  (root-dir (utils:path instroot "root"))
-	  (swapfile-args (parse-swapfile-args swap-size swapfiles)))
+	  (root-dir (utils:path instroot "root")))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
-      (init-swapfiles root-dir swapfile-args)
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
        #:luks-label luks-label
-       #:swapfile-args swapfile-args
        #:zpool zpool
        #:rootfs rootfs
        #:dir-list dir-list)
@@ -655,7 +652,7 @@ Valid options are:
 		(init-instroot-zfs
 		 target boot-partdev
 		 zpool rootfs dir-list
-		 swap-size swapfiles
+		 swap-size
 		 #:root-partdev root-partdev
 		 #:luks-label luks-label
 		 #:dev-list dev-list
@@ -681,7 +678,7 @@ Valid options are:
 	    (init-instroot-zfs
 	     target boot-partdev
 	     zpool rootfs dir-list
-	     swap-size swapfiles
+	     swap-size
 	     #:dev-list dev-list
 	     #:keyfile keyfile)))
 	 (else
