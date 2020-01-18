@@ -12,7 +12,8 @@
  ((ice-9 format))
  ((ice-9 regex) #:prefix regex:)
  ((ice-9 rdelim) #:prefix rdelim:)
- ((ice-9 popen) #:prefix popen:))
+ ((ice-9 popen) #:prefix popen:)
+ ((srfi srfi-1) #:prefix srfi1:))
 
 (define (device-size dev)
   (let* ((dev-size (utils:system->string* "blockdev" "--getsize64" dev))
@@ -183,22 +184,17 @@
     (utils:println "Finished setting up ZFS pool:" zpool)))
 
 (define (parse-swapfile-args swap-size swapfiles)
-  (let* ((swapsize-num (regex:match:substring
-			(regex:string-match "^([0-9]+)[KMGT]?$" swap-size) 1))
-	 (swapsize-num (string->number swapsize-num))
-	 (swapsize-unit
-	  (regex:match:substring
-	   (regex:string-match "^[0-9]+([KMGT])?$" swap-size) 1)))
-    (if (< 0 swapfiles)
-	(let* ((swapfile-size (quotient swapsize-num swapfiles))
-	       (swapfile-size (number->string swapfile-size))
-	       (swapfile-size (string-append swapfile-size swapsize-unit)))
-	  (map
-	   (lambda (idx)
-	     (let ((filename (string-append "file" (format #f "~4,'0d" idx) "_" swapfile-size)))
-	       (list filename swapfile-size)))
-	   (cdr (iota (+ 1 swapfiles)))))
-	'())))
+  (let* ((swap-bytes (utils:parse-unit-as-bytes swap-size))
+	 (swapfile-bytes (floor (/ swap-bytes swapfiles)))
+	 (swapfile-size (utils:emit-bytes-as-unit swapfile-bytes)))
+    (map
+     (lambda (idx)
+       (list
+	(string-append
+	 "file" (format #f "~4,'0d" idx)
+	 "_" swapfile-size)
+	swapfile-bytes))
+     (srfi1:iota swapfiles 1 1))))
 
 (define (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
@@ -210,6 +206,7 @@
      (lambda (args)
        (let* ((filename (car args))
 	      (size (cadr args))
+	      (size (number->string size))
 	      (swapfile (utils:path swap-dir filename)))
 	 (utils:println "Allocating" size "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
@@ -326,7 +323,7 @@
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
-	  zpool rootfs dir-list swap-size swapfiles
+	  zpool rootfs dir-list swap-size
 	  #:key keyfile dev-list luks-partdev luks-label)
   (when (file-exists? instroot)
     (error "Target" instroot "already exists!"))
@@ -366,16 +363,13 @@
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir)))
     (let ((etc-dir (utils:path instroot "etc"))
-	  (root-dir (utils:path instroot "root"))
-	  (swapfile-args (get-swapfile-args swap-size swapfiles)))
+	  (root-dir (utils:path instroot "root")))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
-      (init-swapfiles root-dir swapfile-args)
       (gen-fstab
        etc-dir
        #:boot-partdev boot-partdev
        #:luks-label luks-label
-       #:swapfile-args swapfile-args
        #:zpool zpool
        #:rootfs rootfs
        #:dir-list dir-list)
@@ -403,7 +397,7 @@
       (error "Failed to mount" boot-partdev "as" boot-dir)))
   (let ((etc-dir (utils:path instroot "etc"))
 	(root-dir (utils:path instroot "root"))
-	(swapfile-args (get-swapfile-args swap-size swapfiles)))
+	(swapfile-args (parse-swapfile-args swap-size swapfiles)))
     (mkdir etc-dir)
     (mkdir root-dir #o700)
     (init-swapfiles root-dir swapfile-args)
@@ -658,7 +652,7 @@ Valid options are:
 		(init-instroot-zfs
 		 target boot-partdev
 		 zpool rootfs dir-list
-		 swap-size swapfiles
+		 swap-size
 		 #:root-partdev root-partdev
 		 #:luks-label luks-label
 		 #:dev-list dev-list
@@ -684,7 +678,7 @@ Valid options are:
 	    (init-instroot-zfs
 	     target boot-partdev
 	     zpool rootfs dir-list
-	     swap-size swapfiles
+	     swap-size
 	     #:dev-list dev-list
 	     #:keyfile keyfile)))
 	 (else
