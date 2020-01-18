@@ -375,8 +375,9 @@
        #:luks-partdev luks-partdev
        #:luks-label luks-label
        #:dev-list dev-list)
-      (copy-file keyfile keyfile-stored)
-      (chmod keyfile-stored #o400)
+      (when keyfile-stored
+       (copy-file keyfile keyfile-stored)
+       (chmod keyfile-stored #o400))
       (with-output-to-file (utils:path etc-dir "crypttab")
 	(lambda ()
 	  (print-crypttab root-dir
