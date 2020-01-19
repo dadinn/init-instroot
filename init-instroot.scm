@@ -292,14 +292,14 @@
        (backup-header headers-dir device label)))
     (parse-dev-list dev-list))))
 
-(define (print-crypttab-dev-list keyfile-path dev-list)
+(define (print-crypttab-dev-list keyfile dev-list)
   (map
    (lambda (args)
      (let ((device (car args))
 	   (label (cadr args)))
        (utils:println label
 		      (string-append "UUID=" (fsuuid device))
-		      keyfile-path
+		      keyfile
 		      "luks")))
    (parse-dev-list dev-list)))
 
@@ -313,13 +313,10 @@
      (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
     ;; DEVLISTS
     (when keyfile
-     (let ((keyfile-path (basename keyfile)))
-       (chmod keyfile #o400)
-       (copy-file keyfile (utils:path crypt-dir keyfile-path))
-       (newline)
-       (utils:println "# LUKS devices containing encrypted ZFS vdevs")
-       (newline)
-       (print-crypttab-dev-list keyfile-path dev-list)))))
+     (newline)
+     (utils:println "# LUKS devices containing encrypted ZFS vdevs")
+     (newline)
+     (print-crypttab-dev-list keyfile dev-list))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
@@ -366,7 +363,10 @@
 	   (root-dir (utils:path instroot "root"))
 	   (crypt-dir (utils:path root-dir "crypt"))
 	   (headers-dir (utils:path crypt-dir "headers"))
-	   (swapfile-args (parse-swapfile-args swap-size swapfiles)))
+	   (keyfile-stored
+	    (if keyfile
+		(utils:path crypt-dir (basename keyfile))
+		#f)))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
       (mkdir crypt-dir)
@@ -375,12 +375,15 @@
        #:luks-partdev luks-partdev
        #:luks-label luks-label
        #:dev-list dev-list)
+      (when keyfile-stored
+       (copy-file keyfile keyfile-stored)
+       (chmod keyfile-stored #o400))
       (with-output-to-file (utils:path etc-dir "crypttab")
 	(lambda ()
 	  (print-crypttab root-dir
 	   #:luks-partdev luks-partdev
 	   #:luks-label luks-label
-	   #:keyfile keyfile
+	   #:keyfile keyfile-stored
 	   #:dev-list dev-list)))
       (with-output-to-file (utils:path etc-dir "fstab")
 	(lambda ()
@@ -444,8 +447,8 @@
     (utils:println "Setting up LVM with volumes for root and swap filesystems...")
     (system* "pvcreate" luks-dev)
     (system* "vgcreate" vg-name luks-dev)
-    (system* "lvcreate" "-L" swap-size  "-nswap" vg-name)
-    (system* "lvcreate" "-l" "100%FREE" "-nroot" vg-name)
+    (system* "lvcreate" "-L" swap-size  "-n" "swap" vg-name)
+    (system* "lvcreate" "-l" "100%FREE" "-n" "root" vg-name)
     (let* ((lv-root (string-append "/dev/mapper/" vg-name "-root"))
 	   (lv-swap (string-append "/dev/mapper/" vg-name "-swap"))
 	   (boot-dir (utils:path instroot "boot"))
