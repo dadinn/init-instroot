@@ -68,7 +68,8 @@ Specifying a keyfile is necessary for this feature!")
     (swapfiles
      (single-char #\S)
      (description
-      "Flag that a swapfile has been used instead of LVM or ZFS volume"))
+      "Flag that a swapfile has been used instead of LVM or ZFS volume")
+     (default "0"))
     (help
      (description
       "This usage help...")
