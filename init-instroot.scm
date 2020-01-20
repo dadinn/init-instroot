@@ -373,8 +373,7 @@
       (mkdir headers-dir)
       (backup-headers headers-dir
        #:luks-partdev luks-partdev
-       #:luks-label luks-label
-       #:dev-list dev-list)
+       #:luks-label luks-label)
       (when keyfile-stored
        (copy-file keyfile keyfile-stored)
        (chmod keyfile-stored #o400))
@@ -383,8 +382,7 @@
 	  (print-crypttab root-dir
 	   #:luks-partdev luks-partdev
 	   #:luks-label luks-label
-	   #:keyfile keyfile-stored
-	   #:dev-list dev-list)))
+	   #:keyfile keyfile-stored)))
       (with-output-to-file (utils:path etc-dir "fstab")
 	(lambda ()
 	  (print-fstab
@@ -470,8 +468,7 @@
       (mkdir headers-dir)
       (backup-headers headers-dir
        #:luks-partdev luks-partdev
-       #:luks-label luks-label
-       #:dev-list dev-list)
+       #:luks-label luks-label)
       (utils:println "Formatting" lv-swap "to be used as swap space...")
       (utils:system->devnull* "mkswap" lv-swap)
       (if (zero? (utils:system->devnull* "swapon" lv-swap))
