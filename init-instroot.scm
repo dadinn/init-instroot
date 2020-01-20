@@ -118,9 +118,9 @@
 	    (error "Failed to create EXT4 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))))
 
-(define (init-cryptroot partdev label)
+(define* (init-cryptroot partdev label #:key luks-v2?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
-  (when (not (zero? (system* "cryptsetup" "luksFormat" partdev)))
+  (when (not (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
