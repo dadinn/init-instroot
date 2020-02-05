@@ -220,17 +220,13 @@
 	     (utils:println "WARNING:" swapfile "failed to swap on!"))))
      swapfile-args)))
 
-(define (fstab-entry-root root-dev)
+(define (print-fstab-entry-root root-dev)
   (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro" "0" "1"))
 
-(define (fstab-entry-boot boot-dev)
+(define (print-fstab-entry-boot boot-dev)
   (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults" "0" "2"))
 
-(define* (gen-fstab etc-dir #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
-  (when (not (file-exists? etc-dir))
-    (error "Directory" etc-dir "does not exists!"))
-  (with-output-to-file (utils:path etc-dir "fstab")
-    (lambda ()
+(define* (print-fstab #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
       (newline)
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
@@ -238,8 +234,8 @@
        (luks-label
       (cond
        (zpool
-	(fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	(fstab-entry-boot boot-partdev)
+	(print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	(print-fstab-entry-boot boot-partdev)
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(newline)
 	(utils:println "# systemd specific legacy mounts of ZFS datasets")
@@ -249,8 +245,8 @@
 	   (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	 dir-list))
        ((and swapfile-args (not (null? swapfile-args)))
-	(fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	(fstab-entry-boot boot-partdev)
+	(print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	(print-fstab-entry-boot boot-partdev)
 	(newline)
 	(utils:println "#swapfiles")
 	(newline)
@@ -264,14 +260,18 @@
 	(let* ((vg-name (string-append luks-label "_vg"))
 	       (lv-root (string-append "/dev/mapper/" vg-name "-root"))
 	       (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
-	  (fstab-entry-root lv-root)
-	  (fstab-entry-boot boot-partdev)
-	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0"))))
-      )
+	  (print-fstab-entry-root lv-root)
+	  (print-fstab-entry-boot boot-partdev)
+	  (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))
        (zpool
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
-	(fstab-entry-boot boot-partdev)))
-      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
+	(print-fstab-entry-boot boot-partdev)))
+      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))
+
+(define (parse-dev-list dev-list)
+  (map
+   (lambda (s) (string-split s #\:))
+   (string-split dev-list #\,)))
 
 (define (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
@@ -281,45 +281,42 @@
 		 "--header-backup-file" file)
 	(chmod file #o400)))))
 
-(define* (gen-crypttab etc-dir root-dir #:key luks-partdev luks-label keyfile dev-list)
-  (let* ((crypttab-file (utils:path etc-dir "crypttab"))
-	 (crypt-dir (utils:path root-dir "crypt"))
-	 (headers-dir (utils:path crypt-dir "headers")))
+(define* (backup-headers headers-dir #:key luks-partdev luks-label dev-list)
+  (when luks-label
+   (backup-header headers-dir luks-partdev luks-label))
+  (when dev-list
+   (map
+    (lambda (args)
+      (let ((device (car args))
+	    (label (cadr args)))
+       (backup-header headers-dir device label)))
+    (parse-dev-list dev-list))))
+
+(define (print-crypttab-dev-list keyfile dev-list)
+  (map
+   (lambda (args)
+     (let ((device (car args))
+	   (label (cadr args)))
+       (utils:println label
+		      (string-append "UUID=" (fsuuid device))
+		      keyfile
+		      "luks")))
+   (parse-dev-list dev-list)))
+
+(define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
+  (let* ((crypt-dir (utils:path root-dir "crypt")))
     (when (not (file-exists? crypt-dir))
       (mkdir crypt-dir))
-    (when (not (file-exists? headers-dir))
-      (mkdir headers-dir))
     ;; ROOOTDEV
     (when luks-partdev
-    (with-output-to-file crypttab-file
-      (lambda ()
-	(utils:println "# LUKS device containing root filesystem")
-	(utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")))
-    (backup-header headers-dir luks-partdev luks-label)
-    )
+     (utils:println "# LUKS device containing root filesystem")
+     (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
     ;; DEVLISTS
     (when keyfile
-      (let ((keyfile-name (basename keyfile)))
-	(chmod keyfile #o400)
-	(copy-file keyfile (utils:path crypt-dir keyfile-name))
-	(with-output-to-file crypttab-file
-	  (lambda ()
-	    (newline)
-	    (utils:println "# LUKS devices containing encrypted ZFS vdevs")
-	    (newline)
-	    (map
-	     (lambda (args)
-	       (let ((device (car args))
-		     (label (cadr args)))
-		 (utils:println label
-				(string-append "UUID=" (fsuuid device))
-				(string-append "/root/crypt/" keyfile-name)
-				"luks")
-		 (backup-header headers-dir device label)))
-	     (map
-	      (lambda (s)
-		(string-split s #\:))
-	      (string-split dev-list #\,)))))))))
+     (newline)
+     (utils:println "# LUKS devices containing encrypted ZFS vdevs")
+     (newline)
+     (print-crypttab-dev-list keyfile dev-list))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
@@ -362,23 +359,38 @@
       (mkdir boot-dir)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir)))
-    (let ((etc-dir (utils:path instroot "etc"))
-	  (root-dir (utils:path instroot "root")))
+    (let* ((etc-dir (utils:path instroot "etc"))
+	   (root-dir (utils:path instroot "root"))
+	   (crypt-dir (utils:path root-dir "crypt"))
+	   (headers-dir (utils:path crypt-dir "headers"))
+	   (keyfile-stored
+	    (if keyfile
+		(utils:path crypt-dir (basename keyfile))
+		#f)))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
-      (gen-fstab
-       etc-dir
-       #:boot-partdev boot-partdev
-       #:luks-label luks-label
-       #:zpool zpool
-       #:rootfs rootfs
-       #:dir-list dir-list)
-      (gen-crypttab
-       etc-dir root-dir
+      (mkdir crypt-dir)
+      (mkdir headers-dir)
+      (backup-headers headers-dir
        #:luks-partdev luks-partdev
-       #:luks-label luks-label
-       #:keyfile keyfile
-       #:dev-list dev-list))))
+       #:luks-label luks-label)
+      (when keyfile-stored
+       (copy-file keyfile keyfile-stored)
+       (chmod keyfile-stored #o400))
+      (with-output-to-file (utils:path etc-dir "crypttab")
+	(lambda ()
+	  (print-crypttab root-dir
+	   #:luks-partdev luks-partdev
+	   #:luks-label luks-label
+	   #:keyfile keyfile-stored)))
+      (with-output-to-file (utils:path etc-dir "fstab")
+	(lambda ()
+	  (print-fstab
+	   #:boot-partdev boot-partdev
+	   #:luks-label luks-label
+	   #:zpool zpool
+	   #:rootfs rootfs
+	   #:dir-list dir-list))))))
 
 (define (init-instroot-swapfile instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
@@ -395,21 +407,30 @@
     (mkdir boot-dir)
     (when (not (zero? (system* "mount" boot-partdev boot-dir)))
       (error "Failed to mount" boot-partdev "as" boot-dir)))
-  (let ((etc-dir (utils:path instroot "etc"))
-	(root-dir (utils:path instroot "root"))
-	(swapfile-args (parse-swapfile-args swap-size swapfiles)))
+  (let* ((etc-dir (utils:path instroot "etc"))
+	 (root-dir (utils:path instroot "root"))
+	 (crypt-dir (utils:path root-dir "crypt"))
+	 (headers-dir (utils:path crypt-dir "headers"))
+	 (swapfile-args (parse-swapfile-args swap-size swapfiles)))
     (mkdir etc-dir)
     (mkdir root-dir #o700)
-    (init-swapfiles root-dir swapfile-args)
-    (gen-fstab
-     etc-dir
-     #:boot-partdev boot-partdev
-     #:luks-label luks-label
-     #:swapfile-args swapfile-args)
-    (gen-crypttab
-     etc-dir root-dir
+    (mkdir crypt-dir)
+    (mkdir headers-dir)
+    (backup-headers headers-dir
      #:luks-partdev luks-partdev
-     #:luks-label luks-label)))
+     #:luks-label luks-label)
+    (init-swapfiles root-dir swapfile-args)
+    (with-output-to-file (utils:path etc-dir "crypttab")
+      (lambda ()
+	(print-crypttab root-dir
+	 #:luks-partdev luks-partdev
+	 #:luks-label luks-label)))
+    (with-output-to-file (utils:path etc-dir "fstab")
+      (lambda ()
+	(print-fstab
+	 #:boot-partdev boot-partdev
+	 #:luks-label luks-label
+	 #:swapfile-args swapfile-args)))))
 
 (define* (init-instroot-lvm
 	  instroot boot-partdev luks-partdev luks-label swap-size)
@@ -424,13 +445,15 @@
     (utils:println "Setting up LVM with volumes for root and swap filesystems...")
     (system* "pvcreate" luks-dev)
     (system* "vgcreate" vg-name luks-dev)
-    (system* "lvcreate" "-L" swap-size  "-nswap" vg-name)
-    (system* "lvcreate" "-l" "100%FREE" "-nroot" vg-name)
-    (let ((lv-root (string-append "/dev/mapper/" vg-name "-root"))
-	  (lv-swap (string-append "/dev/mapper/" vg-name "-swap"))
-	  (boot-dir (utils:path instroot "boot"))
-	  (root-dir (utils:path instroot "root"))
-	  (etc-dir (utils:path instroot "etc")))
+    (system* "lvcreate" "-L" swap-size  "-n" "swap" vg-name)
+    (system* "lvcreate" "-l" "100%FREE" "-n" "root" vg-name)
+    (let* ((lv-root (string-append "/dev/mapper/" vg-name "-root"))
+	   (lv-swap (string-append "/dev/mapper/" vg-name "-swap"))
+	   (boot-dir (utils:path instroot "boot"))
+	   (root-dir (utils:path instroot "root"))
+	   (crypt-dir (utils:path root-dir "crypt"))
+	   (headers-dir (utils:path crypt-dir "headers"))
+	   (etc-dir (utils:path instroot "etc")))
       (when (not (zero? (system* "mkfs.ext4" lv-root)))
 	    (error "Failed to create EXT4 filesystem on:" lv-root))
       (mkdir instroot)
@@ -441,19 +464,26 @@
 	(error "Failed to mount" boot-partdev "as" boot-dir))
       (mkdir etc-dir)
       (mkdir root-dir #o700)
+      (mkdir crypt-dir)
+      (mkdir headers-dir)
+      (backup-headers headers-dir
+       #:luks-partdev luks-partdev
+       #:luks-label luks-label)
       (utils:println "Formatting" lv-swap "to be used as swap space...")
       (utils:system->devnull* "mkswap" lv-swap)
       (if (zero? (utils:system->devnull* "swapon" lv-swap))
 	  (utils:system->devnull* "swapoff" lv-swap)
 	  (utils:println "WARNING:" "failed to swap on" lv-swap))
-      (gen-fstab
-       etc-dir
-       #:boot-partdev boot-partdev
-       #:luks-label luks-label)
-      (gen-crypttab
-       etc-dir root-dir
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label))))
+      (with-output-to-file (utils:path etc-dir "crypttab")
+	(lambda ()
+	  (print-crypttab root-dir
+	   #:luks-partdev luks-partdev
+	   #:luks-label luks-label)))
+      (with-output-to-file (utils:path etc-dir "fstab")
+	(lambda ()
+	  (print-fstab
+	   #:boot-partdev boot-partdev
+	   #:luks-label luks-label))))))
 
 (define options-spec
   `((target
@@ -618,7 +648,9 @@ Valid options are:
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
-     ((utils:root-user?)
+     ((not (utils:root-user?))
+      (error "This script must be run as root!"))
+     (else
       (cond
        (initdeps?
 	(deps:install-deps-base lockfile-deps-base)
@@ -686,6 +718,4 @@ Valid options are:
 	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
 	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
-	(utils:println "Finished setting up installation root" target))))
-     (else
-      (error "This script must be run as root!")))))
+	(utils:println "Finished setting up installation root" target)))))))
