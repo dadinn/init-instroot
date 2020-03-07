@@ -567,9 +567,9 @@ Specifying a keyfile is necessary for this feature!")
     (swapsize
      (single-char #\s)
      (description
-      "Size of the total swap space to use (KMGT suffixes allowed)")
+      "Size of the total swap space to use (KMGTPEZY binary unit suffixes allowed)")
      (predicate
-      ,(lambda (s) (regex:string-match "^[0-9]+[KMGT]?$" s)))
+      ,(lambda (s) (regex:string-match "^[0-9]+[KMGTPEZY]?$" s)))
      (value-arg "size")
      (value #t))
     (swapfiles
