@@ -205,13 +205,12 @@
     (map
      (lambda (args)
        (let* ((filename (car args))
-	      (size (cadr args))
-	      (size (number->string size))
+	      (filesize (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
-	 (utils:println "Allocating" size "of swap space in" swapfile "...")
+	 (utils:println "Allocating" (number->string filesize) "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
 		  (string-append "of=" swapfile)
-		  (string-append "bs=" size)
+		  (string-append "bs=" (number->string filesize))
 		  "count=1" "status=progress")
 	 (chmod swapfile #o600)
 	 (utils:system->devnull* "mkswap" swapfile)
