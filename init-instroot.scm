@@ -199,7 +199,11 @@
 (define (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
     (error "Directory" root-dir "does not exists!"))
-  (let ((swap-dir (utils:path root-dir "swap")))
+  (let* ((swap-dir (utils:path root-dir "swap"))
+	 (pagesize (utils:system->string* "getconf" "PAGESIZE"))
+	 (pagesize (regex:string-match "([0-9]+)" pagesize))
+	 (pagesize (regex:match:substring pagesize 1))
+	 (pagesize (string->number pagesize)))
     (when (not (file-exists? swap-dir))
       (mkdir swap-dir))
     (map
@@ -207,6 +211,9 @@
        (let* ((filename (car args))
 	      (filesize (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
+	 (when (< filesize (* 10 pagesize))
+	       (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
+	       (error "Swapfile size is too small:" filesize))
 	 (utils:println "Allocating" (number->string filesize) "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
 		  (string-append "of=" swapfile)
