@@ -590,6 +590,10 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (description
       "Use UEFI boot partitions instead of BIOS.")
      (single-char #\E))
+    (luksv2
+     (description
+      "Use LUKS format version 2 to encrypt root filesystem")
+     (single-char #\L))
     (initdeps
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
@@ -633,6 +637,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (string->number swapfiles))
+	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
@@ -656,6 +661,8 @@ Valid options are:
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
+     ((and luks-v2? (< (deps:read-debian-version) 10))
+      (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
       (cond
        (initdeps?
@@ -680,7 +687,7 @@ Valid options are:
 	    (let* ((parts (init-root-parts root-dev))
 		   (boot-partdev (vector-ref parts 0))
 		   (root-partdev (vector-ref parts 1)))
-	      (init-cryptroot root-partdev luks-label)
+	      (init-cryptroot root-partdev luks-label #:luks-v2? luks-v2?)
 	      (cond
 	       (zpool
 		(when (and keyfile dev-list)
