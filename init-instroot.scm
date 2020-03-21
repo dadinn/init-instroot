@@ -620,7 +620,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 (define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
+  (let* ((lastrun-map (utils:read-config lastrun-file))
 	 (options (utils:getopt-extra args options-spec lastrun-map))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
@@ -674,7 +674,7 @@ Valid options are:
 	  (error "Swap size must be specified!"))
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
-	(utils:write-lastrun lastrun-file options)
+	(utils:write-config lastrun-file options)
 	(deps:install-deps-base lockfile-deps-base)
 	(cond
 	 (root-dev
@@ -728,7 +728,7 @@ Valid options are:
 	     #:keyfile keyfile)))
 	 (else
 	  (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
-	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
+	(utils:write-config (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
-	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
+	(utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
 	(utils:println "Finished setting up installation root" target)))))))
