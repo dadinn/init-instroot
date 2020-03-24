@@ -77,8 +77,6 @@ Specifying a keyfile is necessary for this feature!")
 
 (define state-dir ".state")
 (define lastrun-file (utils:path state-dir "lastrun.scm"))
-(define lockfile-deps-base (utils:path state-dir "deps_base"))
-(define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
   (let* ((lastrun-map (utils:read-config lastrun-file))
@@ -123,9 +121,9 @@ Valid options are:
       (error "Mounted root directory is not specified!"))
     (when (not luks-label)
       (error "LUKS label is not specified!"))
-    (deps:install-deps-base lockfile-deps-base)
+    (deps:install-deps-base)
     (when zpool
-     (deps:install-deps-zfs lockfile-deps-zfs))
+     (deps:install-deps-zfs))
     (system* "umount" (string-append instroot "/boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)

@@ -621,8 +621,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 
 (define state-dir ".state")
 (define lastrun-file (utils:path state-dir "lastrun.scm"))
-(define lockfile-deps-base (utils:path state-dir "deps_base"))
-(define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
@@ -670,8 +668,8 @@ Valid options are:
      (else
       (cond
        (initdeps?
-	(deps:install-deps-base lockfile-deps-base)
-	(deps:install-deps-zfs lockfile-deps-zfs)
+	(deps:install-deps-base)
+	(deps:install-deps-zfs)
 	(utils:println "Finished installing all package dependencies!"))
        (else
 	(when (not swap-size)
@@ -679,7 +677,7 @@ Valid options are:
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
 	(utils:write-config lastrun-file options)
-	(deps:install-deps-base lockfile-deps-base)
+	(deps:install-deps-base)
 	(cond
 	 (root-dev
 	  (cond
@@ -696,7 +694,7 @@ Valid options are:
 	       (zpool
 		(when (and keyfile dev-list)
 		      (init-cryptdevs keyfile dev-list))
-		(deps:install-deps-zfs lockfile-deps-zfs)
+		(deps:install-deps-zfs)
 		(init-zfsroot zpool rootfs #:dir-list dir-list)
 		(init-instroot-zfs
 		 target boot-partdev
@@ -718,7 +716,7 @@ Valid options are:
 	 (zpool
 	  (when (not boot-dev)
 	    (error "Separate boot device must be specified when using ZFS as root!"))
-	  (deps:install-deps-zfs lockfile-deps-zfs)
+	  (deps:install-deps-zfs)
 	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
 	    (init-zfsroot
 	     zpool rootfs
