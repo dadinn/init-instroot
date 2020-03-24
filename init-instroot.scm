@@ -620,8 +620,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 (define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-config lastrun-file))
-	 (options (utils:getopt-extra args options-spec lastrun-map))
+  (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
@@ -655,7 +654,7 @@ Initialise and mount root filesystem. Uses LUKS encryption for root partition, a
 
 Valid options are:
 "))
-      (display (utils:usage options-spec lastrun-map))
+      (display (utils:usage options-spec))
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
