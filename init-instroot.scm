@@ -697,7 +697,7 @@ Valid options are:
 		 target boot-partdev
 		 zpool rootfs dir-list
 		 swap-size
-		 #:root-partdev root-partdev
+		 #:luks-partdev root-partdev
 		 #:luks-label luks-label
 		 #:dev-list dev-list
 		 #:keyfile keyfile))
