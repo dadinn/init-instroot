@@ -77,6 +77,8 @@ Specifying a keyfile is necessary for this feature!")
 
 (define state-dir ".state")
 (define lastrun-file (utils:path state-dir "lastrun.scm"))
+(define lockfile-deps-base (utils:path state-dir "deps_base"))
+(define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
   (let* ((lastrun-map (utils:read-config lastrun-file))
@@ -99,9 +101,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
-	 (help? (hash-ref options 'help))
-	 (lockfile-deps-base ".deps_base")
-	 (lockfile-deps-zfs ".deps_zfs"))
+	 (help? (hash-ref options 'help)))
     ;; todo fix these imperative whens
     (when help?
       (utils:println
