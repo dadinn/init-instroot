@@ -619,8 +619,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
     (chmod fname #o400)
     (utils:println "Finished creating keyfile:" fname)))
 
-(define state-dir ".state")
-(define lastrun-file (utils:path state-dir "lastrun.scm"))
+(define lastrun-file (utils:path ".defaults.scm"))
 
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
@@ -643,8 +642,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
-    (if (not (file-exists? state-dir))
-	(mkdir state-dir))
     (cond
      (help?
       (utils:println

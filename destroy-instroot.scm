@@ -75,8 +75,7 @@ Specifying a keyfile is necessary for this feature!")
       "This usage help...")
      (single-char #\h))))
 
-(define state-dir ".state")
-(define lastrun-file (utils:path state-dir "lastrun.scm"))
+(define lastrun-file (utils:path ".defaults.scm"))
 
 (define (main args)
   (let* ((lastrun-map (utils:read-config lastrun-file))
