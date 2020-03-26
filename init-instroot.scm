@@ -660,7 +660,7 @@ Valid options are:
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
-     ((and luks-v2? (< (deps:read-debian-version) 10))
+     ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
       (cond
