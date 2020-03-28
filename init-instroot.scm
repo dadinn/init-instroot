@@ -164,6 +164,7 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
+    (when (not (zero?
     (system*
      "zfs" "create"
      "-o" "compression=lz4"
@@ -172,7 +173,8 @@
      "-o" "keyformat=passphrase"
      "-o" "keylocation=prompt"
      "-o" "pbkdf2iters=1000000"
-     root-dataset)
+     root-dataset)))
+      (error "Failed creating dataset" root-dataset))
     (map
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
