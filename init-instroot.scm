@@ -387,7 +387,9 @@
 		(utils:path crypt-dir (basename keyfile))
 		#f)))
       (mkdir etc-dir)
-      (mkdir root-dir #o700)
+      (if (file-exists? root-dir)
+	  (chmod root-dir #o700)
+	  (mkdir root-dir #o700))
       (mkdir crypt-dir)
       (mkdir headers-dir)
       (backup-headers headers-dir
@@ -552,7 +554,7 @@
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
-     (default "home,var,var/lib,gnu")
+     (default "home,root,gnu,var,var/lib")
      (value-arg "dirlist")
      (value #t))
     (devlst
