@@ -56,6 +56,7 @@
 	   "-N" "2"
 	   "-t" "2:8300")
   (system* "partprobe" boot-dev)
+  (sleep 1)
   (let ((boot-partdev (partdev boot-dev "2")))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
     (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)))
@@ -67,6 +68,7 @@
 	   "-N" "1"
 	   "-t" "1:ef00")
   (system* "partprobe" boot-dev)
+  (sleep 1)
   (let ((boot-partdev (partdev boot-dev "1")))
     (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
     (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
@@ -86,6 +88,7 @@
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (vector
      (init-boot-parts boot-dev #:uefiboot? uefiboot?)
      (partdev root-dev "1")))
@@ -96,6 +99,7 @@
 	     "-t" "1:ef00"
 	     "-t" "2:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (let ((boot-partdev (partdev root-dev "1"))
 	  (root-partdev (partdev root-dev "2")))
       (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
@@ -111,6 +115,7 @@
 	     "-t" "2:8300"
 	     "-t" "3:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (let ((boot-partdev (partdev root-dev "2"))
 	  (root-partdev (partdev root-dev "3")))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
