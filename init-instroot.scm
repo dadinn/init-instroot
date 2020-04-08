@@ -135,15 +135,15 @@
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
   (utils:println "WARNING: This can take quite a long time!")
-  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [Y/n]")))
+  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
     (cond
-     ((regex:string-match "[nN]" shred-prompt)
-      (utils:println "Skipped shredding of LUKS device."))
-     (else
+     ((regex:string-match "[yY]" shred-prompt)
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
 	     (dev-size (device-size luks-dev)))
-	(system* "dd" "if=/dev/zero" (string-append "of=" luks-dev) "status=progress"))))))
+	(system* "dd" "if=/dev/zero" (string-append "of=" luks-dev) "status=progress")))
+     (else
+      (utils:println "Skipped shredding of LUKS device.")))))
 
 (define (init-cryptdevs keyfile dev-list)
   (map
