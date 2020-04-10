@@ -533,14 +533,15 @@
     (rootdev
      (single-char #\r)
      (description
-      "Device to use for root filesystem")
+      "Device to use for LUKS encrypted root filesystem")
      (predicate ,utils:block-device?)
      (value-arg "device")
      (value #t))
     (zpool
      (single-char #\z)
      (description
-      "ZFS pool name for system directories and swap device")
+      "ZFS pool to use as root device, if no root device is specified (separate boot device must be specified too).
+      Alternatively, if a separate root device is specified too, the pool is used for additional system directories and swap device.")
      (value-arg "zpool")
      (value #t))
     (rootfs
@@ -660,7 +661,11 @@ USAGE:
 
 " (basename (car args)) " [OPTIONS]
 
-Initialise and mount root filesystem. Uses LUKS encryption for root partition, and allows choice between LVM or swapfiles for swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume. Also, allows configuring separate boot device, either BIOS or UEFI.
+Initialises and mounts a root filesystem.
+
+Uses LUKS encrypted and EXT4 formatted root filesystem, and either plain files, or LVM for swap space. Supports either BIOS or UEFI boot partitions. Also, using a separate boot device is an option. 
+
+Alternatively, a ZFS pool can be used for both root filesystem and swap space (requires a separate boot device).
 
 Valid options are:
 "))

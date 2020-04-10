@@ -107,7 +107,9 @@ USAGE:
 
 " (basename (car args)) " [OPTIONS]
 
-Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables stored in lastrun-file.
+Unmounts and destroys installation root directory, that has been set up previously by init-instroot script. Also, unmounts boot partition, closes LVM volumes and LUKS devices, and destroys all device partitions used.
+
+When the file " lastrun-file " exists, the default values to option arguments are read from it. This file always contains the arguments given during the last execution of the init-instroot script.
 
 Valid options are:
 "))
