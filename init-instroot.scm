@@ -240,10 +240,10 @@
      swapfile-args)))
 
 (define (print-fstab-entry-root root-dev)
-  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro" "0" "1"))
+  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro,noatime" "0" "1"))
 
 (define (print-fstab-entry-boot boot-dev)
-  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults" "0" "2"))
+  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
 
 (define* (print-fstab #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
       (newline)
