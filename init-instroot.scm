@@ -675,19 +675,17 @@ Valid options are:
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
+     (initdeps?
+      (deps:install-deps-base)
+      (deps:install-deps-zfs)
+      (utils:println "Finished installing all package dependencies!"))
+     ((not swap-size)
+      (error "Swap size must be specified!"))
+     ((and dev-list (not keyfile))
+      (error "Keyfile must be specified to unlock encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
-      (cond
-       (initdeps?
-	(deps:install-deps-base)
-	(deps:install-deps-zfs)
-	(utils:println "Finished installing all package dependencies!"))
-       (else
-	(when (not swap-size)
-	  (error "Swap size must be specified!"))
-	(when (and dev-list (not keyfile))
-	  (error "Keyfile must be specified to unlock encrypted devices!"))
 	(utils:write-config lastrun-file options)
 	(deps:install-deps-base)
 	(cond
@@ -745,4 +743,4 @@ Valid options are:
 	(utils:write-config (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
 	(utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
-	(utils:println "Finished setting up installation root" target)))))))
+	(utils:println "Finished setting up installation root" target)))))
