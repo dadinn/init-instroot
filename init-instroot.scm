@@ -620,8 +620,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 (define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
-	 (options (utils:getopt-extra args options-spec lastrun-map))
+  (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
@@ -629,14 +628,14 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (zpool (hash-ref options 'zpool))
 	 (rootfs (hash-ref options 'rootfs))
 	 (dir-list (hash-ref options 'dirlst))
-	 (dir-list (if dir-list (string-split dir-list #\,) #f))
+	 (dir-list (and dir-list (string-split dir-list #\,)))
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
-	 (dev-list (if dev-list (utils:parse-pairs dev-list) #f))
+	 (dev-list (and dev-list (utils:parse-pairs dev-list)))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
-	 (swapfiles (string->number swapfiles))
+	 (swapfiles (and swapfiles (string->number swapfiles)))
 	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
@@ -655,7 +654,7 @@ Initialise and mount root filesystem. Uses LUKS encryption for root partition, a
 
 Valid options are:
 "))
-      (display (utils:usage options-spec lastrun-map))
+      (display (utils:usage options-spec))
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
@@ -674,7 +673,7 @@ Valid options are:
 	  (error "Swap size must be specified!"))
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
-	(utils:write-lastrun lastrun-file options)
+	(utils:write-config lastrun-file options)
 	(deps:install-deps-base lockfile-deps-base)
 	(cond
 	 (root-dev
@@ -728,7 +727,7 @@ Valid options are:
 	     #:keyfile keyfile)))
 	 (else
 	  (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
-	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
+	(utils:write-config (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
-	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
+	(utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
 	(utils:println "Finished setting up installation root" target)))))))

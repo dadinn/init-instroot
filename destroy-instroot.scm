@@ -79,7 +79,7 @@ Specifying a keyfile is necessary for this feature!")
 (define lastrun-file (utils:path state-dir "lastrun.scm"))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
+  (let* ((lastrun-map (utils:read-config lastrun-file))
 	 (options (utils:getopt-extra args options-spec lastrun-map))
 
 	 (instroot (hash-ref options 'target))
