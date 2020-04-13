@@ -164,10 +164,18 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
-    (utils:system->devnull*
+    (utils:println "Creating root ZFS dataset" root-dataset "...")
+    (when (not (zero?
+    (system*
      "zfs" "create"
      "-o" "compression=lz4"
-     root-dataset)
+     ;; encryption settings
+     "-o" "encryption=aes-128-gcm"
+     "-o" "keyformat=passphrase"
+     "-o" "keylocation=prompt"
+     "-o" "pbkdf2iters=1000000"
+     root-dataset)))
+      (error "Failed creating dataset" root-dataset))
     (map
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
@@ -379,7 +387,9 @@
 		(utils:path crypt-dir (basename keyfile))
 		#f)))
       (mkdir etc-dir)
-      (mkdir root-dir #o700)
+      (if (file-exists? root-dir)
+	  (chmod root-dir #o700)
+	  (mkdir root-dir #o700))
       (mkdir crypt-dir)
       (mkdir headers-dir)
       (backup-headers headers-dir
@@ -544,7 +554,7 @@
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
-     (default "home,var,var/lib,gnu")
+     (default "home,root,gnu,var,var/lib")
      (value-arg "dirlist")
      (value #t))
     (devlst
