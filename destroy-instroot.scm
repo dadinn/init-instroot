@@ -75,8 +75,7 @@ Specifying a keyfile is necessary for this feature!")
       "This usage help...")
      (single-char #\h))))
 
-(define state-dir ".state")
-(define lastrun-file (utils:path state-dir "lastrun.scm"))
+(define lastrun-file (utils:path ".defaults.scm"))
 
 (define (main args)
   (let* ((lastrun-map (utils:read-config lastrun-file))
@@ -99,9 +98,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
-	 (help? (hash-ref options 'help))
-	 (lockfile-deps-base ".deps_base")
-	 (lockfile-deps-zfs ".deps_zfs"))
+	 (help? (hash-ref options 'help)))
     ;; todo fix these imperative whens
     (when help?
       (utils:println
@@ -110,7 +107,9 @@ USAGE:
 
 " (basename (car args)) " [OPTIONS]
 
-Unmounts and destroys installation root directory, set up previously by init_instroot.sh script. Unmounts boot partition, swaps off swapfiles or LVM/ZFS swap devices, destroys LUKS devices, and zapps all device partitions used. By default uses options from variables stored in lastrun-file.
+Unmounts and destroys installation root directory, that has been set up previously by init-instroot script. Also, unmounts boot partition, closes LVM volumes and LUKS devices, and destroys all device partitions used.
+
+When the file " lastrun-file " exists, the default values to option arguments are read from it. This file always contains the arguments given during the last execution of the init-instroot script.
 
 Valid options are:
 "))
@@ -123,9 +122,9 @@ Valid options are:
       (error "Mounted root directory is not specified!"))
     (when (not luks-label)
       (error "LUKS label is not specified!"))
-    (deps:install-deps-base lockfile-deps-base)
+    (deps:install-deps-base)
     (when zpool
-     (deps:install-deps-zfs lockfile-deps-zfs))
+     (deps:install-deps-zfs))
     (system* "umount" (string-append instroot "/boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)

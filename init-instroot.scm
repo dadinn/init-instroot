@@ -56,10 +56,11 @@
 	   "-N" "2"
 	   "-t" "2:8300")
   (system* "partprobe" boot-dev)
+  (sleep 1)
   (let ((boot-partdev (partdev boot-dev "2")))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)))
-	  (error "Failed to create EXT4 filesystem on:" boot-partdev))
+    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (error "Failed to create EXT4 filesystem on:" boot-partdev))
     boot-partdev))
 
 (define (init-boot-parts-uefi boot-dev)
@@ -67,10 +68,11 @@
 	   "-N" "1"
 	   "-t" "1:ef00")
   (system* "partprobe" boot-dev)
+  (sleep 1)
   (let ((boot-partdev (partdev boot-dev "1")))
     (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
     (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-	  (error "Failed to create FAT32 filesystem on:" boot-partdev))
+      (error "Failed to create FAT32 filesystem on:" boot-partdev))
     boot-partdev))
 
 (define* (init-boot-parts boot-dev #:key uefiboot?)
@@ -86,6 +88,7 @@
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (vector
      (init-boot-parts boot-dev #:uefiboot? uefiboot?)
      (partdev root-dev "1")))
@@ -96,11 +99,12 @@
 	     "-t" "1:ef00"
 	     "-t" "2:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (let ((boot-partdev (partdev root-dev "1"))
 	  (root-partdev (partdev root-dev "2")))
       (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
       (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-	    (error "Failed to create FAT32 filesystem on:" boot-partdev))
+	(error "Failed to create FAT32 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))
    (else
     (system* "sgdisk" root-dev "-Z"
@@ -111,11 +115,12 @@
 	     "-t" "2:8300"
 	     "-t" "3:8300")
     (system* "partprobe" root-dev)
+    (sleep 1)
     (let ((boot-partdev (partdev root-dev "2"))
 	  (root-partdev (partdev root-dev "3")))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)))
-	    (error "Failed to create EXT4 filesystem on:" boot-partdev))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))))
 
 (define* (init-cryptroot partdev label #:key luks-v2?)
@@ -130,15 +135,15 @@
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
   (utils:println "WARNING: This can take quite a long time!")
-  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [Y/n]")))
+  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
     (cond
-     ((regex:string-match "[nN]" shred-prompt)
-      (utils:println "Skipped shredding of LUKS device."))
-     (else
+     ((regex:string-match "[yY]" shred-prompt)
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
 	     (dev-size (device-size luks-dev)))
-	(system* "dd" "if=/dev/zero" (string-append "of=" luks-dev) "status=progress"))))))
+	(system* "dd" "if=/dev/zero" (string-append "of=" luks-dev) "status=progress")))
+     (else
+      (utils:println "Skipped shredding of LUKS device.")))))
 
 (define (init-cryptdevs keyfile dev-list)
   (map
@@ -159,10 +164,18 @@
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
-    (utils:system->devnull*
+    (utils:println "Creating root ZFS dataset" root-dataset "...")
+    (when (not (zero?
+    (system*
      "zfs" "create"
      "-o" "compression=lz4"
-     root-dataset)
+     ;; encryption settings
+     "-o" "encryption=aes-128-gcm"
+     "-o" "keyformat=passphrase"
+     "-o" "keylocation=prompt"
+     "-o" "pbkdf2iters=1000000"
+     root-dataset)))
+      (error "Failed creating dataset" root-dataset))
     (map
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
@@ -212,7 +225,7 @@
 	      (filesize (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
 	 (when (< filesize (* 10 pagesize))
-	       (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
+	   (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
 	       (error "Swapfile size is too small:" filesize))
 	 (utils:println "Allocating" (number->string filesize) "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
@@ -227,10 +240,10 @@
      swapfile-args)))
 
 (define (print-fstab-entry-root root-dev)
-  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro" "0" "1"))
+  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro,noatime" "0" "1"))
 
 (define (print-fstab-entry-boot boot-dev)
-  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults" "0" "2"))
+  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
 
 (define* (print-fstab #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
       (newline)
@@ -345,8 +358,8 @@
       (when (not (utils:block-device? luks-dev))
         (error "Cannot find LUKS device" luks-label))
       (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
-      (when (not (zero? (system* "mkfs.ext4" luks-dev)))
-	    (error "Failed to create EXT4 filesystem on:" luks-dev))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
+	(error "Failed to create EXT4 filesystem on:" luks-dev))
       (utils:println "Mounting LUKS root filesystem...")
       (when (not (zero? (system* "mount" luks-dev instroot)))
 	(error "Failed to mount" luks-dev "as" instroot)))
@@ -374,7 +387,9 @@
 		(utils:path crypt-dir (basename keyfile))
 		#f)))
       (mkdir etc-dir)
-      (mkdir root-dir #o700)
+      (if (file-exists? root-dir)
+	  (chmod root-dir #o700)
+	  (mkdir root-dir #o700))
       (mkdir crypt-dir)
       (mkdir headers-dir)
       (backup-headers headers-dir
@@ -405,8 +420,8 @@
   (mkdir instroot)
   (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
   (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
-    (when (not (zero? (system* "mkfs.ext4" luks-dev)))
-	  (error "Failed to create EXT4 filesystem on:" luks-dev))
+    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
+      (error "Failed to create EXT4 filesystem on:" luks-dev))
     (when (not (zero? (system* "mount" luks-dev instroot)))
       (error "Failed to mount" luks-dev "as" instroot)))
   (let ((boot-dir (utils:path instroot "boot")))
@@ -460,8 +475,8 @@
 	   (crypt-dir (utils:path root-dir "crypt"))
 	   (headers-dir (utils:path crypt-dir "headers"))
 	   (etc-dir (utils:path instroot "etc")))
-      (when (not (zero? (system* "mkfs.ext4" lv-root)))
-	    (error "Failed to create EXT4 filesystem on:" lv-root))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" lv-root)))
+	(error "Failed to create EXT4 filesystem on:" lv-root))
       (mkdir instroot)
       (when (not (zero? (system* "mount" lv-root instroot)))
 	(error "Failed to mount" instroot))
@@ -518,14 +533,15 @@
     (rootdev
      (single-char #\r)
      (description
-      "Device to use for root filesystem")
+      "Device to use for LUKS encrypted root filesystem")
      (predicate ,utils:block-device?)
      (value-arg "device")
      (value #t))
     (zpool
      (single-char #\z)
      (description
-      "ZFS pool name for system directories and swap device")
+      "ZFS pool to use as root device, if no root device is specified (separate boot device must be specified too).
+      Alternatively, if a separate root device is specified too, the pool is used for additional system directories and swap device.")
      (value-arg "zpool")
      (value #t))
     (rootfs
@@ -539,7 +555,7 @@
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
-     (default "home,var,var/lib,gnu")
+     (default "home,root,gnu,var,var/lib")
      (value-arg "dirlist")
      (value #t))
     (devlst
@@ -607,17 +623,14 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
   (let* ((fname (basename f))
 	 (fname (utils:path ".keys" fname)))
     (when (file-exists? fname)
-	  (error "Cannot create keyfile! File already exists:" fname))
+      (error "Cannot create keyfile! File already exists:" fname))
     (when (not (file-exists? ".keys"))
-	  (mkdir ".keys"))
+      (mkdir ".keys"))
     (system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4")
     (chmod fname #o400)
     (utils:println "Finished creating keyfile:" fname)))
 
-(define state-dir ".state")
-(define lastrun-file (utils:path state-dir "lastrun.scm"))
-(define lockfile-deps-base (utils:path state-dir "deps_base"))
-(define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
+(define lastrun-file (utils:path ".defaults.scm"))
 
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
@@ -640,8 +653,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
-    (if (not (file-exists? state-dir))
-	(mkdir state-dir))
     (cond
      (help?
       (utils:println
@@ -650,7 +661,11 @@ USAGE:
 
 " (basename (car args)) " [OPTIONS]
 
-Initialise and mount root filesystem. Uses LUKS encryption for root partition, and allows choice between LVM or swapfiles for swap configuration. Optionally allows for using a ZFS pool for custom root directories and swap volume. Also, allows configuring separate boot device, either BIOS or UEFI.
+Initialises and mounts a root filesystem.
+
+Uses LUKS encrypted and EXT4 formatted root filesystem, and either plain files, or LVM for swap space. Supports either BIOS or UEFI boot partitions. Also, using a separate boot device is an option. 
+
+Alternatively, a ZFS pool can be used for both root filesystem and swap space (requires a separate boot device).
 
 Valid options are:
 "))
@@ -660,13 +675,13 @@ Valid options are:
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
-     ((and luks-v2? (< (deps:read-debian-version) 10))
+     ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
       (cond
        (initdeps?
-	(deps:install-deps-base lockfile-deps-base)
-	(deps:install-deps-zfs lockfile-deps-zfs)
+	(deps:install-deps-base)
+	(deps:install-deps-zfs)
 	(utils:println "Finished installing all package dependencies!"))
        (else
 	(when (not swap-size)
@@ -674,7 +689,7 @@ Valid options are:
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
 	(utils:write-config lastrun-file options)
-	(deps:install-deps-base lockfile-deps-base)
+	(deps:install-deps-base)
 	(cond
 	 (root-dev
 	  (cond
@@ -690,14 +705,14 @@ Valid options are:
 	      (cond
 	       (zpool
 		(when (and keyfile dev-list)
-		      (init-cryptdevs keyfile dev-list))
-		(deps:install-deps-zfs lockfile-deps-zfs)
+		  (init-cryptdevs keyfile dev-list))
+		(deps:install-deps-zfs)
 		(init-zfsroot zpool rootfs #:dir-list dir-list)
 		(init-instroot-zfs
 		 target boot-partdev
 		 zpool rootfs dir-list
 		 swap-size
-		 #:root-partdev root-partdev
+		 #:luks-partdev root-partdev
 		 #:luks-label luks-label
 		 #:dev-list dev-list
 		 #:keyfile keyfile))
@@ -713,7 +728,7 @@ Valid options are:
 	 (zpool
 	  (when (not boot-dev)
 	    (error "Separate boot device must be specified when using ZFS as root!"))
-	  (deps:install-deps-zfs lockfile-deps-zfs)
+	  (deps:install-deps-zfs)
 	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
 	    (init-zfsroot
 	     zpool rootfs
