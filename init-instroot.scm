@@ -686,61 +686,61 @@ Valid options are:
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
-	(utils:write-config lastrun-file options)
-	(deps:install-deps-base)
+      (utils:write-config lastrun-file options)
+      (deps:install-deps-base)
+      (cond
+       (root-dev
 	(cond
-	 (root-dev
-	  (cond
-	   (boot-dev
-	    (error "Separate boot device is not supported!"))
-	   (uefiboot?
-	    (error "UEFI boot is not yet supported!"))
-	   (else
-	    (let* ((parts (init-root-parts root-dev))
-		   (boot-partdev (vector-ref parts 0))
-		   (root-partdev (vector-ref parts 1)))
-	      (init-cryptroot root-partdev luks-label #:luks-v2? luks-v2?)
-	      (cond
-	       (zpool
-		(when (and keyfile dev-list)
-		  (init-cryptdevs keyfile dev-list))
-		(deps:install-deps-zfs)
-		(init-zfsroot zpool rootfs #:dir-list dir-list)
-		(init-instroot-zfs
-		 target boot-partdev
-		 zpool rootfs dir-list
-		 swap-size
-		 #:luks-partdev root-partdev
-		 #:luks-label luks-label
-		 #:dev-list dev-list
-		 #:keyfile keyfile))
-	       ((< 0 swapfiles)
-		(init-instroot-swapfile
-		 target boot-partdev root-partdev luks-label
-		 swap-size swapfiles))
-	       (else
-		(deps:install-deps-lvm)
-		(init-instroot-lvm
-		 target boot-partdev root-partdev luks-label
-		 swap-size)))))))
-	 (zpool
-	  (when (not boot-dev)
-	    (error "Separate boot device must be specified when using ZFS as root!"))
-	  (deps:install-deps-zfs)
-	  (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
-	    (init-zfsroot
-	     zpool rootfs
-	     #:swap-size swap-size
-	     #:dir-list dir-list)
-	    (init-instroot-zfs
-	     target boot-partdev
-	     zpool rootfs dir-list
-	     swap-size
-	     #:dev-list dev-list
-	     #:keyfile keyfile)))
+	 (boot-dev
+	  (error "Separate boot device is not supported!"))
+	 (uefiboot?
+	  (error "UEFI boot is not yet supported!"))
 	 (else
-	  (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
-	(utils:write-config (utils:path target "CONFIG_VARS.scm") options)
-	;; to support backwards compatibility with debconf.sh shell script
-	(utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
-	(utils:println "Finished setting up installation root" target)))))
+	  (let* ((parts (init-root-parts root-dev))
+		 (boot-partdev (vector-ref parts 0))
+		 (root-partdev (vector-ref parts 1)))
+	    (init-cryptroot root-partdev luks-label #:luks-v2? luks-v2?)
+	    (cond
+	     (zpool
+	      (when (and keyfile dev-list)
+		(init-cryptdevs keyfile dev-list))
+	      (deps:install-deps-zfs)
+	      (init-zfsroot zpool rootfs #:dir-list dir-list)
+	      (init-instroot-zfs
+	       target boot-partdev
+	       zpool rootfs dir-list
+	       swap-size
+	       #:luks-partdev root-partdev
+	       #:luks-label luks-label
+	       #:dev-list dev-list
+	       #:keyfile keyfile))
+	     ((< 0 swapfiles)
+	      (init-instroot-swapfile
+	       target boot-partdev root-partdev luks-label
+	       swap-size swapfiles))
+	     (else
+	      (deps:install-deps-lvm)
+	      (init-instroot-lvm
+	       target boot-partdev root-partdev luks-label
+	       swap-size)))))))
+       (zpool
+	(when (not boot-dev)
+	  (error "Separate boot device must be specified when using ZFS as root!"))
+	(deps:install-deps-zfs)
+	(let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?)))
+	  (init-zfsroot
+	   zpool rootfs
+	   #:swap-size swap-size
+	   #:dir-list dir-list)
+	  (init-instroot-zfs
+	   target boot-partdev
+	   zpool rootfs dir-list
+	   swap-size
+	   #:dev-list dev-list
+	   #:keyfile keyfile)))
+       (else
+	(error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
+      (utils:write-config (utils:path target "CONFIG_VARS.scm") options)
+      ;; to support backwards compatibility with debconf.sh shell script
+      (utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
+      (utils:println "Finished setting up installation root" target)))))
