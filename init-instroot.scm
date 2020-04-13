@@ -118,9 +118,9 @@
 	    (error "Failed to create EXT4 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))))
 
-(define (init-cryptroot partdev label)
+(define* (init-cryptroot partdev label #:key luks-v2?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
-  (when (not (zero? (system* "cryptsetup" "luksFormat" partdev)))
+  (when (not (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
@@ -199,19 +199,25 @@
 (define (init-swapfiles root-dir swapfile-args)
   (when (not (file-exists? root-dir))
     (error "Directory" root-dir "does not exists!"))
-  (let ((swap-dir (utils:path root-dir "swap")))
+  (let* ((swap-dir (utils:path root-dir "swap"))
+	 (pagesize (utils:system->string* "getconf" "PAGESIZE"))
+	 (pagesize (regex:string-match "([0-9]+)" pagesize))
+	 (pagesize (regex:match:substring pagesize 1))
+	 (pagesize (string->number pagesize)))
     (when (not (file-exists? swap-dir))
       (mkdir swap-dir))
     (map
      (lambda (args)
        (let* ((filename (car args))
-	      (size (cadr args))
-	      (size (number->string size))
+	      (filesize (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
-	 (utils:println "Allocating" size "of swap space in" swapfile "...")
+	 (when (< filesize (* 10 pagesize))
+	       (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
+	       (error "Swapfile size is too small:" filesize))
+	 (utils:println "Allocating" (number->string filesize) "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
 		  (string-append "of=" swapfile)
-		  (string-append "bs=" size)
+		  (string-append "bs=" (number->string filesize))
 		  "count=1" "status=progress")
 	 (chmod swapfile #o600)
 	 (utils:system->devnull* "mkswap" swapfile)
@@ -567,9 +573,9 @@ Specifying a keyfile is necessary for this feature!")
     (swapsize
      (single-char #\s)
      (description
-      "Size of the total swap space to use (KMGT suffixes allowed)")
+      "Size of the total swap space to use (KMGTPEZY binary unit suffixes allowed)")
      (predicate
-      ,(lambda (s) (regex:string-match "^[0-9]+[KMGT]?$" s)))
+      ,(lambda (s) (regex:string-match "^[0-9]+[KMGTPEZY]?$" s)))
      (value-arg "size")
      (value #t))
     (swapfiles
@@ -584,6 +590,10 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (description
       "Use UEFI boot partitions instead of BIOS.")
      (single-char #\E))
+    (luksv2
+     (description
+      "Use LUKS format version 2 to encrypt root filesystem")
+     (single-char #\L))
     (initdeps
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
@@ -610,8 +620,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 (define lockfile-deps-zfs (utils:path state-dir "deps_zfs"))
 
 (define (main args)
-  (let* ((lastrun-map (utils:read-lastrun lastrun-file))
-	 (options (utils:getopt-extra args options-spec lastrun-map))
+  (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
@@ -619,14 +628,15 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (zpool (hash-ref options 'zpool))
 	 (rootfs (hash-ref options 'rootfs))
 	 (dir-list (hash-ref options 'dirlst))
-	 (dir-list (if dir-list (string-split dir-list #\,) #f))
+	 (dir-list (and dir-list (string-split dir-list #\,)))
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
-	 (dev-list (if dev-list (utils:parse-pairs dev-list) #f))
+	 (dev-list (and dev-list (utils:parse-pairs dev-list)))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
-	 (swapfiles (string->number swapfiles))
+	 (swapfiles (and swapfiles (string->number swapfiles)))
+	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
@@ -644,12 +654,14 @@ Initialise and mount root filesystem. Uses LUKS encryption for root partition, a
 
 Valid options are:
 "))
-      (display (utils:usage options-spec lastrun-map))
+      (display (utils:usage options-spec))
       (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
+     ((and luks-v2? (< (deps:read-debian-version) 10))
+      (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      (else
       (cond
        (initdeps?
@@ -661,7 +673,7 @@ Valid options are:
 	  (error "Swap size must be specified!"))
 	(when (and dev-list (not keyfile))
 	  (error "Keyfile must be specified to unlock encrypted devices!"))
-	(utils:write-lastrun lastrun-file options)
+	(utils:write-config lastrun-file options)
 	(deps:install-deps-base lockfile-deps-base)
 	(cond
 	 (root-dev
@@ -674,7 +686,7 @@ Valid options are:
 	    (let* ((parts (init-root-parts root-dev))
 		   (boot-partdev (vector-ref parts 0))
 		   (root-partdev (vector-ref parts 1)))
-	      (init-cryptroot root-partdev luks-label)
+	      (init-cryptroot root-partdev luks-label #:luks-v2? luks-v2?)
 	      (cond
 	       (zpool
 		(when (and keyfile dev-list)
@@ -715,7 +727,7 @@ Valid options are:
 	     #:keyfile keyfile)))
 	 (else
 	  (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))
-	(utils:write-lastrun (utils:path target "CONFIG_VARS.scm") options)
+	(utils:write-config (utils:path target "CONFIG_VARS.scm") options)
 	;; to support backwards compatibility with debconf.sh shell script
-	(utils:write-lastrun-vars (utils:path target "CONFIG_VARS.sh") options)
+	(utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
 	(utils:println "Finished setting up installation root" target)))))))
