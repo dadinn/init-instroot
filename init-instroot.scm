@@ -59,8 +59,8 @@
   (sleep 1)
   (let ((boot-partdev (partdev boot-dev "2")))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)))
-	  (error "Failed to create EXT4 filesystem on:" boot-partdev))
+    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (error "Failed to create EXT4 filesystem on:" boot-partdev))
     boot-partdev))
 
 (define (init-boot-parts-uefi boot-dev)
@@ -72,7 +72,7 @@
   (let ((boot-partdev (partdev boot-dev "1")))
     (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
     (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-	  (error "Failed to create FAT32 filesystem on:" boot-partdev))
+      (error "Failed to create FAT32 filesystem on:" boot-partdev))
     boot-partdev))
 
 (define* (init-boot-parts boot-dev #:key uefiboot?)
@@ -104,7 +104,7 @@
 	  (root-partdev (partdev root-dev "2")))
       (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
       (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-	    (error "Failed to create FAT32 filesystem on:" boot-partdev))
+	(error "Failed to create FAT32 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))
    (else
     (system* "sgdisk" root-dev "-Z"
@@ -119,8 +119,8 @@
     (let ((boot-partdev (partdev root-dev "2"))
 	  (root-partdev (partdev root-dev "3")))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" "-j" boot-partdev)))
-	    (error "Failed to create EXT4 filesystem on:" boot-partdev))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (vector boot-partdev root-partdev)))))
 
 (define* (init-cryptroot partdev label #:key luks-v2?)
@@ -225,7 +225,7 @@
 	      (filesize (cadr args))
 	      (swapfile (utils:path swap-dir filename)))
 	 (when (< filesize (* 10 pagesize))
-	       (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
+	   (utils:println "ERROR: Swapfile size must be at least 10 times the virtual memory page size:" (number->string (* 10 pagesize)) "bytes!")
 	       (error "Swapfile size is too small:" filesize))
 	 (utils:println "Allocating" (number->string filesize) "of swap space in" swapfile "...")
 	 (system* "dd" "if=/dev/zero"
@@ -240,10 +240,10 @@
      swapfile-args)))
 
 (define (print-fstab-entry-root root-dev)
-  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro" "0" "1"))
+  (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro,noatime" "0" "1"))
 
 (define (print-fstab-entry-boot boot-dev)
-  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults" "0" "2"))
+  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
 
 (define* (print-fstab #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
       (newline)
@@ -358,8 +358,8 @@
       (when (not (utils:block-device? luks-dev))
         (error "Cannot find LUKS device" luks-label))
       (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
-      (when (not (zero? (system* "mkfs.ext4" luks-dev)))
-	    (error "Failed to create EXT4 filesystem on:" luks-dev))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
+	(error "Failed to create EXT4 filesystem on:" luks-dev))
       (utils:println "Mounting LUKS root filesystem...")
       (when (not (zero? (system* "mount" luks-dev instroot)))
 	(error "Failed to mount" luks-dev "as" instroot)))
@@ -420,8 +420,8 @@
   (mkdir instroot)
   (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
   (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
-    (when (not (zero? (system* "mkfs.ext4" luks-dev)))
-	  (error "Failed to create EXT4 filesystem on:" luks-dev))
+    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
+      (error "Failed to create EXT4 filesystem on:" luks-dev))
     (when (not (zero? (system* "mount" luks-dev instroot)))
       (error "Failed to mount" luks-dev "as" instroot)))
   (let ((boot-dir (utils:path instroot "boot")))
@@ -475,8 +475,8 @@
 	   (crypt-dir (utils:path root-dir "crypt"))
 	   (headers-dir (utils:path crypt-dir "headers"))
 	   (etc-dir (utils:path instroot "etc")))
-      (when (not (zero? (system* "mkfs.ext4" lv-root)))
-	    (error "Failed to create EXT4 filesystem on:" lv-root))
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" lv-root)))
+	(error "Failed to create EXT4 filesystem on:" lv-root))
       (mkdir instroot)
       (when (not (zero? (system* "mount" lv-root instroot)))
 	(error "Failed to mount" instroot))
@@ -622,9 +622,9 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
   (let* ((fname (basename f))
 	 (fname (utils:path ".keys" fname)))
     (when (file-exists? fname)
-	  (error "Cannot create keyfile! File already exists:" fname))
+      (error "Cannot create keyfile! File already exists:" fname))
     (when (not (file-exists? ".keys"))
-	  (mkdir ".keys"))
+      (mkdir ".keys"))
     (system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4")
     (chmod fname #o400)
     (utils:println "Finished creating keyfile:" fname)))
@@ -700,7 +700,7 @@ Valid options are:
 	      (cond
 	       (zpool
 		(when (and keyfile dev-list)
-		      (init-cryptdevs keyfile dev-list))
+		  (init-cryptdevs keyfile dev-list))
 		(deps:install-deps-zfs)
 		(init-zfsroot zpool rootfs #:dir-list dir-list)
 		(init-instroot-zfs
