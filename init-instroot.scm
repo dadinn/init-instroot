@@ -327,11 +327,11 @@
     (when (not (file-exists? crypt-dir))
       (mkdir crypt-dir))
     ;; ROOOTDEV
-    (when luks-partdev
+    (when (and luks-partdev luks-label)
      (utils:println "# LUKS device containing root filesystem")
      (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
     ;; DEVLISTS
-    (when keyfile
+    (when (and keyfile dev-list)
      (newline)
      (utils:println "# LUKS devices containing encrypted ZFS vdevs")
      (newline)
