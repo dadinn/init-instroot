@@ -245,7 +245,9 @@
 (define (print-fstab-entry-boot boot-dev)
   (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
 
-(define* (print-fstab #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
+(define* (print-fstab output-file #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
+  (with-output-to-file output-file
+    (lambda ()
       (newline)
       (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
       (newline)
@@ -285,7 +287,7 @@
        (zpool
 	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	(print-fstab-entry-boot boot-partdev)))
-      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))
+      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
 (define (parse-dev-list dev-list)
   (map
@@ -394,14 +396,13 @@
        #:luks-partdev luks-partdev
        #:luks-label luks-label
        #:keyfile keyfile-stored)
-      (with-output-to-file (utils:path etc-dir "fstab")
-	(lambda ()
-	  (print-fstab
-	   #:boot-partdev boot-partdev
-	   #:luks-label luks-label
-	   #:zpool zpool
-	   #:rootfs rootfs
-	   #:dir-list dir-list))))))
+      (print-fstab
+       (utils:path etc-dir "fstab")
+       #:boot-partdev boot-partdev
+       #:luks-label luks-label
+       #:zpool zpool
+       #:rootfs rootfs
+       #:dir-list dir-list))))
 
 (define (init-instroot-swapfile instroot boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
@@ -435,12 +436,11 @@
      (utils:path etc-dir "crypttab")
      #:luks-partdev luks-partdev
      #:luks-label luks-label)
-    (with-output-to-file (utils:path etc-dir "fstab")
-      (lambda ()
-	(print-fstab
-	 #:boot-partdev boot-partdev
-	 #:luks-label luks-label
-	 #:swapfile-args swapfile-args)))))
+    (print-fstab
+     (utils:path etc-dir "fstab")
+     #:boot-partdev boot-partdev
+     #:luks-label luks-label
+     #:swapfile-args swapfile-args)))
 
 (define* (init-instroot-lvm
 	  instroot boot-partdev luks-partdev luks-label swap-size)
@@ -488,11 +488,10 @@
        (utils:path etc-dir "crypttab")
        #:luks-partdev luks-partdev
        #:luks-label luks-label)
-      (with-output-to-file (utils:path etc-dir "fstab")
-	(lambda ()
-	  (print-fstab
-	   #:boot-partdev boot-partdev
-	   #:luks-label luks-label))))))
+      (print-fstab
+       (utils:path etc-dir "fstab")
+       #:boot-partdev boot-partdev
+       #:luks-label luks-label))))
 
 (define options-spec
   `((target
