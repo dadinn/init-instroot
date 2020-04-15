@@ -365,15 +365,13 @@
 	(error "Failed to mount" luks-dev "as" instroot)))
       (utils:println "Mounting all ZFS root directories...")
       (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs))
-     (zpool
+     (else
       (utils:println "Mounting ZFS root...")
       (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
       (system* "zfs" "umount" "-a")
       (system* "zfs" "set" (string-append "mountpoint=" instroot) systemfs)
       (system* "zfs" "mount" "-a")
-      (system* "mount" "-o" "remount,exec,dev" instroot))
-     (else
-      (error "Either LUKS device or zfs pool must have been specified!")))
+      (system* "mount" "-o" "remount,exec,dev" instroot)))
     (let ((boot-dir (utils:path instroot "boot")))
       (mkdir boot-dir)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
