@@ -311,7 +311,9 @@
        (backup-header headers-dir device label)))
     (parse-dev-list dev-list))))
 
-(define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
+(define* (print-crypttab output-file #:key luks-partdev luks-label keyfile dev-list)
+  (with-output-to-file output-file
+    (lambda ()
     ;; ROOOTDEV
     (when (and luks-partdev luks-label)
      (utils:println "# LUKS device containing root filesystem")
@@ -326,7 +328,7 @@
 	(let ((device (car args))
 	      (label (cadr args)))
 	  (utils:println label (string-append "UUID=" (fsuuid device)) keyfile "luks")))
-      (parse-dev-list dev-list))))
+      (parse-dev-list dev-list))))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
@@ -387,12 +389,11 @@
       (when keyfile-stored
        (copy-file keyfile keyfile-stored)
        (chmod keyfile-stored #o400))
-      (with-output-to-file (utils:path etc-dir "crypttab")
-	(lambda ()
-	  (print-crypttab root-dir
-	   #:luks-partdev luks-partdev
-	   #:luks-label luks-label
-	   #:keyfile keyfile-stored)))
+      (print-crypttab
+       (utils:path etc-dir "crypttab")
+       #:luks-partdev luks-partdev
+       #:luks-label luks-label
+       #:keyfile keyfile-stored)
       (with-output-to-file (utils:path etc-dir "fstab")
 	(lambda ()
 	  (print-fstab
@@ -430,11 +431,10 @@
      #:luks-partdev luks-partdev
      #:luks-label luks-label)
     (init-swapfiles root-dir swapfile-args)
-    (with-output-to-file (utils:path etc-dir "crypttab")
-      (lambda ()
-	(print-crypttab root-dir
-	 #:luks-partdev luks-partdev
-	 #:luks-label luks-label)))
+    (print-crypttab
+     (utils:path etc-dir "crypttab")
+     #:luks-partdev luks-partdev
+     #:luks-label luks-label)
     (with-output-to-file (utils:path etc-dir "fstab")
       (lambda ()
 	(print-fstab
@@ -484,11 +484,10 @@
       (if (zero? (utils:system->devnull* "swapon" lv-swap))
 	  (utils:system->devnull* "swapoff" lv-swap)
 	  (utils:println "WARNING:" "failed to swap on" lv-swap))
-      (with-output-to-file (utils:path etc-dir "crypttab")
-	(lambda ()
-	  (print-crypttab root-dir
-	   #:luks-partdev luks-partdev
-	   #:luks-label luks-label)))
+      (print-crypttab
+       (utils:path etc-dir "crypttab")
+       #:luks-partdev luks-partdev
+       #:luks-label luks-label)
       (with-output-to-file (utils:path etc-dir "fstab")
 	(lambda ()
 	  (print-fstab
