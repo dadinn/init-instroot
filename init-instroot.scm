@@ -312,9 +312,6 @@
     (parse-dev-list dev-list))))
 
 (define* (print-crypttab root-dir #:key luks-partdev luks-label keyfile dev-list)
-  (let* ((crypt-dir (utils:path root-dir "crypt")))
-    (when (not (file-exists? crypt-dir))
-      (mkdir crypt-dir))
     ;; ROOOTDEV
     (when (and luks-partdev luks-label)
      (utils:println "# LUKS device containing root filesystem")
@@ -329,7 +326,7 @@
 	(let ((device (car args))
 	      (label (cadr args)))
 	  (utils:println label (string-append "UUID=" (fsuuid device)) keyfile "luks")))
-      (parse-dev-list dev-list)))))
+      (parse-dev-list dev-list))))
 
 (define* (init-instroot-zfs
 	  instroot boot-partdev
