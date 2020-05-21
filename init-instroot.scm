@@ -300,7 +300,8 @@
       (lambda ()
 	(system* "cryptsetup" "luksHeaderBackup" device
 		 "--header-backup-file" file)
-	(chmod file #o400)))))
+	(chmod file #o400)
+	(system* "chattr" "+i" file)))))
 
 (define* (backup-headers headers-dir #:key luks-partdev luks-label dev-list)
   (when luks-label
