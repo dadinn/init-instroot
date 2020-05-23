@@ -347,16 +347,15 @@
 	  target boot-partdev
 	  zpool rootfs dir-list swap-size
 	  #:key keyfile dev-list luks-partdev luks-label)
-  (when (file-exists? target)
-    (error "Target" target "already exists!"))
-  (when (not (utils:block-device? boot-partdev))
-    (error "Cannot find device" boot-partdev "for boot partition!"))
-  (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
-    (error "zpool" zpool "not available!"))
   (let ((systemfs (utils:path zpool rootfs)))
+    (when (not (utils:block-device? boot-partdev))
+      (error "Cannot find device" boot-partdev "for boot partition!"))
+    (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
+      (error "zpool" zpool "not available!"))
     (when (not (zero? (utils:system->devnull* "zfs" "list" systemfs)))
       (error "ZFS dataset does not exist:" systemfs))
-    ;; BEGIN
+    (when (file-exists? target)
+      (error "Target" target "already exists!"))
     (mkdir target)
     (cond
      (luks-partdev
