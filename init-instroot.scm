@@ -526,8 +526,8 @@
      (else
       (let* ((parts (init-root-parts root-dev))
 	     (boot-partdev (vector-ref parts 0))
-	     (root-partdev (vector-ref parts 1)))
-	(init-cryptroot root-partdev luks-label #:luks-v2? luks-v2?)
+	     (luks-partdev (vector-ref parts 1)))
+	(init-cryptroot luks-partdev luks-label #:luks-v2? luks-v2?)
 	(cond
 	 (zpool
 	  (when (and keyfile dev-list)
@@ -538,18 +538,18 @@
 	   target boot-partdev
 	   zpool rootfs dir-list
 	   swap-size
-	   #:luks-partdev root-partdev
+	   #:luks-partdev luks-partdev
 	   #:luks-label luks-label
 	   #:dev-list dev-list
 	   #:keyfile keyfile))
 	 ((< 0 swapfiles)
 	  (init-instroot-swapfile
-	   target boot-partdev root-partdev luks-label
+	   target boot-partdev luks-partdev luks-label
 	   swap-size swapfiles))
 	 (else
 	  (deps:install-deps-lvm)
 	  (init-instroot-lvm
-	   target boot-partdev root-partdev luks-label
+	   target boot-partdev luks-partdev luks-label
 	   swap-size)))))))
    (zpool
     (when (not boot-dev)
