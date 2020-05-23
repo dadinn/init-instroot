@@ -657,10 +657,8 @@ Uses LUKS encrypted and EXT4 formatted root filesystem, and either plain files, 
 
 Alternatively, a ZFS pool can be used for both root filesystem and swap space (requires a separate boot device).
 
-Valid options are:
-"))
-      (display (utils:usage options-spec))
-      (newline))
+Valid options are:"))
+      (utils:println (utils:usage options-spec)))
      (new-keyfile
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
