@@ -245,12 +245,15 @@
 (define (print-fstab-entry-boot boot-dev)
   (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
 
+(define (print-fstab-headers)
+  (newline)
+  (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
+  (newline))
+
 (define* (print-fstab output-file #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
   (with-output-to-file output-file
     (lambda ()
-      (newline)
-      (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
-      (newline)
+      (print-fstab-headers)
       (cond
        (luks-label
 	(cond
