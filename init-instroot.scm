@@ -347,7 +347,13 @@
 	  target boot-partdev
 	  zpool rootfs dir-list swap-size
 	  #:key keyfile dev-list luks-partdev luks-label)
-  (let ((systemfs (utils:path zpool rootfs)))
+  (let* ((systemfs (utils:path zpool rootfs))
+	 (boot-dir (utils:path target "boot"))
+	 (etc-dir (utils:path target "etc"))
+	 (root-dir (utils:path target "root"))
+	 (crypt-dir (utils:path root-dir "crypt"))
+	 (headers-dir (utils:path crypt-dir "headers"))
+	 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
     (when (not (utils:block-device? boot-partdev))
       (error "Cannot find device" boot-partdev "for boot partition!"))
     (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
@@ -377,15 +383,6 @@
       (system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
       (system* "zfs" "mount" "-a")
       (system* "mount" "-o" "remount,exec,dev" target)))
-    (let* ((boot-dir (utils:path target "boot"))
-	   (etc-dir (utils:path target "etc"))
-	   (root-dir (utils:path target "root"))
-	   (crypt-dir (utils:path root-dir "crypt"))
-	   (headers-dir (utils:path crypt-dir "headers"))
-	   (keyfile-stored
-	    (if keyfile
-		(utils:path crypt-dir (basename keyfile))
-		#f)))
       (mkdir boot-dir)
       (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	(error "Failed to mount" boot-partdev "as" boot-dir))
@@ -414,7 +411,7 @@
        #:luks-label luks-label
        #:zpool zpool
        #:rootfs rootfs
-       #:dir-list dir-list))))
+       #:dir-list dir-list)))
 
 (define (init-instroot-swapfile target boot-partdev luks-partdev luks-label swap-size swapfiles)
   (utils:println "Setting up installation root with swapfile for swap space...")
