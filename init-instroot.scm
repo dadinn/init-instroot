@@ -388,7 +388,8 @@
       (mkdir headers-dir)
       (backup-headers headers-dir
        #:luks-partdev luks-partdev
-       #:luks-label luks-label)
+       #:luks-label luks-label
+       #:dev-list dev-list)
       (when keyfile-stored
        (copy-file keyfile keyfile-stored)
        (chmod keyfile-stored #o400))
@@ -396,6 +397,7 @@
        (utils:path etc-dir "crypttab")
        #:luks-partdev luks-partdev
        #:luks-label luks-label
+       #:dev-list dev-list
        #:keyfile keyfile-stored)
       (print-fstab
        (utils:path etc-dir "fstab")
