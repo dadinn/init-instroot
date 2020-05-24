@@ -384,9 +384,9 @@
      #:dir-list dir-list)))
 
 (define* (init-instroot-zfs-on-luks
-	  target boot-partdev
+	  target boot-partdev luks-partdev luks-label
 	  zpool rootfs dir-list swap-size
-	  #:key keyfile dev-list luks-partdev luks-label)
+	  #:key keyfile dev-list)
   (let* ((systemfs (utils:path zpool rootfs))
 	 (boot-dir (utils:path target "boot"))
 	 (etc-dir (utils:path target "etc"))
@@ -573,10 +573,9 @@
 	  (init-zfsroot zpool rootfs #:dir-list dir-list)
 	  (init-instroot-zfs-on-luks
 	   target boot-partdev
+	   luks-partdev luks-label
 	   zpool rootfs dir-list
 	   swap-size
-	   #:luks-partdev luks-partdev
-	   #:luks-label luks-label
 	   #:dev-list dev-list
 	   #:keyfile keyfile))
 	 ((< 0 swapfiles)
