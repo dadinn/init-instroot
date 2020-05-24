@@ -403,8 +403,6 @@
     (when (file-exists? target)
       (error "Target" target "already exists!"))
     (mkdir target)
-    (cond
-     (luks-partdev
       (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
 	(when (not (utils:block-device? luks-dev))
           (error "Cannot find LUKS device" luks-label))
@@ -415,14 +413,7 @@
 	(when (not (zero? (system* "mount" luks-dev target)))
 	  (error "Failed to mount" luks-dev "as" target)))
       (utils:println "Mounting all ZFS root directories...")
-      (system* "zfs" "set" (string-append "mountpoint=" target) systemfs))
-     (else
-      (utils:println "Mounting ZFS root...")
-      (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
-      (system* "zfs" "umount" "-a")
       (system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
-      (system* "zfs" "mount" "-a")
-      (system* "mount" "-o" "remount,exec,dev" target)))
     (mkdir boot-dir)
     (when (not (zero? (system* "mount" boot-partdev boot-dir)))
       (error "Failed to mount" boot-partdev "as" boot-dir))
