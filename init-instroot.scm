@@ -345,15 +345,13 @@
 
 (define* (init-instroot-zfs-native
 	  target boot-partdev
-	  zpool rootfs dir-list swap-size
-	  #:key keyfile dev-list luks-partdev luks-label)
+	  zpool rootfs dir-list swap-size)
   (let* ((systemfs (utils:path zpool rootfs))
 	 (boot-dir (utils:path target "boot"))
 	 (etc-dir (utils:path target "etc"))
 	 (root-dir (utils:path target "root"))
 	 (crypt-dir (utils:path root-dir "crypt"))
-	 (headers-dir (utils:path crypt-dir "headers"))
-	 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
+	 (headers-dir (utils:path crypt-dir "headers")))
     (when (not (utils:block-device? boot-partdev))
       (error "Cannot find device" boot-partdev "for boot partition!"))
     (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
@@ -363,26 +361,12 @@
     (when (file-exists? target)
       (error "Target" target "already exists!"))
     (mkdir target)
-    (cond
-     (luks-partdev
-      (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
-	(when (not (utils:block-device? luks-dev))
-          (error "Cannot find LUKS device" luks-label))
-	(utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
-	(when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
-	  (error "Failed to create EXT4 filesystem on:" luks-dev))
-	(utils:println "Mounting LUKS root filesystem...")
-	(when (not (zero? (system* "mount" luks-dev target)))
-	  (error "Failed to mount" luks-dev "as" target)))
-      (utils:println "Mounting all ZFS root directories...")
-      (system* "zfs" "set" (string-append "mountpoint=" target) systemfs))
-     (else
       (utils:println "Mounting ZFS root...")
       (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
       (system* "zfs" "umount" "-a")
       (system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
       (system* "zfs" "mount" "-a")
-      (system* "mount" "-o" "remount,exec,dev" target)))
+      (system* "mount" "-o" "remount,exec,dev" target)
     (mkdir boot-dir)
     (when (not (zero? (system* "mount" boot-partdev boot-dir)))
       (error "Failed to mount" boot-partdev "as" boot-dir))
@@ -392,24 +376,9 @@
 	(mkdir root-dir #o700))
     (mkdir crypt-dir)
     (mkdir headers-dir)
-    (backup-headers
-     headers-dir
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label
-     #:dev-list dev-list)
-    (when keyfile-stored
-      (copy-file keyfile keyfile-stored)
-      (chmod keyfile-stored #o400))
-    (print-crypttab
-     (utils:path etc-dir "crypttab")
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label
-     #:dev-list dev-list
-     #:keyfile keyfile-stored)
     (print-fstab
      (utils:path etc-dir "fstab")
      #:boot-partdev boot-partdev
-     #:luks-label luks-label
      #:zpool zpool
      #:rootfs rootfs
      #:dir-list dir-list)))
