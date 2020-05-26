@@ -483,57 +483,6 @@
      #:luks-label luks-label
      #:swapfile-args swapfile-args)))
 
-(define* (init-instroot-lvm
-	  target boot-partdev luks-partdev luks-label swap-size)
-  (when (file-exists? target)
-    (error "Target" target "already exists!"))
-  (when (not (utils:block-device? boot-partdev))
-    (error "Cannot find device" boot-partdev "for boot partition!"))
-  (when (not (utils:block-device? luks-partdev))
-    (error "Cannot find device" luks-partdev "for root partition!"))
-  (let ((luks-dev (utils:path "/dev/mapper" luks-label))
-	(vg-name (string-append luks-label "_vg")))
-    (utils:println "Setting up LVM with volumes for root and swap filesystems...")
-    (system* "pvcreate" luks-dev)
-    (system* "vgcreate" vg-name luks-dev)
-    (system* "lvcreate" "-L" swap-size  "-n" "swap" vg-name)
-    (system* "lvcreate" "-l" "100%FREE" "-n" "root" vg-name)
-    (let* ((lv-root (string-append "/dev/mapper/" vg-name "-root"))
-	   (lv-swap (string-append "/dev/mapper/" vg-name "-swap"))
-	   (boot-dir (utils:path target "boot"))
-	   (root-dir (utils:path target "root"))
-	   (crypt-dir (utils:path root-dir "crypt"))
-	   (headers-dir (utils:path crypt-dir "headers"))
-	   (etc-dir (utils:path target "etc")))
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" lv-root)))
-	(error "Failed to create EXT4 filesystem on:" lv-root))
-      (mkdir target)
-      (when (not (zero? (system* "mount" lv-root target)))
-	(error "Failed to mount" target))
-      (mkdir boot-dir)
-      (when (not (zero? (system* "mount" boot-partdev boot-dir)))
-	(error "Failed to mount" boot-partdev "as" boot-dir))
-      (mkdir etc-dir)
-      (mkdir root-dir #o700)
-      (mkdir crypt-dir)
-      (mkdir headers-dir)
-      (backup-headers headers-dir
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label)
-      (utils:println "Formatting" lv-swap "to be used as swap space...")
-      (utils:system->devnull* "mkswap" lv-swap)
-      (if (zero? (utils:system->devnull* "swapon" lv-swap))
-	  (utils:system->devnull* "swapoff" lv-swap)
-	  (utils:println "WARNING:" "failed to swap on" lv-swap))
-      (print-crypttab
-       (utils:path etc-dir "crypttab")
-       #:luks-partdev luks-partdev
-       #:luks-label luks-label)
-      (print-fstab
-       (utils:path etc-dir "fstab")
-       #:boot-partdev boot-partdev
-       #:luks-label luks-label))))
-
 (define*
   (init-instroot
    target
@@ -575,9 +524,54 @@
 	   swap-size swapfiles))
 	 (else
 	  (deps:install-deps-lvm)
-	  (init-instroot-lvm
-	   target boot-partdev luks-partdev luks-label
-	   swap-size)))))))
+	  (when (file-exists? target)
+	    (error "Target" target "already exists!"))
+	  (when (not (utils:block-device? boot-partdev))
+	    (error "Cannot find device" boot-partdev "for boot partition!"))
+	  (when (not (utils:block-device? luks-partdev))
+	    (error "Cannot find device" luks-partdev "for root partition!"))
+	  (let ((luks-dev (utils:path "/dev/mapper" luks-label))
+		(vg-name (string-append luks-label "_vg")))
+	    (utils:println "Setting up LVM with volumes for root and swap filesystems...")
+	    (system* "pvcreate" luks-dev)
+	    (system* "vgcreate" vg-name luks-dev)
+	    (system* "lvcreate" "-L" swap-size  "-n" "swap" vg-name)
+	    (system* "lvcreate" "-l" "100%FREE" "-n" "root" vg-name)
+	    (let* ((lv-root (string-append "/dev/mapper/" vg-name "-root"))
+		   (lv-swap (string-append "/dev/mapper/" vg-name "-swap"))
+		   (boot-dir (utils:path target "boot"))
+		   (root-dir (utils:path target "root"))
+		   (crypt-dir (utils:path root-dir "crypt"))
+		   (headers-dir (utils:path crypt-dir "headers"))
+		   (etc-dir (utils:path target "etc")))
+	      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" lv-root)))
+		(error "Failed to create EXT4 filesystem on:" lv-root))
+	      (mkdir target)
+	      (when (not (zero? (system* "mount" lv-root target)))
+		(error "Failed to mount" target))
+	      (mkdir boot-dir)
+	      (when (not (zero? (system* "mount" boot-partdev boot-dir)))
+		(error "Failed to mount" boot-partdev "as" boot-dir))
+	      (mkdir etc-dir)
+	      (mkdir root-dir #o700)
+	      (mkdir crypt-dir)
+	      (mkdir headers-dir)
+	      (backup-headers headers-dir
+			      #:luks-partdev luks-partdev
+			      #:luks-label luks-label)
+	      (utils:println "Formatting" lv-swap "to be used as swap space...")
+	      (utils:system->devnull* "mkswap" lv-swap)
+	      (if (zero? (utils:system->devnull* "swapon" lv-swap))
+		  (utils:system->devnull* "swapoff" lv-swap)
+		  (utils:println "WARNING:" "failed to swap on" lv-swap))
+	      (print-crypttab
+	       (utils:path etc-dir "crypttab")
+	       #:luks-partdev luks-partdev
+	       #:luks-label luks-label)
+	      (print-fstab
+	       (utils:path etc-dir "fstab")
+	       #:boot-partdev boot-partdev
+	       #:luks-label luks-label)))))))))
    (zpool
     (when (not boot-dev)
       (error "Separate boot device must be specified when using ZFS as root!"))
