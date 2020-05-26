@@ -445,44 +445,6 @@
      #:rootfs rootfs
      #:dir-list dir-list)))
 
-(define (init-instroot-swapfile target boot-partdev luks-partdev luks-label swap-size swapfiles)
-  (utils:println "Setting up installation root with swapfile for swap space...")
-  (when (file-exists? target)
-    (error "Target" target "already exists!"))
-  (mkdir target)
-  (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
-  (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
-    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
-      (error "Failed to create EXT4 filesystem on:" luks-dev))
-    (when (not (zero? (system* "mount" luks-dev target)))
-      (error "Failed to mount" luks-dev "as" target)))
-  (let ((boot-dir (utils:path target "boot")))
-    (mkdir boot-dir)
-    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
-      (error "Failed to mount" boot-partdev "as" boot-dir)))
-  (let* ((etc-dir (utils:path target "etc"))
-	 (root-dir (utils:path target "root"))
-	 (crypt-dir (utils:path root-dir "crypt"))
-	 (headers-dir (utils:path crypt-dir "headers"))
-	 (swapfile-args (parse-swapfile-args swap-size swapfiles)))
-    (mkdir etc-dir)
-    (mkdir root-dir #o700)
-    (mkdir crypt-dir)
-    (mkdir headers-dir)
-    (backup-headers headers-dir
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label)
-    (init-swapfiles root-dir swapfile-args)
-    (print-crypttab
-     (utils:path etc-dir "crypttab")
-     #:luks-partdev luks-partdev
-     #:luks-label luks-label)
-    (print-fstab
-     (utils:path etc-dir "fstab")
-     #:boot-partdev boot-partdev
-     #:luks-label luks-label
-     #:swapfile-args swapfile-args)))
-
 (define*
   (init-instroot
    target
@@ -519,9 +481,42 @@
 	   #:dev-list dev-list
 	   #:keyfile keyfile))
 	 ((< 0 swapfiles)
-	  (init-instroot-swapfile
-	   target boot-partdev luks-partdev luks-label
-	   swap-size swapfiles))
+	  (utils:println "Setting up installation root with swapfile for swap space...")
+	  (when (file-exists? target)
+	    (error "Target" target "already exists!"))
+	  (mkdir target)
+	  (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
+	  (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
+	    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
+	      (error "Failed to create EXT4 filesystem on:" luks-dev))
+	    (when (not (zero? (system* "mount" luks-dev target)))
+	      (error "Failed to mount" luks-dev "as" target)))
+	  (let ((boot-dir (utils:path target "boot")))
+	    (mkdir boot-dir)
+	    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
+	      (error "Failed to mount" boot-partdev "as" boot-dir)))
+	  (let* ((etc-dir (utils:path target "etc"))
+		 (root-dir (utils:path target "root"))
+		 (crypt-dir (utils:path root-dir "crypt"))
+		 (headers-dir (utils:path crypt-dir "headers"))
+		 (swapfile-args (parse-swapfile-args swap-size swapfiles)))
+	    (mkdir etc-dir)
+	    (mkdir root-dir #o700)
+	    (mkdir crypt-dir)
+	    (mkdir headers-dir)
+	    (backup-headers headers-dir
+			    #:luks-partdev luks-partdev
+			    #:luks-label luks-label)
+	    (init-swapfiles root-dir swapfile-args)
+	    (print-crypttab
+	     (utils:path etc-dir "crypttab")
+	     #:luks-partdev luks-partdev
+	     #:luks-label luks-label)
+	    (print-fstab
+	     (utils:path etc-dir "fstab")
+	     #:boot-partdev boot-partdev
+	     #:luks-label luks-label
+	     #:swapfile-args swapfile-args)))
 	 (else
 	  (deps:install-deps-lvm)
 	  (when (file-exists? target)
