@@ -343,46 +343,6 @@
 	     (utils:println label (string-append "UUID=" (fsuuid device)) keyfile "luks")))
 	 (parse-dev-list dev-list))))))
 
-(define* (init-instroot-zfs-native
-	  target boot-partdev
-	  zpool rootfs dir-list swap-size)
-  (let* ((systemfs (utils:path zpool rootfs))
-	 (boot-dir (utils:path target "boot"))
-	 (etc-dir (utils:path target "etc"))
-	 (root-dir (utils:path target "root"))
-	 (crypt-dir (utils:path root-dir "crypt"))
-	 (headers-dir (utils:path crypt-dir "headers")))
-    (when (not (utils:block-device? boot-partdev))
-      (error "Cannot find device" boot-partdev "for boot partition!"))
-    (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
-      (error "zpool" zpool "not available!"))
-    (when (not (zero? (utils:system->devnull* "zfs" "list" systemfs)))
-      (error "ZFS dataset does not exist:" systemfs))
-    (when (file-exists? target)
-      (error "Target" target "already exists!"))
-    (mkdir target)
-    (utils:println "Mounting ZFS root...")
-    (system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
-    (system* "zfs" "umount" "-a")
-    (system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
-    (system* "zfs" "mount" "-a")
-    (system* "mount" "-o" "remount,exec,dev" target)
-    (mkdir boot-dir)
-    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
-      (error "Failed to mount" boot-partdev "as" boot-dir))
-    (mkdir etc-dir)
-    (if (file-exists? root-dir)
-	(chmod root-dir #o700)
-	(mkdir root-dir #o700))
-    (mkdir crypt-dir)
-    (mkdir headers-dir)
-    (print-fstab
-     (utils:path etc-dir "fstab")
-     #:boot-partdev boot-partdev
-     #:zpool zpool
-     #:rootfs rootfs
-     #:dir-list dir-list)))
-
 (define*
   (init-instroot
    target
@@ -564,12 +524,42 @@
        zpool rootfs
        #:swap-size swap-size
        #:dir-list dir-list)
-      (init-instroot-zfs-native
-       target boot-partdev
-       zpool rootfs dir-list
-       swap-size
-       #:dev-list dev-list
-       #:keyfile keyfile)))
+      (let* ((systemfs (utils:path zpool rootfs))
+	     (boot-dir (utils:path target "boot"))
+	     (etc-dir (utils:path target "etc"))
+	     (root-dir (utils:path target "root"))
+	     (crypt-dir (utils:path root-dir "crypt"))
+	     (headers-dir (utils:path crypt-dir "headers")))
+	(when (not (utils:block-device? boot-partdev))
+	  (error "Cannot find device" boot-partdev "for boot partition!"))
+	(when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
+	  (error "zpool" zpool "not available!"))
+	(when (not (zero? (utils:system->devnull* "zfs" "list" systemfs)))
+	  (error "ZFS dataset does not exist:" systemfs))
+	(when (file-exists? target)
+	  (error "Target" target "already exists!"))
+	(mkdir target)
+	(utils:println "Mounting ZFS root...")
+	(system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
+	(system* "zfs" "umount" "-a")
+	(system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
+	(system* "zfs" "mount" "-a")
+	(system* "mount" "-o" "remount,exec,dev" target)
+	(mkdir boot-dir)
+	(when (not (zero? (system* "mount" boot-partdev boot-dir)))
+	  (error "Failed to mount" boot-partdev "as" boot-dir))
+	(mkdir etc-dir)
+	(if (file-exists? root-dir)
+	    (chmod root-dir #o700)
+	    (mkdir root-dir #o700))
+	(mkdir crypt-dir)
+	(mkdir headers-dir)
+	(print-fstab
+	 (utils:path etc-dir "fstab")
+	 #:boot-partdev boot-partdev
+	 #:zpool zpool
+	 #:rootfs rootfs
+	 #:dir-list dir-list))))
    (else
     (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!"))))
 
