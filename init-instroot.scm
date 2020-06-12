@@ -265,47 +265,6 @@
       (newline)
       (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
-(define* (print-fstab output-file #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
-  (with-output-to-file output-file
-    (lambda ()
-      (cond
-       (luks-label
-	(cond
-	 (zpool
-	  (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	  (print-fstab-entry-boot boot-partdev)
-	  (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
-	  (newline)
-	  (utils:println "# systemd specific legacy mounts of ZFS datasets")
-	  (newline)
-	  (map
-	   (lambda (dirfs)
-	     (utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
-	   dir-list))
-	 ((and swapfile-args (not (null? swapfile-args)))
-	  (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	  (print-fstab-entry-boot boot-partdev)
-	  (newline)
-	  (utils:println "#swapfiles")
-	  (newline)
-	  (map
-	   (lambda (args)
-	     (let* ((filename (car args))
-		    (file-path (utils:path "/root/swap" filename)))
-	       (utils:println file-path "none" "swap" "sw" "0" "0")))
-	   swapfile-args))
-	 (else
-	  (let* ((vg-name (string-append luks-label "_vg"))
-		 (lv-root (string-append "/dev/mapper/" vg-name "-root"))
-		 (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
-	    (print-fstab-entry-root lv-root)
-	    (print-fstab-entry-boot boot-partdev)
-	    (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))
-       (zpool
-	(utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
-	(print-fstab-entry-boot boot-partdev)))
-      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
-
 (define (parse-dev-list dev-list)
   (map
    (lambda (s) (string-split s #\:))
@@ -426,13 +385,18 @@
 	     luks-partdev luks-label
 	     #:dev-list dev-list
 	     #:keyfile keyfile-stored)
-	    (print-fstab
+	    (print-fstab*
 	     (utils:path etc-dir "fstab")
-	     #:boot-partdev boot-partdev
-	     #:luks-label luks-label
-	     #:zpool zpool
-	     #:rootfs rootfs
-	     #:dir-list dir-list)))
+	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	     (print-fstab-entry-boot boot-partdev)
+	     (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	     (newline)
+	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
+	     (newline)
+	     (map
+	      (lambda (dirfs)
+		(utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
+	      dir-list))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
 	  (when (file-exists? target)
@@ -464,11 +428,19 @@
 	    (print-crypttab
 	     (utils:path etc-dir "crypttab")
 	     luks-partdev luks-label)
-	    (print-fstab
+	    (print-fstab*
 	     (utils:path etc-dir "fstab")
-	     #:boot-partdev boot-partdev
-	     #:luks-label luks-label
-	     #:swapfile-args swapfile-args)))
+	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
+	     (print-fstab-entry-boot boot-partdev)
+	     (newline)
+	     (utils:println "#swapfiles")
+	     (newline)
+	     (map
+	      (lambda (args)
+		(let* ((filename (car args))
+		       (file-path (utils:path "/root/swap" filename)))
+		  (utils:println file-path "none" "swap" "sw" "0" "0")))
+	      swapfile-args))))
 	 (else
 	  (deps:install-deps-lvm)
 	  (when (file-exists? target)
@@ -514,10 +486,14 @@
 	      (print-crypttab
 	       (utils:path etc-dir "crypttab")
 	       luks-partdev luks-label)
-	      (print-fstab
+	      (print-fstab*
 	       (utils:path etc-dir "fstab")
-	       #:boot-partdev boot-partdev
-	       #:luks-label luks-label)))))))))
+	       (let* ((vg-name (string-append luks-label "_vg"))
+		      (lv-root (string-append "/dev/mapper/" vg-name "-root"))
+		      (lv-swap (string-append "/dev/mapper/" vg-name "-swap")))
+		 (print-fstab-entry-root lv-root)
+		 (print-fstab-entry-boot boot-partdev)
+		 (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))))))
    (zpool
     (when (not boot-dev)
       (error "Separate boot device must be specified when using ZFS as root!"))
@@ -557,12 +533,10 @@
 	    (mkdir root-dir #o700))
 	(mkdir crypt-dir)
 	(mkdir headers-dir)
-	(print-fstab
+	(print-fstab*
 	 (utils:path etc-dir "fstab")
-	 #:boot-partdev boot-partdev
-	 #:zpool zpool
-	 #:rootfs rootfs
-	 #:dir-list dir-list))))
+	 (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	 (print-fstab-entry-boot boot-partdev)))))
    (else
     (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!"))))
 
