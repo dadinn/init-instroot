@@ -434,7 +434,6 @@
 	     (print-fstab-entry-boot boot-partdev)
 	     (newline)
 	     (utils:println "#swapfiles")
-	     (newline)
 	     (map
 	      (lambda (args)
 		(let* ((filename (car args))
