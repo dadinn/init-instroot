@@ -257,10 +257,17 @@
   (utils:println "# <file system> <mountpoint> <type> <options> <dump> <pass>")
   (newline))
 
-(define* (print-fstab output-file #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
+(define-syntax-rule (print-fstab* output-file body ...)
   (with-output-to-file output-file
     (lambda ()
       (print-fstab-headers)
+      body ...
+      (newline)
+      (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
+
+(define* (print-fstab output-file #:key boot-partdev luks-label swapfile-args zpool rootfs dir-list)
+  (with-output-to-file output-file
+    (lambda ()
       (cond
        (luks-label
 	(cond
