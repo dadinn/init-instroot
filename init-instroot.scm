@@ -481,7 +481,7 @@
 	 (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	 (print-fstab-entry-boot boot-partdev))))
      (else
-      (error "Either block device for LUKS formatted root or a ZFS pool must be specified for root!")))))
+      (error "Either block device (for using LUKS encryption), or a ZFS pool (using native ZFS encrption) must be specified for root!")))))
 
 (define options-spec
   `((target
