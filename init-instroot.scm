@@ -660,6 +660,8 @@ Valid options are:"))
       (error "Keyfile must be specified to unlock encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
+     ((and uefiboot? (not (zero? (system* "modprobe" "efivars"))))
+      (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      (else
       (utils:write-config lastrun-file options)
       (init-instroot target
