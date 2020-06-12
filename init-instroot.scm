@@ -324,13 +324,12 @@
        (backup-header headers-dir device label)))
     (parse-dev-list dev-list))))
 
-(define* (print-crypttab output-file #:key luks-partdev luks-label keyfile dev-list)
+(define* (print-crypttab output-file luks-partdev luks-label #:key keyfile dev-list)
   (with-output-to-file output-file
     (lambda ()
       ;; ROOOTDEV
-      (when (and luks-partdev luks-label)
-	(utils:println "# LUKS device containing root filesystem")
-	(utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks"))
+      (utils:println "# LUKS device containing root filesystem")
+      (utils:println luks-label (string-append "UUID=" (fsuuid luks-partdev)) "none" "luks")
       ;; DEVLISTS
       (when (and keyfile dev-list)
 	(newline)
@@ -417,8 +416,7 @@
 	      (chmod keyfile-stored #o400))
 	    (print-crypttab
 	     (utils:path etc-dir "crypttab")
-	     #:luks-partdev luks-partdev
-	     #:luks-label luks-label
+	     luks-partdev luks-label
 	     #:dev-list dev-list
 	     #:keyfile keyfile-stored)
 	    (print-fstab
@@ -458,8 +456,7 @@
 	    (init-swapfiles root-dir swapfile-args)
 	    (print-crypttab
 	     (utils:path etc-dir "crypttab")
-	     #:luks-partdev luks-partdev
-	     #:luks-label luks-label)
+	     luks-partdev luks-label)
 	    (print-fstab
 	     (utils:path etc-dir "fstab")
 	     #:boot-partdev boot-partdev
@@ -509,8 +506,7 @@
 		  (utils:println "WARNING:" "failed to swap on" lv-swap))
 	      (print-crypttab
 	       (utils:path etc-dir "crypttab")
-	       #:luks-partdev luks-partdev
-	       #:luks-label luks-label)
+	       luks-partdev luks-label)
 	      (print-fstab
 	       (utils:path etc-dir "fstab")
 	       #:boot-partdev boot-partdev
