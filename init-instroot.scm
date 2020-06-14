@@ -61,52 +61,72 @@
 	   "-N" "2"
 	   "-t" "2:8300")
   (part-probe boot-dev)
-  (let ((boot-partdev (partdev boot-dev "2")))
+  (let ((boot-partdev (partdev boot-dev "2"))
+	(result (make-hash-table 3)))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
     (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
       (error "Failed to create EXT4 filesystem on:" boot-partdev))
-    boot-partdev))
+    (hash-set! result 'boot boot-partdev)
+    result))
 
 (define (init-boot-parts-uefi boot-dev)
   (system* "sgdisk" boot-dev "-Z"
-	   "-N" "1"
-	   "-t" "1:ef00")
+	   "-n" "1:0+50M"
+	   "-N" "2"
+	   "-t" "1:ef00"
+	   "-t" "1:8300")
   (part-probe boot-dev)
-  (let ((boot-partdev (partdev boot-dev "1")))
+  (let ((uefi-partdev (partdev boot-dev "1"))
+	(boot-partdev (partdev boot-dev "2"))
+	(result (make-hash-table 3)))
     (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
-    (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-      (error "Failed to create FAT32 filesystem on:" boot-partdev))
-    boot-partdev))
+    (when (not (zero? (system* "mkfs.fat" "-F32" uefi-partdev)))
+      (error "Failed to create FAT32 filesystem on:" uefi-partdev))
+    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (error "Failed to create EXT4 filesystem on:" boot-partdev))
+    (hash-set! result 'uefi uefi-partdev)
+    (hash-set! result 'boot boot-partdev)
+    result))
 
 (define* (init-boot-parts boot-dev #:key uefiboot?)
-  (let ((boot-partdev
+  (let ((result
 	 (if uefiboot?
 	     (init-boot-parts-uefi boot-dev)
 	     (init-boot-parts-bios boot-dev))))
     (utils:println "Finished setting up partitions on:" boot-dev)
-    boot-partdev))
+    result))
 
 (define* (init-root-parts root-dev #:key boot-dev uefiboot?)
   (cond
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (part-probe root-dev)
-    (vector
-     (init-boot-parts boot-dev #:uefiboot? uefiboot?)
-     (partdev root-dev "1")))
+    (let ((result (init-boot-parts boot-dev uefiboot?)))
+      (hash-set! result 'root (partdev root-dev "1"))
+      result))
    (uefiboot?
     (system* "sgdisk" root-dev "-Z"
-	     "-n" "1:0:+500M"
-	     "-N" "2"
+	     "-n" "1:0:+50M"
+	     "-n" "2:0:+500M"
+	     "-N" "3"
 	     "-t" "1:ef00"
-	     "-t" "2:8300")
+	     "-t" "2:8300"
+	     "-t" "3:8300")
     (part-probe root-dev)
-    (let ((boot-partdev (partdev root-dev "1"))
-	  (root-partdev (partdev root-dev "2")))
-      (utils:println "Formatting boot partition device as FAT32:" boot-partdev)
-      (when (not (zero? (system* "mkfs.fat" "-F32" boot-partdev)))
-	(error "Failed to create FAT32 filesystem on:" boot-partdev))
-      (vector boot-partdev root-partdev)))
+    (let ((uefi-partdev (partdev root-dev "1"))
+	  (boot-partdev (partdev root-dev "2"))
+	  (root-partdev (partdev root-dev "3"))
+	  (result (make-hash-table 3)))
+      (utils:println "Formatting UEFI partition device as FAT32:" uefi-partdev)
+      (when (not (zero? (system* "mkfs.fat" "-F32" uefi-partdev)))
+	(error "Failed to create FAT32 filesystem on:" uefi-partdev))
+      (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
+      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+	(error "Failed to create EXT4 filesystem on:" boot-partdev))
+      (hash-set! result 'uefi uefi-partdev)
+      (hash-set! result 'boot boot-partdev)
+      (hash-set! result 'root root-partdev)
+      result))
    (else
     (system* "sgdisk" root-dev "-Z"
 	     "-n" "1:0:+2M"
@@ -117,11 +137,14 @@
 	     "-t" "3:8300")
     (part-probe root-dev)
     (let ((boot-partdev (partdev root-dev "2"))
-	  (root-partdev (partdev root-dev "3")))
+	  (root-partdev (partdev root-dev "3"))
+	  (result (make-hash-table 2)))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
       (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
 	(error "Failed to create EXT4 filesystem on:" boot-partdev))
-      (vector boot-partdev root-partdev)))))
+      (hash-set! result 'boot boot-partdev)
+      (hash-set! result 'root root-partdev)
+      result))))
 
 (define* (init-cryptroot partdev label #:key luks-v2?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
@@ -329,8 +352,9 @@
     (cond
      (root-dev
       (let* ((parts (init-root-parts root-dev #:uefiboot? uefiboot? #:boot-dev boot-dev))
-	     (boot-partdev (vector-ref parts 0))
-	     (luks-partdev (vector-ref parts 1)))
+	     (uefi-partdev (hash-ref parts 'uefi))
+	     (boot-partdev (hash-ref parts 'boot))
+	     (luks-partdev (hash-ref parts 'root)))
 	(init-cryptroot luks-partdev luks-label #:luks-v2? luks-v2?)
 	(cond
 	 (zpool
@@ -460,8 +484,10 @@
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
       (deps:install-deps-zfs)
-      (let ((boot-partdev (init-boot-parts boot-dev #:uefiboot? uefiboot?))
-	    (systemfs (utils:path zpool rootfs)))
+      (let* ((parts (init-boot-parts boot-dev #:uefiboot? uefiboot?))
+	     (uefi-partdev (hash-ref parts 'uefi))
+	     (boot-partdev (hash-ref parts 'boot))
+	     (systemfs (utils:path zpool rootfs)))
 	(init-zfsroot
 	 zpool rootfs
 	 #:swap-size swap-size
