@@ -318,6 +318,9 @@
    zpool rootfs dir-list
    swap-size swapfiles)
   (deps:install-deps-base)
+  (when (file-exists? target)
+    (error "Target" target "already exists!"))
+  (mkdir target)
   (cond
    (root-dev
     (cond
@@ -343,9 +346,6 @@
 		 (crypt-dir (utils:path root-dir "crypt"))
 		 (headers-dir (utils:path crypt-dir "headers"))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
-	    (when (file-exists? target)
-	      (error "Target" target "already exists!"))
-	    (mkdir target)
 	    (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
 	      (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
 	      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
@@ -391,9 +391,6 @@
 	      dir-list))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
-	  (when (file-exists? target)
-	    (error "Target" target "already exists!"))
-	  (mkdir target)
 	  (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
 	  (let ((luks-dev (utils:path "/dev/mapper" luks-label)))
 	    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" luks-dev)))
@@ -434,8 +431,6 @@
 	      swapfile-args))))
 	 (else
 	  (deps:install-deps-lvm)
-	  (when (file-exists? target)
-	    (error "Target" target "already exists!"))
 	  (let ((luks-dev (utils:path "/dev/mapper" luks-label))
 		(vg-name (string-append luks-label "_vg")))
 	    (utils:println "Setting up LVM with volumes for root and swap filesystems...")
@@ -452,7 +447,6 @@
 		   (etc-dir (utils:path target "etc")))
 	      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" lv-root)))
 		(error "Failed to create EXT4 filesystem on:" lv-root))
-	      (mkdir target)
 	      (when (not (zero? (system* "mount" lv-root target)))
 		(error "Failed to mount" target))
 	      (mkdir boot-dir)
@@ -496,9 +490,6 @@
 	     (root-dir (utils:path target "root"))
 	     (crypt-dir (utils:path root-dir "crypt"))
 	     (headers-dir (utils:path crypt-dir "headers")))
-	(when (file-exists? target)
-	  (error "Target" target "already exists!"))
-	(mkdir target)
 	(utils:println "Mounting ZFS root...")
 	(system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
 	(system* "zfs" "umount" "-a")
