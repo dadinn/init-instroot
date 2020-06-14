@@ -272,8 +272,10 @@
 (define (print-fstab-entry-root root-dev)
   (utils:println (string-append "UUID=" (fsuuid root-dev)) "/" "ext4" "errors=remount-ro,noatime" "0" "1"))
 
-(define (print-fstab-entry-boot boot-dev)
-  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2"))
+(define* (print-fstab-entry-boot boot-dev #:optional uefi-dev)
+  (utils:println (string-append "UUID=" (fsuuid boot-dev)) "/boot" "ext4" "defaults,noatime" "0" "2")
+  (when uefi-dev
+    (utils:println (string-append "UUID=" (fsuuid uefi-dev)) "/boot/efi" "vfat" "defaults,noatime" "0" "1")))
 
 (define (print-fstab-headers)
   (newline)
@@ -403,7 +405,7 @@
 	    (print-fstab*
 	     (utils:path etc-dir "fstab")
 	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	     (print-fstab-entry-boot boot-partdev)
+	     (print-fstab-entry-boot boot-partdev uefi-partdev)
 	     (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
 	     (newline)
 	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
@@ -442,7 +444,7 @@
 	    (print-fstab*
 	     (utils:path etc-dir "fstab")
 	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
-	     (print-fstab-entry-boot boot-partdev)
+	     (print-fstab-entry-boot boot-partdev uefi-partdev)
 	     (newline)
 	     (utils:println "#swapfiles")
 	     (map
@@ -491,7 +493,7 @@
 	    (print-fstab*
 	     (utils:path etc-dir "fstab")
 	     (print-fstab-entry-root lv-root)
-	     (print-fstab-entry-boot boot-partdev)
+	     (print-fstab-entry-boot boot-partdev uefi-partdev)
 	     (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
      (zpool
       (when (not boot-dev)
@@ -522,7 +524,7 @@
 	(print-fstab*
 	 (utils:path etc-dir "fstab")
 	 (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
-	 (print-fstab-entry-boot boot-partdev))))
+	 (print-fstab-entry-boot boot-partdev uefi-partdev))))
      (else
       (error "Either block device (for using LUKS encryption), or a ZFS pool (using native ZFS encrption) must be specified for root!")))))
 
