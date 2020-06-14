@@ -88,7 +88,7 @@
     (hash-set! result 'boot boot-partdev)
     result))
 
-(define* (init-boot-parts boot-dev #:key uefiboot?)
+(define* (init-boot-parts boot-dev #:optional uefiboot?)
   (let ((result
 	 (if uefiboot?
 	     (init-boot-parts-uefi boot-dev)
@@ -499,7 +499,7 @@
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
       (deps:install-deps-zfs)
-      (let* ((parts (init-boot-parts boot-dev #:uefiboot? uefiboot?))
+      (let* ((parts (init-boot-parts boot-dev uefiboot?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (systemfs (utils:path zpool rootfs)))
