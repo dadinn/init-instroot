@@ -328,15 +328,9 @@
 	 (headers-dir (utils:path crypt-dir "headers")))
     (cond
      (root-dev
-      (cond
-       (boot-dev
-	(error "Separate boot device is not supported!"))
-       (uefiboot?
-	(error "UEFI boot is not yet supported!"))
-       (else
-	(let* ((parts (init-root-parts root-dev))
-	       (boot-partdev (vector-ref parts 0))
-	       (luks-partdev (vector-ref parts 1)))
+      (let* ((parts (init-root-parts root-dev #:uefiboot? uefiboot? #:boot-dev boot-dev))
+	     (boot-partdev (vector-ref parts 0))
+	     (luks-partdev (vector-ref parts 1)))
 	  (init-cryptroot luks-partdev luks-label #:luks-v2? luks-v2?)
 	  (cond
 	   (zpool
@@ -461,7 +455,7 @@
 	       (utils:path etc-dir "fstab")
 	       (print-fstab-entry-root lv-root)
 	       (print-fstab-entry-boot boot-partdev)
-	       (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))))
+	       (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
      (zpool
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
