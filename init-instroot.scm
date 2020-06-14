@@ -345,6 +345,7 @@
     (error "Target" target "already exists!"))
   (mkdir target)
   (let* ((boot-dir (utils:path target "boot"))
+	 (uefi-dir (utils:path boot-dir "efi"))
 	 (etc-dir (utils:path target "etc"))
 	 (root-dir (utils:path target "root"))
 	 (crypt-dir (utils:path root-dir "crypt"))
@@ -376,6 +377,10 @@
 	    (mkdir boot-dir)
 	    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	      (error "Failed to mount" boot-partdev "as" boot-dir))
+	    (when uefiboot?
+	      (mkdir uefi-dir)
+	      (when (not (zero? (system* "mount" uefi-partdev uefi-dir)))
+		(error "Failed to mount" uefi-partdev "as" uefi-dir)))
 	    (mkdir etc-dir)
 	    (if (file-exists? root-dir)
 		(chmod root-dir #o700)
@@ -418,6 +423,10 @@
 	  (mkdir boot-dir)
 	  (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	    (error "Failed to mount" boot-partdev "as" boot-dir))
+	  (when uefiboot?
+	    (mkdir uefi-dir)
+	    (when (not (zero? (system* "mount" uefi-partdev uefi-dir)))
+	      (error "Failed to mount" uefi-partdev "as" uefi-dir)))
 	  (let ((swapfile-args (parse-swapfile-args swap-size swapfiles)))
 	    (mkdir etc-dir)
 	    (mkdir root-dir #o700)
@@ -460,6 +469,10 @@
 	    (mkdir boot-dir)
 	    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	      (error "Failed to mount" boot-partdev "as" boot-dir))
+	    (when uefiboot?
+	      (mkdir uefi-dir)
+	      (when (not (zero? (system* "mount" uefi-partdev uefi-dir)))
+		(error "Failed to mount" uefi-partdev "as" uefi-dir)))
 	    (mkdir etc-dir)
 	    (mkdir root-dir #o700)
 	    (mkdir crypt-dir)
@@ -501,6 +514,10 @@
 	(mkdir boot-dir)
 	(when (not (zero? (system* "mount" boot-partdev boot-dir)))
 	  (error "Failed to mount" boot-partdev "as" boot-dir))
+	(when uefiboot?
+	  (mkdir uefi-dir)
+	  (when (not (zero? (system* "mount" uefi-partdev uefi-dir)))
+	    (error "Failed to mount" uefi-partdev "as" uefi-dir)))
 	(mkdir etc-dir)
 	(print-fstab*
 	 (utils:path etc-dir "fstab")
