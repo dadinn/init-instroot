@@ -185,7 +185,9 @@
   (when (not (zero? (utils:system->devnull* "zpool" "import" zpool)))
     (error "Failed to import ZFS pool:" zpool))
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
-    (error "Cannot find ZFS pool:" zpool)))
+    (error "Cannot find ZFS pool:" zpool))
+  ;; force loading encryption keys for root dataset
+  (system* "zfs" "load-key" zpool))
 
 (define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
   (reimport-and-check-pool zpool)
