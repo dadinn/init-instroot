@@ -189,6 +189,24 @@
   ;; force loading encryption keys for root dataset
   (system* "zfs" "load-key" zpool))
 
+(define (init-zpool name vdevs)
+  (apply
+   system*
+   "zpool" "create" "-f"
+   "-o" "ashift=12"
+   ;; encryption options
+   "-O" "encryption=aes-128-gcm"
+   "-O" "pbkdf2iters=1000000"
+   "-O" "keyformat=passphrase"
+   "-O" "keylocation=prompt"
+   ;; filesystem options
+   "-O" "normalization=formD"
+   "-O" "atime=off"
+   "-O" "devices=off"
+   "-O" "acltype=posixacl"
+   "-O" "xattr=sa"
+   name vdevs))
+
 (define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
   (reimport-and-check-pool zpool)
   (let* ((root-dataset (utils:path zpool rootfs))
