@@ -118,7 +118,10 @@ Valid options are:
     (when (not luks-label)
       (error "LUKS label is not specified!"))
     (deps:install-deps-base)
-    (system* "umount" (string-append instroot "/boot"))
+    (when uefiboot?
+      (utils:println "Unmounting /boot/efi...")
+      (system* "umount" (utils:path instroot "boot" "efi")))
+    (system* "umount" (utils:path instroot "boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
       (utils:system->devnull* "partprobe" boot-dev))
