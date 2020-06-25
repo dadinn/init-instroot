@@ -190,22 +190,24 @@
   (system* "zfs" "load-key" zpool))
 
 (define (init-zpool name vdevs)
-  (apply
-   system*
-   "zpool" "create" "-f"
-   "-o" "ashift=12"
-   ;; encryption options
-   "-O" "encryption=aes-128-gcm"
-   "-O" "pbkdf2iters=1000000"
-   "-O" "keyformat=passphrase"
-   "-O" "keylocation=prompt"
-   ;; filesystem options
-   "-O" "normalization=formD"
-   "-O" "atime=off"
-   "-O" "devices=off"
-   "-O" "acltype=posixacl"
-   "-O" "xattr=sa"
-   name vdevs))
+  (utils:println "Creating ZFS pool:" name)
+  (if (zero? (apply system*
+     "zpool" "create" "-f"
+     "-o" "ashift=12"
+     ;; encryption options
+     "-O" "encryption=aes-128-gcm"
+     "-O" "pbkdf2iters=1000000"
+     "-O" "keyformat=passphrase"
+     "-O" "keylocation=prompt"
+     ;; filesystem options
+     "-O" "normalization=formD"
+     "-O" "atime=off"
+     "-O" "devices=off"
+     "-O" "acltype=posixacl"
+     "-O" "xattr=sa"
+     name vdevs))
+   (utils:println "Finished creating ZFS pool:" name)
+   (error "Failed to create ZFS pool:" name)))
 
 (define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
   (reimport-and-check-pool zpool)
@@ -710,7 +712,14 @@ Valid options are:"))
      (init-zpool?
       (deps:install-deps-base)
       (deps:install-deps-zfs)
-      (utils:println "Finished installing all package dependencies!"))
+      (let ((args (hash-ref options '())))
+	(cond
+	 ((not (nil? args))
+	  (let ((name (car args))
+		(vdevs (cdr args)))
+	    (init-zpool name vdevs)))
+	 (else
+	  (utils:println "Finished installing all package dependencies!")))))
      ((not swap-size)
       (error "Swap size must be specified!"))
      ((and dev-list (not keyfile))
