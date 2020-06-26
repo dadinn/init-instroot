@@ -133,7 +133,7 @@ Valid options are:
      (root-dev
       (cond
        (zpool
-	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
 	(system* "zpool" "export" zpool)
 	(when dev-specs
 	  (map
@@ -152,7 +152,7 @@ Valid options are:
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
      (zpool
-      (system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+      (system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
       (system* "zpool" "export" zpool))
      (else
       (error "Either a root device, and/or a ZFS pool name must be specified!")))
