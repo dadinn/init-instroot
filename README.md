@@ -4,7 +4,7 @@ Initialises and mounts a root filesystem.
 
 * Uses a [LUKS](https://en.wikipedia.org/wiki/Linux_Unified_Key_Setup) encrypted device formatted as [EXT4](https://wiki.debian.org/Ext4), or [ZFS](https://github.com/openzfs/zfs) pool for root filesystem.
 * Uses either plain files, [LVM](https://en.wikipedia.org/wiki/Logical_volume_management), or a [ZFS](https://github.com/openzfs/zfs) volume for swap space.
-* Supports either BIOS or UEFI boot partitioning.
+* Supports either [BIOS](https://en.wikipedia.org/wiki/BIOS) or [UEFI](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) boot partitioning.
 * Using a separate boot device is an option (but mandatory with ZFS root).
 
 The ZFS pool must be created and configured manually beforehand.
