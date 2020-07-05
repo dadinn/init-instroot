@@ -198,15 +198,7 @@
       (error "root dataset already exists!" root-dataset))
     (utils:println "Creating root ZFS dataset" root-dataset "...")
     (when (not (zero?
-    (system*
-     "zfs" "create"
-     "-o" "compression=lz4"
-     ;; encryption settings
-     "-o" "encryption=aes-128-gcm"
-     "-o" "keyformat=passphrase"
-     "-o" "keylocation=prompt"
-     "-o" "pbkdf2iters=1000000"
-     root-dataset)))
+    (system* "zfs" "create" "-o" "compression=lz4" root-dataset)))
       (error "Failed creating dataset" root-dataset))
     (map
      (lambda (dir-name)
