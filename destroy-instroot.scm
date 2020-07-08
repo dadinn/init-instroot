@@ -123,8 +123,6 @@ Valid options are:
     (when (not luks-label)
       (error "LUKS label is not specified!"))
     (deps:install-deps-base)
-    (when zpool
-     (deps:install-deps-zfs))
     (system* "umount" (string-append instroot "/boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
@@ -133,6 +131,7 @@ Valid options are:
      (root-dev
       (cond
        (zpool
+	(deps:install-deps-zfs)
 	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
 	(system* "zpool" "export" zpool)
 	(when dev-specs
