@@ -67,6 +67,10 @@ Specifying a keyfile is necessary for this feature!")
      (single-char #\S)
      (description
       "Flag that a swapfile has been used instead of LVM or ZFS volume"))
+    (uefiboot
+     (description
+      "Flag that UEFI boot partition has been used instead of BIOS.")
+     (single-char #\E))
     (help
      (description
       "This usage help...")
