@@ -644,7 +644,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (description
       "Use LUKS format version 2 to encrypt root filesystem")
      (single-char #\L))
-    (initdeps
+    (init-zpool
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
      (single-char #\Z))
@@ -685,7 +685,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (swapfiles (and swapfiles (string->number swapfiles)))
 	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
-	 (initdeps? (hash-ref options 'initdeps))
+	 (init-zpool? (hash-ref options 'init-zpool))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
@@ -707,7 +707,7 @@ Valid options are:"))
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
-     (initdeps?
+     (init-zpool?
       (deps:install-deps-base)
       (deps:install-deps-zfs)
       (utils:println "Finished installing all package dependencies!"))
