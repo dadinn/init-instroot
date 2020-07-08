@@ -23,7 +23,6 @@
      (single-char #\l)
      (description
       "LUKS encrypted root device name")
-     (default "crypt_root")
      (value-arg "LABEL")
      (value #t))
     (bootdev
@@ -50,7 +49,6 @@
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
-     (default "system")
      (value-arg "NAME")
      (value #t))
     (devlst
@@ -68,8 +66,7 @@ Specifying a keyfile is necessary for this feature!")
     (swapfiles
      (single-char #\S)
      (description
-      "Flag that a swapfile has been used instead of LVM or ZFS volume")
-     (default "0"))
+      "Flag that a swapfile has been used instead of LVM or ZFS volume"))
     (help
      (description
       "This usage help...")
