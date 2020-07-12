@@ -62,14 +62,22 @@ This will install all the package dependencies, and builds and loads the kernel 
 
 ### Create and configure a new ZFS pool
 
-Always use the long `/dev/disk/by-id/*` device paths when creating a ZFS pool. Using the `/dev/sd*` device nodes directly can cause sporadic import failures, especially on systems that have more than one storage pool. A the ZFS pool with some recommended set of options can be created with the following command:
+It is highly recommended to use `/dev/disk/by-id/*` or `/dev/disk/by-path/*` device paths when creating a ZFS pool. Using the `/dev/sd*` device nodes directly can cause sporadic import failures, especially on systems that have more than one storage pool. 
 
-	sudo zpool create -o ashift=12 \
+Use the following command to create a ZFS pool with encrypted root dataset using prompted passphrase, UTF-8 filenames, and 4Kb sector size:
+
+	init-instroot -Z $ZPOOL_NAME $VDEV_SPECS
+
+This is equivalent to creating the pool manually, with the following command:
+
+	zpool create -f -o ashift=12 \
+	-O encryption=aes-128-gcm -O pbkdf2iters=1000000 \
+	-O keyformat=passphrase -O keylocation=prompt \
 	-O normalization=formD -O atime=off -O devices=off \
-	-O acltype=posixacl -O xattr=sa -O compression=lz4 \
-	-O canmount=off $ZPOOL_NAME $VDEV_DEFINITION
+	-O acltype=posixacl -O xattr=sa -O \
+	$ZPOOL_NAME $VDEV_SPECS
 
-For more details about `zpool` command, the available options, and possible VDEV definitions refer to the [manual](https://manpages.debian.org/unstable/zfsutils-linux/zpool.8.en.html).
+Refer to the [manual](https://zfsonlinux.org/manpages/0.8.1/man8/zpool.8.html#lbAE) for more details about the `zpool` command, its available options, and details of the VDEV specification format.
 
 # destroy-instroot.scm
 
