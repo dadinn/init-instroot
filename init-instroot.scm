@@ -71,10 +71,10 @@
 
 (define (init-boot-parts-uefi boot-dev)
   (system* "sgdisk" boot-dev "-Z"
-	   "-n" "1:0+50M"
-	   "-N" "2"
+	   "-n" "1:0:+50M"
 	   "-t" "1:ef00"
-	   "-t" "1:8300")
+	   "-N" "2"
+	   "-t" "2:8300")
   (part-probe boot-dev)
   (let ((uefi-partdev (partdev boot-dev "1"))
 	(boot-partdev (partdev boot-dev "2"))
