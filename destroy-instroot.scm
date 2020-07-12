@@ -23,7 +23,6 @@
      (single-char #\l)
      (description
       "LUKS encrypted root device name")
-     (default "crypt_root")
      (value-arg "LABEL")
      (value #t))
     (bootdev
@@ -50,7 +49,6 @@
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
-     (default "system")
      (value-arg "NAME")
      (value #t))
     (devlst
@@ -68,8 +66,11 @@ Specifying a keyfile is necessary for this feature!")
     (swapfiles
      (single-char #\S)
      (description
-      "Flag that a swapfile has been used instead of LVM or ZFS volume")
-     (default "0"))
+      "Flag that a swapfile has been used instead of LVM or ZFS volume"))
+    (uefiboot
+     (description
+      "Flag that UEFI boot partition has been used instead of BIOS.")
+     (single-char #\E))
     (help
      (description
       "This usage help...")
@@ -87,17 +88,11 @@ Specifying a keyfile is necessary for this feature!")
 	 (luks-label (hash-ref options 'label))
 	 (zpool (hash-ref options 'zpool))
 	 (rootfs (hash-ref options 'rootfs))
-	 (dir-list (hash-ref options 'dirlst))
-	 (dir-list (if dir-list (string-split dir-list #\,) #f))
-	 (keyfile (hash-ref options 'keyfile))
-	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
-	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
-	 (initdeps? (hash-ref options 'initdeps))
 	 (help? (hash-ref options 'help)))
     ;; todo fix these imperative whens
     (when help?
@@ -123,9 +118,10 @@ Valid options are:
     (when (not luks-label)
       (error "LUKS label is not specified!"))
     (deps:install-deps-base)
-    (when zpool
-     (deps:install-deps-zfs))
-    (system* "umount" (string-append instroot "/boot"))
+    (when uefiboot?
+      (utils:println "Unmounting /boot/efi...")
+      (system* "umount" (utils:path instroot "boot" "efi")))
+    (system* "umount" (utils:path instroot "boot"))
     (when boot-dev
       (utils:system->devnull* "sgdisk" "-Z" boot-dev)
       (utils:system->devnull* "partprobe" boot-dev))
@@ -133,7 +129,8 @@ Valid options are:
      (root-dev
       (cond
        (zpool
-	(system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+	(deps:install-deps-zfs)
+	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
 	(system* "zpool" "export" zpool)
 	(when dev-specs
 	  (map
@@ -152,7 +149,7 @@ Valid options are:
       (utils:system->devnull* "sgdisk" "-Z" root-dev)
       (utils:system->devnull* "partprobe" root-dev))
      (zpool
-      (system* "zfs" "destroy" "-r" (string-append zpool "/" rootfs))
+      (system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
       (system* "zpool" "export" zpool))
      (else
       (error "Either a root device, and/or a ZFS pool name must be specified!")))
