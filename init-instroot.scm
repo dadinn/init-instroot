@@ -695,7 +695,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
        (string-append "
 USAGE:
 
-" (basename (car args)) " [OPTIONS]
+" (basename (car args)) " [OPTION...]
 
 Initialises and mounts a root filesystem.
 
