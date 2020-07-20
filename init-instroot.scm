@@ -185,7 +185,29 @@
   (when (not (zero? (utils:system->devnull* "zpool" "import" zpool)))
     (error "Failed to import ZFS pool:" zpool))
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
-    (error "Cannot find ZFS pool:" zpool)))
+    (error "Cannot find ZFS pool:" zpool))
+  ;; force loading encryption keys for root dataset
+  (system* "zfs" "load-key" zpool))
+
+(define (init-zpool name vdevs)
+  (utils:println "Creating ZFS pool:" name)
+  (if (zero? (apply system*
+     "zpool" "create" "-f"
+     "-o" "ashift=12"
+     ;; encryption options
+     "-O" "encryption=aes-128-gcm"
+     "-O" "pbkdf2iters=1000000"
+     "-O" "keyformat=passphrase"
+     "-O" "keylocation=prompt"
+     ;; filesystem options
+     "-O" "normalization=formD"
+     "-O" "atime=off"
+     "-O" "devices=off"
+     "-O" "acltype=posixacl"
+     "-O" "xattr=sa"
+     name vdevs))
+   (utils:println "Finished creating ZFS pool:" name)
+   (error "Failed to create ZFS pool:" name)))
 
 (define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
   (reimport-and-check-pool zpool)
@@ -196,15 +218,7 @@
       (error "root dataset already exists!" root-dataset))
     (utils:println "Creating root ZFS dataset" root-dataset "...")
     (when (not (zero?
-    (system*
-     "zfs" "create"
-     "-o" "compression=lz4"
-     ;; encryption settings
-     "-o" "encryption=aes-128-gcm"
-     "-o" "keyformat=passphrase"
-     "-o" "keylocation=prompt"
-     "-o" "pbkdf2iters=1000000"
-     root-dataset)))
+    (system* "zfs" "create" "-o" "compression=lz4" root-dataset)))
       (error "Failed creating dataset" root-dataset))
     (map
      (lambda (dir-name)
@@ -632,7 +646,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
      (description
       "Use LUKS format version 2 to encrypt root filesystem")
      (single-char #\L))
-    (initdeps
+    (init-zpool
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
      (single-char #\Z))
@@ -673,7 +687,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (swapfiles (and swapfiles (string->number swapfiles)))
 	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
-	 (initdeps? (hash-ref options 'initdeps))
+	 (init-zpool? (hash-ref options 'init-zpool))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
@@ -695,10 +709,17 @@ Valid options are:"))
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
-     (initdeps?
+     (init-zpool?
       (deps:install-deps-base)
       (deps:install-deps-zfs)
-      (utils:println "Finished installing all package dependencies!"))
+      (let ((args (hash-ref options '())))
+	(cond
+	 ((not (nil? args))
+	  (let ((name (car args))
+		(vdevs (cdr args)))
+	    (init-zpool name vdevs)))
+	 (else
+	  (utils:println "Finished installing all package dependencies!")))))
      ((not swap-size)
       (error "Swap size must be specified!"))
      ((and dev-list (not keyfile))
