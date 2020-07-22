@@ -100,7 +100,7 @@ Specifying a keyfile is necessary for this feature!")
        (string-append "
 USAGE:
 
-" (basename (car args)) " [OPTIONS]
+" (basename (car args)) " [OPTION...]
 
 Unmounts and destroys installation root directory, that has been set up previously by init-instroot script. Also, unmounts boot partition, closes LVM volumes and LUKS devices, and destroys all device partitions used.
 
