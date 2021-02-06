@@ -158,9 +158,9 @@
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
   (utils:println "WARNING: This can take quite a long time!")
-  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
+  (let ((resp (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
     (cond
-     ((regex:string-match "[yY]" shred-prompt)
+     ((regex:string-match "[yY]" resp)
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
 	     (dev-size (device-size luks-dev)))

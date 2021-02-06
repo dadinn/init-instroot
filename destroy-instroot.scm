@@ -157,9 +157,9 @@ Valid options are:
       (catch #t
        (lambda () (rmdir instroot))
        (lambda* (key #:rest args)
-	(let ((delinstroot (readline (string-append "Directory " instroot " is not empty. Would you still like te remove it? [y/N]"))))
+	(let ((resp (readline (string-append "Directory " instroot " is not empty. Would you still like te remove it? [y/N]"))))
 	  (cond
-	   ((regex:string-match "[yY]" delinstroot)
+	   ((regex:string-match "[yY]" resp)
 	    (utils:println "Removing directory" instroot " with its content...")
 	    (system* "rm" "-rf" instroot))
 	   (else
