@@ -94,10 +94,10 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (help? (hash-ref options 'help)))
-    ;; todo fix these imperative whens
-    (when help?
-      (utils:println
-       (string-append "
+    (cond
+     (help?
+       (utils:println
+	(string-append "
 USAGE:
 
 " (basename (car args)) " [OPTION...]
@@ -108,51 +108,38 @@ When the file " lastrun-file " exists, the default values to option arguments ar
 
 Valid options are:
 "))
-      (display (utils:usage options-spec lastrun-map))
-      (newline)
-      (exit 0))
-    (when (not (eqv? 0 (getuid)))
-      (error "This script must be run as root!"))
-    (when (not target)
-      (error "Mounted root directory is not specified!"))
-    (when (not luks-label)
-      (error "LUKS label is not specified!"))
-    (deps:install-deps-base)
-    (when uefiboot?
-      (utils:println "Unmounting /boot/efi...")
-      (system* "umount" (utils:path target "boot" "efi")))
-    (system* "umount" (utils:path target "boot"))
-    (when boot-dev
-      (utils:system->devnull* "sgdisk" "-Z" boot-dev)
-      (utils:system->devnull* "partprobe" boot-dev))
-    (cond
-     (root-dev
-      (cond
-       (zpool
+       (utils:println (utils:usage options-spec lastrun-map)))
+     ((not (utils:root-user?))
+       (error "This script must be run as root!"))
+     ((not (utils:directory? target))
+      (error "Target directory doesn't exist!" target))
+     (else
+      (deps:install-deps-base)
+      (when uefiboot?
+	(utils:println "Unmounting /boot/efi...")
+	(system* "umount" (utils:path target "boot" "efi")))
+      (system* "umount" (utils:path target "boot"))
+      (when boot-dev
+	(utils:system->devnull* "sgdisk" "-Z" boot-dev)
+	(utils:system->devnull* "partprobe" boot-dev))
+      (when zpool
 	(deps:install-deps-zfs)
 	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
-	(system* "zpool" "export" zpool)
-	(when dev-specs
-	  (map
-	   (lambda (spec)
-	     (let* ((device (car spec))
-		    (label (cdr spec)))
-	       (system* "cryptsetup" "luksClose" label)))
-	   dev-specs))
-	(system* "umount" target))
-       ((< 0 swapfiles)
-	(system* "umount" target))
-       (else
+	(system* "zpool" "export" zpool))
+      (when dev-specs
+	(map
+	 (lambda (spec)
+	   (let* ((device (car spec))
+		  (label (cdr spec)))
+	     (system* "cryptsetup" "luksClose" label)))
+	 dev-specs))
+      (when root-dev
 	(system* "umount" target)
-	(system* "vgremove" "-f" (string-append luks-label "_vg"))))
-      (system* "cryptsetup" "luksClose" luks-label)
-      (utils:system->devnull* "sgdisk" "-Z" root-dev)
-      (utils:system->devnull* "partprobe" root-dev))
-     (zpool
-      (system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
-      (system* "zpool" "export" zpool))
-     (else
-      (error "Either a root device, and/or a ZFS pool name must be specified!")))
+	(when (< 0 swapfiles)
+	  (system* "vgremove" "-f" (string-append luks-label "_vg")))
+	(system* "cryptsetup" "luksClose" luks-label)
+	(utils:system->devnull* "sgdisk" "-Z" root-dev)
+	(utils:system->devnull* "partprobe" root-dev))))
     (when (utils:directory? target)
       (catch #t
        (lambda () (rmdir target))
