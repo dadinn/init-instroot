@@ -115,10 +115,13 @@ Valid options are:
       (error "Target directory doesn't exist!" target))
      (else
       (deps:install-deps-base)
-      (when uefiboot?
-	(utils:println "Unmounting /boot/efi...")
-	(system* "umount" (utils:path target "boot" "efi")))
-      (system* "umount" (utils:path target "boot"))
+      (let* ((boot-dir (utils:path target "boot"))
+	     (efi-dir (utils:path boot-dir "efi")))
+	(when (and uefiboot? (utils:directory? efi-dir))
+	  (utils:println "Unmounting /boot/efi...")
+	  (system* "umount" efi-dir))
+	(when (utils:directory? boot-dir)
+	  (system* "umount" boot-dir)))
       (when boot-dev
 	(utils:system->devnull* "sgdisk" "-Z" boot-dev)
 	(utils:system->devnull* "partprobe" boot-dev))
