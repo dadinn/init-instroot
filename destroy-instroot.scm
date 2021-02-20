@@ -76,24 +76,25 @@ Specifying a keyfile is necessary for this feature!")
       "This usage help...")
      (single-char #\h))))
 
-(define lastrun-file (utils:path ".defaults.scm"))
-
 (define (main args)
-  (let* ((lastrun-map (utils:read-config lastrun-file))
-	 (options (utils:getopt-extra args options-spec lastrun-map))
-
+  (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
-	 (boot-dev (hash-ref options 'bootdev))
-	 (root-dev (hash-ref options 'rootdev))
-	 (luks-label (hash-ref options 'label))
-	 (zpool (hash-ref options 'zpool))
-	 (rootfs (hash-ref options 'rootfs))
-	 (dev-list (hash-ref options 'devlst))
+	 (defaults
+	   (utils:read-config
+	    (let ((config-path (utils:path target utils:config-filename)))
+	      (if (file-exists? config-path) config-path utils:config-filename))))
+	 (options-ref (lambda (key) (or (hash-ref options key) (hash-ref defaults key))))
+	 (boot-dev (options-ref 'bootdev))
+	 (root-dev (options-ref 'rootdev))
+	 (luks-label (options-ref 'label))
+	 (zpool (options-ref 'zpool))
+	 (rootfs (options-ref 'rootfs))
+	 (dev-list (options-ref 'devlst))
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
-	 (swapfiles (hash-ref options 'swapfiles))
+	 (swapfiles (options-ref 'swapfiles))
 	 (swapfiles (if swapfiles (string->number swapfiles)))
-	 (uefiboot? (hash-ref options 'uefiboot))
-	 (help? (hash-ref options 'help)))
+	 (uefiboot? (options-ref 'uefiboot))
+	 (help? (options-ref 'help)))
     (cond
      (help?
        (utils:println
@@ -104,11 +105,9 @@ USAGE:
 
 Unmounts and destroys installation root directory, that has been set up previously by init-instroot script. Also, unmounts boot partition, closes LVM volumes and LUKS devices, and destroys all device partitions used.
 
-When the file " lastrun-file " exists, the default values to option arguments are read from it. This file always contains the arguments given during the last execution of the init-instroot script.
-
 Valid options are:
 "))
-       (utils:println (utils:usage options-spec lastrun-map)))
+       (utils:println (utils:usage options-spec)))
      ((not (utils:root-user?))
        (error "This script must be run as root!"))
      ((not (utils:directory? target))
