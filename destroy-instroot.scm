@@ -127,7 +127,7 @@ Valid options are:
 	(utils:system->devnull* "partprobe" boot-dev))
       (when zpool
 	(deps:install-deps-zfs)
-	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
+	(system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
 	(system* "zpool" "export" zpool))
       (when dev-specs
 	(map
