@@ -91,7 +91,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (dev-list (hash-ref options 'devlst))
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swapfiles (hash-ref options 'swapfiles))
-	 (swapfiles (string->number swapfiles))
+	 (swapfiles (if swapfiles (string->number swapfiles)))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (help? (hash-ref options 'help)))
     (cond
