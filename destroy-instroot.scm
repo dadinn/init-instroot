@@ -82,7 +82,7 @@ Specifying a keyfile is necessary for this feature!")
   (let* ((lastrun-map (utils:read-config lastrun-file))
 	 (options (utils:getopt-extra args options-spec lastrun-map))
 
-	 (instroot (hash-ref options 'target))
+	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
 	 (luks-label (hash-ref options 'label))
@@ -94,10 +94,10 @@ Specifying a keyfile is necessary for this feature!")
 	 (swapfiles (string->number swapfiles))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (help? (hash-ref options 'help)))
-    ;; todo fix these imperative whens
-    (when help?
-      (utils:println
-       (string-append "
+    (cond
+     (help?
+       (utils:println
+	(string-append "
 USAGE:
 
 " (basename (car args)) " [OPTION...]
@@ -108,60 +108,50 @@ When the file " lastrun-file " exists, the default values to option arguments ar
 
 Valid options are:
 "))
-      (display (utils:usage options-spec lastrun-map))
-      (newline)
-      (exit 0))
-    (when (not (eqv? 0 (getuid)))
-      (error "This script must be run as root!"))
-    (when (not instroot)
-      (error "Mounted root directory is not specified!"))
-    (when (not luks-label)
-      (error "LUKS label is not specified!"))
-    (deps:install-deps-base)
-    (when uefiboot?
-      (utils:println "Unmounting /boot/efi...")
-      (system* "umount" (utils:path instroot "boot" "efi")))
-    (system* "umount" (utils:path instroot "boot"))
-    (when boot-dev
-      (utils:system->devnull* "sgdisk" "-Z" boot-dev)
-      (utils:system->devnull* "partprobe" boot-dev))
-    (cond
-     (root-dev
-      (cond
-       (zpool
+       (utils:println (utils:usage options-spec lastrun-map)))
+     ((not (utils:root-user?))
+       (error "This script must be run as root!"))
+     ((not (utils:directory? target))
+      (error "Target directory doesn't exist!" target))
+     (else
+      (deps:install-deps-base)
+      (let* ((boot-dir (utils:path target "boot"))
+	     (efi-dir (utils:path boot-dir "efi")))
+	(when (and uefiboot? (utils:directory? efi-dir))
+	  (utils:println "Unmounting /boot/efi...")
+	  (system* "umount" efi-dir))
+	(when (utils:directory? boot-dir)
+	  (system* "umount" boot-dir)))
+      (when boot-dev
+	(utils:system->devnull* "sgdisk" "-Z" boot-dev)
+	(utils:system->devnull* "partprobe" boot-dev))
+      (when zpool
 	(deps:install-deps-zfs)
 	(system* "zfs" "destroy" "-r" (utils:path zpool "/" rootfs))
-	(system* "zpool" "export" zpool)
-	(when dev-specs
-	  (map
-	   (lambda (spec)
-	     (let* ((device (car spec))
-		    (label (cdr spec)))
-	       (system* "cryptsetup" "luksClose" label)))
-	   dev-specs))
-	(system* "umount" instroot))
-       ((< 0 swapfiles)
-	(system* "umount" instroot))
-       (else
-	(system* "umount" instroot)
-	(system* "vgremove" "-f" (string-append luks-label "_vg"))))
-      (system* "cryptsetup" "luksClose" luks-label)
-      (utils:system->devnull* "sgdisk" "-Z" root-dev)
-      (utils:system->devnull* "partprobe" root-dev))
-     (zpool
-      (system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
-      (system* "zpool" "export" zpool))
-     (else
-      (error "Either a root device, and/or a ZFS pool name must be specified!")))
-    (when (utils:directory? instroot)
+	(system* "zpool" "export" zpool))
+      (when dev-specs
+	(map
+	 (lambda (spec)
+	   (let* ((device (car spec))
+		  (label (cdr spec)))
+	     (system* "cryptsetup" "luksClose" label)))
+	 dev-specs))
+      (when root-dev
+	(system* "umount" target)
+	(when (< 0 swapfiles)
+	  (system* "vgremove" "-f" (string-append luks-label "_vg")))
+	(system* "cryptsetup" "luksClose" luks-label)
+	(utils:system->devnull* "sgdisk" "-Z" root-dev)
+	(utils:system->devnull* "partprobe" root-dev))))
+    (when (utils:directory? target)
       (catch #t
-       (lambda () (rmdir instroot))
+       (lambda () (rmdir target))
        (lambda* (key #:rest args)
-	(let ((delinstroot (readline (string-append "Directory " instroot " is not empty. Would you still like te remove it? [y/N]"))))
+	(let ((resp (readline (string-append "Directory " target " is not empty. Would you still like te remove it? [y/N]"))))
 	  (cond
-	   ((regex:string-match "[yY]" delinstroot)
-	    (utils:println "Removing directory" instroot " with its content...")
-	    (system* "rm" "-rf" instroot))
+	   ((regex:string-match "[yY]" resp)
+	    (utils:println "Removing directory" target " with its content...")
+	    (system* "rm" "-rf" target))
 	   (else
-	    (utils:println "Skipped removing" instroot "directory.")))))))
-    (utils:println "Finished destroying initialized root structure:" instroot)))
+	    (utils:println "Skipped removing" target "directory.")))))))
+    (utils:println "Finished destroying initialized root structure:" target)))
