@@ -178,6 +178,10 @@
 	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
    (string-split dev-list #\,)))
 
+(define (load-zfs-kernel-module)
+  (when (not (zero? (system* "modprobe" "zfs")))
+    (error "ZFS kernel modules are not loaded!")))
+
 (define (reimport-and-check-pool zpool)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
@@ -378,6 +382,7 @@
 	  (when (and keyfile dev-list)
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
+	  (load-zfs-kernel-module)
 	  (init-zfsroot zpool rootfs #:dir-list dir-list)
 	  (let* ((systemfs (utils:path zpool rootfs))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
@@ -513,6 +518,7 @@
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
       (deps:install-deps-zfs)
+      (load-zfs-kernel-module)
       (let* ((parts (init-boot-parts boot-dev uefiboot?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
@@ -712,6 +718,7 @@ Valid options are:"))
      (init-zpool?
       (deps:install-deps-base)
       (deps:install-deps-zfs)
+      (load-zfs-kernel-module)
       (let ((args (hash-ref options '())))
 	(cond
 	 ((not (nil? args))
