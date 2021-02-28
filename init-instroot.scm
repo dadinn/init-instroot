@@ -729,7 +729,7 @@ Valid options are:"))
      ((and uefiboot? (not (zero? (system* "modprobe" "efivars"))))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      (else
-      (utils:write-config lastrun-file options)
+      (utils:write-config utils:config-filename options)
       (init-instroot target
        #:boot-dev boot-dev
        #:uefiboot? uefiboot?
@@ -743,7 +743,5 @@ Valid options are:"))
        #:dir-list dir-list
        #:swap-size swap-size
        #:swapfiles swapfiles)
-      (utils:write-config (utils:path target "CONFIG_VARS.scm") options)
-      ;; to support backwards compatibility with debconf.sh shell script
-      (utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
+      (utils:move-file utils:config-filename (utils:path target utils:config-filename))
       (utils:println "Finished setting up installation root" target)))))
