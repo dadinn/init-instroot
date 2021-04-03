@@ -158,9 +158,9 @@
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
   (utils:println "WARNING: This can take quite a long time!")
-  (let ((shred-prompt (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
+  (let ((resp (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
     (cond
-     ((regex:string-match "[yY]" shred-prompt)
+     ((regex:string-match "[yY]" resp)
       (utils:println "Shredding LUKS device...")
       (let* ((luks-dev (string-append "/dev/mapper/" label))
 	     (dev-size (device-size luks-dev)))
@@ -177,6 +177,10 @@
        (when (not (file-exists? (string-append "/dev/mapper/" label)))
 	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
    (string-split dev-list #\,)))
+
+(define (load-zfs-kernel-module)
+  (when (not (zero? (system* "modprobe" "zfs")))
+    (error "ZFS kernel modules are not loaded!")))
 
 (define (reimport-and-check-pool zpool)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
@@ -378,6 +382,7 @@
 	  (when (and keyfile dev-list)
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
+	  (load-zfs-kernel-module)
 	  (init-zfsroot zpool rootfs #:dir-list dir-list)
 	  (let* ((systemfs (utils:path zpool rootfs))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
@@ -513,6 +518,7 @@
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
       (deps:install-deps-zfs)
+      (load-zfs-kernel-module)
       (let* ((parts (init-boot-parts boot-dev uefiboot?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
@@ -712,6 +718,7 @@ Valid options are:"))
      (init-zpool?
       (deps:install-deps-base)
       (deps:install-deps-zfs)
+      (load-zfs-kernel-module)
       (let ((args (hash-ref options '())))
 	(cond
 	 ((not (nil? args))
@@ -729,7 +736,7 @@ Valid options are:"))
      ((and uefiboot? (not (zero? (system* "modprobe" "efivars"))))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      (else
-      (utils:write-config lastrun-file options)
+      (utils:write-config utils:config-filename options)
       (init-instroot target
        #:boot-dev boot-dev
        #:uefiboot? uefiboot?
@@ -743,7 +750,5 @@ Valid options are:"))
        #:dir-list dir-list
        #:swap-size swap-size
        #:swapfiles swapfiles)
-      (utils:write-config (utils:path target "CONFIG_VARS.scm") options)
-      ;; to support backwards compatibility with debconf.sh shell script
-      (utils:write-config-vars (utils:path target "CONFIG_VARS.sh") options)
+      (utils:move-file utils:config-filename (utils:path target utils:config-filename))
       (utils:println "Finished setting up installation root" target)))))
