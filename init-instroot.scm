@@ -697,7 +697,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
-      (utils:println
+      (display
        (string-append "
 USAGE:
 
@@ -705,12 +705,15 @@ USAGE:
 
 Initialises and mounts a root filesystem.
 
-Uses LUKS encrypted and EXT4 formatted root filesystem, and either plain files, or LVM for swap space. Supports either BIOS or UEFI boot partitions. Also, using a separate boot device is an option. 
+Uses LUKS encrypted and EXT4 formatted root filesystem. Allows using either plain files, or LVM for swap space. Supports both BIOS or UEFI boot partitions. Also, using a separate boot device is an option.
 
-Alternatively, a ZFS pool can be used for both root filesystem and swap space (requires a separate boot device).
+Alternatively, a ZFS pool can be used for both root filesystem and swap space. Using ZFS pool as root filesystem requires a separate boot device.
 
-Valid options are:"))
-      (utils:println (utils:usage options-spec)))
+Valid options are:
+
+" (utils:usage options-spec)))
+      (newline)
+      (newline))
      (new-keyfile
       (create-keyfile new-keyfile))
      ((not (utils:root-user?))
