@@ -128,7 +128,7 @@ Valid options are:
 	(deps:install-deps-zfs)
 	(system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
 	(system* "zpool" "export" zpool))
-      (map
+      (for-each
        (lambda (spec)
 	 (let* ((device (car spec))
 		(label (cdr spec)))

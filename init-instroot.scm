@@ -169,7 +169,7 @@
       (utils:println "Skipped shredding of LUKS device.")))))
 
 (define (init-cryptdevs keyfile dev-list)
-  (map
+  (for-each
    (lambda (s)
      (let* ((m (string-split s #\:))
 	    (device (car m))
@@ -227,7 +227,7 @@
     (when (not (zero?
     (system* "zfs" "create" "-o" "compression=lz4" root-dataset)))
       (error "Failed creating dataset" root-dataset))
-    (map
+    (for-each
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
      dir-list)
@@ -251,7 +251,7 @@
   (let* ((swap-bytes (utils:parse-unit-as-bytes swap-size))
 	 (swapfile-bytes (floor (/ swap-bytes swapfiles)))
 	 (swapfile-size (utils:emit-bytes-as-unit swapfile-bytes)))
-    (map
+    (for-each
      (lambda (idx)
        (list
 	(string-append
@@ -270,7 +270,7 @@
 	 (pagesize (string->number pagesize)))
     (when (not (file-exists? swap-dir))
       (mkdir swap-dir))
-    (map
+    (for-each
      (lambda (args)
        (let* ((filename (car args))
 	      (filesize (cadr args))
@@ -329,7 +329,7 @@
   (when luks-label
    (backup-header headers-dir luks-partdev luks-label))
   (when dev-list
-   (map
+   (for-each
     (lambda (args)
       (let ((device (car args))
 	    (label (cadr args)))
@@ -347,7 +347,7 @@
 	(newline)
 	(utils:println "# LUKS devices containing encrypted ZFS vdevs")
 	(newline)
-	(map
+	(for-each
 	 (lambda (args)
 	   (let ((device (car args))
 		 (label (cadr args)))
@@ -432,7 +432,7 @@
 	     (newline)
 	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
 	     (newline)
-	     (map
+	     (for-each
 	      (lambda (dirfs)
 		(utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	      dir-list))))
@@ -469,7 +469,7 @@
 	     (print-fstab-entry-boot boot-partdev uefi-partdev)
 	     (newline)
 	     (utils:println "#swapfiles")
-	     (map
+	     (for-each
 	      (lambda (args)
 		(let* ((filename (car args))
 		       (file-path (utils:path "/root/swap" filename)))
