@@ -147,7 +147,7 @@
       result))))
 
 (define* (init-cryptroot partdev label #:key luks-v2?)
-  (utils:println "Formatting" partdev "to be used as LUKS device...")
+  (utils:println "Formatting" partdev "to be used as LUKS device..." (newline) "IMPORTANT: Do not leave encryption passphrase empty otherwise the system can not boot!")
   (when (not (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
