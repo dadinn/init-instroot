@@ -128,13 +128,12 @@ Valid options are:
 	(deps:install-deps-zfs)
 	(system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
 	(system* "zpool" "export" zpool))
-      (when dev-specs
-	(map
-	 (lambda (spec)
-	   (let* ((device (car spec))
-		  (label (cdr spec)))
-	     (system* "cryptsetup" "luksClose" label)))
-	 dev-specs))
+      (map
+       (lambda (spec)
+	 (let* ((device (car spec))
+		(label (cdr spec)))
+	   (system* "cryptsetup" "luksClose" label)))
+       (or dev-specs '()))
       (when root-dev
 	(system* "umount" target)
 	(when (not (< 0 swapfiles))
