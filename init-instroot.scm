@@ -155,9 +155,13 @@
       (hash-set! result 'root root-partdev)
       result))))
 
-(define* (init-cryptroot partdev label #:key luks-v2?)
+(define* (luks-format partdev #:key luks-v2?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
-  (when (not (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
+  (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
+
+(define* (init-cryptroot partdev label #:key luks-v2?)
+  (when (not (luks-format partdev
+	      #:luks-v2? luks-v2?))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
