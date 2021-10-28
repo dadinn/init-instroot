@@ -171,6 +171,17 @@
 		   (if force? "--batch-mode" "")
 		   partdev)))))
 
+(define (luks-open partdev label passphrase)
+  (if passphrase
+   (let ((output-port
+	  (popen:open-output-pipe
+	   (format #f "cryptsetup luksOpen ~A ~A ~A"
+		   (if passphrase (string-append "--key-file -") "")
+		   partdev label))))
+     (display passphrase output-port)
+     (zero? (status:exit-val (popen:close-pipe output-port))))
+   (zero? (system* "cryptsetup" "luksOpen" partdev label))))
+
 (define* (init-cryptroot partdev label #:key passphrase luks-v2? force?)
   (when (not (luks-format partdev
 	      #:passphrase passphrase
@@ -180,7 +191,7 @@
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
   (utils:println "Opening LUKS device" partdev "as" label "...")
-  (when (not (zero? (system* "cryptsetup" "luksOpen" partdev label)))
+  (when (not (luks-open partdev label passphrase))
     (error "Failed to open LUKS device:" label))
   (newline)
   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
