@@ -708,6 +708,9 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
      (description
       "Use LUKS format version 2 to encrypt root filesystem")
      (single-char #\L))
+    (luks-shred
+     (description
+      "Shred LUKS device with random data after formatting."))
     (init-zpool
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
@@ -718,7 +721,7 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
 Normally the process would ask for confirmation before formatting, if it found existing filesystem headers on the device."))
     (force-format-luks
      (description
-      "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation."))
+      "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation. Also, by default this automatically skips shredding the LUKS device after formatting, unless used together with the --luks-shred flag, in which case it automatically shreds the LUKS device after formatting."))
     (help
      (description
       "This usage help...")
@@ -754,6 +757,7 @@ Normally the process would ask for confirmation before formatting, if it found e
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (and swapfiles (string->number swapfiles)))
 	 (luks-v2? (hash-ref options 'luksv2))
+	 (luks-shred? (hash-ref options 'luks-shred))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
 	 (force-format-ext4? (hash-ref options 'force-format-ext4))
@@ -800,6 +804,8 @@ Valid options are:
       (error "Keyfile must be specified to unlock additional LUKS encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
+     ((and luks-shred? (not force-format-luks?))
+      (error "Shredding LUKS device option must be only used together with the --force-format-luks option."))
      ((and uefiboot? (not (modprobe? "efivars")))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      (else
