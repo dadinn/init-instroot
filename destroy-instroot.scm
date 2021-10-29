@@ -137,7 +137,7 @@ Valid options are:
 	 dev-specs))
       (when root-dev
 	(system* "umount" target)
-	(when (< 0 swapfiles)
+	(when (not (< 0 swapfiles))
 	  (system* "vgremove" "-f" (string-append luks-label "_vg")))
 	(system* "cryptsetup" "luksClose" luks-label)
 	(utils:system->devnull* "sgdisk" "-Z" root-dev)
