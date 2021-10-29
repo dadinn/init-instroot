@@ -609,7 +609,7 @@
      (default "/mnt/instroot")
      (value-arg "path")
      (value #t))
-    (label
+    (luks-label
      (single-char #\l)
      (description
       "LUKS encrypted device name for root")
@@ -736,7 +736,7 @@ Normally the process would ask for confirmation before formatting, if it found e
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
-	 (luks-label (hash-ref options 'label))
+	 (luks-label (hash-ref options 'luks-label))
 	 (zpool (hash-ref options 'zpool))
 	 (zroot (hash-ref options 'zroot))
 	 (zdirs (hash-ref options 'zdirs))

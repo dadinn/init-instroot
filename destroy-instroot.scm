@@ -19,7 +19,7 @@
      (default "/mnt/instroot")
      (value-arg "PATH")
      (value #t))
-    (label
+    (luks-label
      (single-char #\l)
      (description
       "LUKS encrypted root device name")
@@ -80,7 +80,7 @@
 	 (options-ref (lambda (key) (or (hash-ref options key) (hash-ref defaults key))))
 	 (boot-dev (options-ref 'bootdev))
 	 (root-dev (options-ref 'rootdev))
-	 (luks-label (options-ref 'label))
+	 (luks-label (options-ref 'luks-label))
 	 (zpool (options-ref 'zpool))
 	 (zroot (options-ref 'zroot))
 	 (luks-devs (options-ref 'luks-devs))
