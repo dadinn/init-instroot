@@ -654,6 +654,10 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
      (single-char #\Z))
+    (force-format-ext4
+     (description
+      "Force formatting devices (i.e. root and boot) with ext4 filesystems.
+Normally the process would ask for confirmation before formatting, if it found existing filesystem headers on the device."))
     (help
      (description
       "This usage help...")
@@ -690,6 +694,7 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
 	 (luks-v2? (hash-ref options 'luksv2))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
+	 (force-format-ext4? (hash-ref options 'force-format-ext4))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
