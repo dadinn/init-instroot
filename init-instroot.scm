@@ -54,7 +54,7 @@
   ;; needs some delay to avoid timing issues
   (sleep 1))
 
-(define (init-boot-parts-bios boot-dev)
+(define* (init-boot-parts-bios boot-dev #:optional force?)
   (system* "sgdisk" boot-dev "-Z"
 	   "-n" "1:0:+2M"
 	   "-t" "1:ef02"
@@ -64,7 +64,9 @@
   (let ((boot-partdev (partdev boot-dev "2"))
 	(result (make-hash-table 3)))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+    (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+				      (if force? "-F" "")
+				      boot-partdev))))
       (error "Failed to create EXT4 filesystem on:" boot-partdev))
     (hash-set! result 'boot boot-partdev)
     result))
@@ -88,20 +90,23 @@
     (hash-set! result 'boot boot-partdev)
     result))
 
-(define* (init-boot-parts boot-dev #:optional uefiboot?)
+(define* (init-boot-parts boot-dev #:key uefiboot? force?)
   (let ((result
 	 (if uefiboot?
 	     (init-boot-parts-uefi boot-dev)
-	     (init-boot-parts-bios boot-dev))))
+	     (init-boot-parts-bios boot-dev force?))))
     (utils:println "Finished setting up partitions on:" boot-dev)
     result))
 
-(define* (init-root-parts root-dev #:key boot-dev uefiboot?)
+(define* (init-root-parts root-dev #:key boot-dev uefiboot? force?)
   (cond
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (part-probe root-dev)
-    (let ((result (init-boot-parts boot-dev uefiboot?)))
+    (let ((result
+	   (init-boot-parts boot-dev
+	    #:uefiboot? uefiboot?
+	    #:force? force?)))
       (hash-set! result 'root (partdev root-dev "1"))
       result))
    (uefiboot?
@@ -121,7 +126,9 @@
       (when (not (zero? (system* "mkfs.fat" "-F32" uefi-partdev)))
 	(error "Failed to create FAT32 filesystem on:" uefi-partdev))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+					(if force? "-F" "")
+					boot-partdev))))
 	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (hash-set! result 'uefi uefi-partdev)
       (hash-set! result 'boot boot-partdev)
@@ -140,7 +147,9 @@
 	  (root-partdev (partdev root-dev "3"))
 	  (result (make-hash-table 2)))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+					(if force? "-F" "")
+					boot-partdev))))
 	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (hash-set! result 'boot boot-partdev)
       (hash-set! result 'root root-partdev)
@@ -359,7 +368,8 @@
    root-dev luks-label luks-v2?
    dev-list keyfile
    zpool zroot zdirs
-   swap-size swapfiles)
+   swap-size swapfiles
+   force-format-ext4?)
   (deps:install-deps-base)
   (when (file-exists? target)
     (error "Target" target "already exists!"))
@@ -372,7 +382,12 @@
 	 (headers-dir (utils:path crypt-dir "headers")))
     (cond
      (root-dev
-      (let* ((parts (init-root-parts root-dev #:uefiboot? uefiboot? #:boot-dev boot-dev))
+      (let* ((parts
+	      (init-root-parts
+	       root-dev
+	       #:uefiboot? uefiboot?
+	       #:boot-dev boot-dev
+	       #:force? force-format-ext4?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (luks-partdev (hash-ref parts 'root)))
@@ -519,7 +534,10 @@
 	(error "Separate boot device must be specified when using ZFS as root!"))
       (deps:install-deps-zfs)
       (load-zfs-kernel-module)
-      (let* ((parts (init-boot-parts boot-dev uefiboot?))
+      (let* ((parts
+	      (init-boot-parts boot-dev
+	       #:uefiboot? uefiboot?
+	       #:force? force-format-ext4?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (systemfs (utils:path zpool zroot)))
@@ -753,6 +771,7 @@ Valid options are:
        #:zroot zroot
        #:zdirs zdirs
        #:swap-size swap-size
-       #:swapfiles swapfiles)
+       #:swapfiles swapfiles
+       #:force-format-ext4? force-format-ext4?)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
       (utils:println "Finished setting up installation root" target)))))
