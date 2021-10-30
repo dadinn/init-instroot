@@ -680,6 +680,9 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
      (description
       "Force formatting devices (i.e. root and boot) with ext4 filesystems.
 Normally the process would ask for confirmation before formatting, if it found existing filesystem headers on the device."))
+    (force-format-luks
+     (description
+      "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation."))
     (help
      (description
       "This usage help...")
@@ -717,6 +720,7 @@ Normally the process would ask for confirmation before formatting, if it found e
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
 	 (force-format-ext4? (hash-ref options 'force-format-ext4))
+	 (force-format-luks? (hash-ref options 'force-format-luks))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
