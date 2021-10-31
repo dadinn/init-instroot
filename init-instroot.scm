@@ -728,6 +728,9 @@ Normally the process would ask for confirmation before formatting, if it found e
     (force-format-luks
      (description
       "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation. Also, by default this automatically skips shredding the LUKS device after formatting, unless used together with the --luks-shred flag, in which case it automatically shreds the LUKS device after formatting."))
+    (accept-openzfs-license
+     (description "Confirm OpenZFS License (CDDL) automatically:
+https://github.com/openzfs/zfs/blob/master/LICENSE"))
     (help
      (description
       "This usage help...")
@@ -766,6 +769,7 @@ Normally the process would ask for confirmation before formatting, if it found e
 	 (luks-shred? (hash-ref options 'luks-shred))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
+	 (accept-openzfs-license? (hash-ref options 'accept-openzfs-license))
 	 (force-format-ext4? (hash-ref options 'force-format-ext4))
 	 (force-format-luks? (hash-ref options 'force-format-luks))
 	 (help? (hash-ref options 'help)))
