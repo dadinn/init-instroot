@@ -155,13 +155,17 @@
       (hash-set! result 'root root-partdev)
       result))))
 
-(define* (luks-format partdev #:key luks-v2?)
+(define* (luks-format partdev #:key luks-v2? force?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
-  (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
+  (zero? (system (format #f "cryptsetup luksFormat --type ~A ~A ~A"
+			 (if luks-v2? "luks2" "luks1")
+			 (if force? "--batch-mode" "")
+			 partdev))))
 
-(define* (init-cryptroot partdev label #:key luks-v2?)
+(define* (init-cryptroot partdev label #:key luks-v2? force?)
   (when (not (luks-format partdev
-	      #:luks-v2? luks-v2?))
+	      #:luks-v2? luks-v2?
+	      #:force? force?))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
@@ -373,7 +377,8 @@
    dev-list keyfile
    zpool zroot zdirs
    swap-size swapfiles
-   force-format-ext4?)
+   force-format-ext4?
+   force-format-luks?)
   (deps:install-deps-base)
   (when (file-exists? target)
     (error "Target" target "already exists!"))
@@ -395,7 +400,9 @@
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (luks-partdev (hash-ref parts 'root)))
-	(init-cryptroot luks-partdev luks-label #:luks-v2? luks-v2?)
+	(init-cryptroot luks-partdev luks-label
+	 #:force? force-format-luks?
+	 #:luks-v2? luks-v2?)
 	(cond
 	 (zpool
 	  (when (and keyfile dev-list)
@@ -780,6 +787,7 @@ Valid options are:
        #:zdirs zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles
-       #:force-format-ext4? force-format-ext4?)
+       #:force-format-ext4? force-format-ext4?
+       #:force-format-luks? force-format-luks?)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
       (utils:println "Finished setting up installation root" target)))))
