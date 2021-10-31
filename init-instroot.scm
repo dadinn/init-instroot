@@ -182,7 +182,7 @@
      (zero? (status:exit-val (popen:close-pipe output-port))))
    (zero? (system* "cryptsetup" "luksOpen" partdev label))))
 
-(define* (init-cryptroot partdev label #:key passphrase luks-v2? force?)
+(define* (init-cryptroot partdev label #:key passphrase luks-shred? luks-v2? force?)
   (when (not (luks-format partdev
 	      #:passphrase passphrase
 	      #:luks-v2? luks-v2?
@@ -193,10 +193,14 @@
   (utils:println "Opening LUKS device" partdev "as" label "...")
   (when (not (luks-open partdev label passphrase))
     (error "Failed to open LUKS device:" label))
-  (newline)
-  (utils:println "It is recommended to overwrite a new LUKS device with random data.")
-  (utils:println "WARNING: This can take quite a long time!")
-  (let ((resp (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
+  (let ((resp
+	 (cond
+	  ((not force?)
+	   (newline)
+	   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
+	   (utils:println "WARNING: This can take quite a long time!")
+	   (readline "Would you like to overwrite LUKS device with random data? [y/N]"))
+	  (else (if luks-shred? "Y" "N")))))
     (cond
      ((regex:string-match "[yY]" resp)
       (utils:println "Shredding LUKS device...")
@@ -394,7 +398,8 @@
    target
    #:key
    boot-dev uefiboot?
-   root-dev luks-label luks-v2?
+   root-dev luks-label
+   luks-v2? luks-shred?
    dev-list keyfile
    zpool zroot zdirs
    swap-size swapfiles
@@ -425,6 +430,7 @@
 	(init-cryptroot
 	 luks-partdev luks-label
 	 #:force? force-format-luks?
+	 #:luks-shred? luks-shred?
 	 #:passphrase passphrase
 	 #:luks-v2? luks-v2?)
 	(cond
@@ -815,6 +821,7 @@ Valid options are:
        #:uefiboot? uefiboot?
        #:root-dev root-dev
        #:luks-label luks-label
+       #:luks-shred? luks-shred?
        #:luks-v2? luks-v2?
        #:dev-list dev-list
        #:keyfile keyfile
