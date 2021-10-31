@@ -800,7 +800,6 @@ Valid options are:
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
      (init-zpool?
-      (deps:install-deps-base)
       (deps:install-deps-zfs
        accept-openzfs-license?)
       (load-zfs-kernel-module)
