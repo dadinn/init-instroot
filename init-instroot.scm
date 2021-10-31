@@ -655,6 +655,11 @@ using a key which can unlock the devices in the list!")
       ,(lambda (s) (equal? s (basename s))))
      (value-arg "filename")
      (value #t))
+    (passphrase
+     (single-char #\p)
+     (description "Passphrase used with LUKS or ZFS encryption for root filesystem and swap space.")
+     (value-arg "text")
+     (value #t))
     (swapsize
      (single-char #\s)
      (description
@@ -720,6 +725,7 @@ Normally the process would ask for confirmation before formatting, if it found e
 	   (utils:parse-arg-alist dev-list
 	    #:list-separator #\,
 	    #:pair-separator #\:)))
+	 (passphrase (hash-ref options 'passphrase))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (and swapfiles (string->number swapfiles)))
