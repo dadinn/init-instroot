@@ -401,6 +401,7 @@
    root-dev luks-label
    luks-v2? luks-shred?
    dev-list keyfile
+   accept-openzfs-license?
    zpool zroot zdirs
    swap-size swapfiles
    force-format-ext4?
@@ -437,7 +438,8 @@
 	 (zpool
 	  (when (and keyfile dev-list)
 	    (init-cryptdevs keyfile dev-list))
-	  (deps:install-deps-zfs)
+	  (deps:install-deps-zfs
+	   accept-openzfs-license?)
 	  (load-zfs-kernel-module)
 	  (init-zfsroot zpool zroot #:zdirs zdirs)
 	  (let* ((systemfs (utils:path zpool zroot))
@@ -573,7 +575,8 @@
      (zpool
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
-      (deps:install-deps-zfs)
+      (deps:install-deps-zfs
+       accept-openzfs-license?)
       (load-zfs-kernel-module)
       (let* ((parts
 	      (init-boot-parts boot-dev
@@ -798,7 +801,8 @@ Valid options are:
       (error "This script must be run as root!"))
      (init-zpool?
       (deps:install-deps-base)
-      (deps:install-deps-zfs)
+      (deps:install-deps-zfs
+       accept-openzfs-license?)
       (load-zfs-kernel-module)
       (let ((args (hash-ref options '())))
 	(cond
@@ -829,6 +833,8 @@ Valid options are:
        #:luks-v2? luks-v2?
        #:dev-list dev-list
        #:keyfile keyfile
+       #:accept-openzfs-license?
+       accept-openzfs-license?
        #:zpool zpool
        #:zroot zroot
        #:zdirs zdirs
