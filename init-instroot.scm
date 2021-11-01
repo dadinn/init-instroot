@@ -269,25 +269,47 @@
   ;; force loading encryption keys for root dataset
   (system* "zfs" "load-key" zpool))
 
-(define (init-zpool name vdevs)
+(define* (init-zpool name vdevs #:key passphrase)
   (utils:println "Creating ZFS pool:" name)
-  (if (zero? (apply system*
-     "zpool" "create" "-f"
-     "-o" "ashift=12"
-     ;; encryption options
-     "-O" "encryption=aes-128-gcm"
-     "-O" "pbkdf2iters=1000000"
-     "-O" "keyformat=passphrase"
-     "-O" "keylocation=prompt"
-     ;; filesystem options
-     "-O" "normalization=formD"
-     "-O" "atime=off"
-     "-O" "devices=off"
-     "-O" "acltype=posixacl"
-     "-O" "xattr=sa"
-     name vdevs))
-   (utils:println "Finished creating ZFS pool:" name)
-   (error "Failed to create ZFS pool:" name)))
+  (let ((zfs-encryption-options
+         (list
+          "-O" "encryption=aes-128-gcm"
+          "-O" "pbkdf2iters=1000000"
+          "-O" "keyformat=passphrase"
+          "-O" "keylocation=prompt"))
+        (zfs-filesystem-options
+         (list
+          "-O" "normalization=formD"
+          "-O" "atime=off"
+          "-O" "devices=off"
+          "-O" "acltype=posixacl"
+          "-O" "xattr=sa")))
+    (cond
+     ((and (zfs-native-encryption-supported?) passphrase)
+      (let ((output-pipe
+             (apply popen:open-pipe* OPEN_WRITE
+                    "zpool" "create" "-f" "-o" "ashift=12"
+                    (append
+                     zfs-encryption-options
+                     zfs-filesystem-options
+                     (cons name vdevs)))))
+        (rdelim:write-line passphrase output-pipe)
+        (zero? (status:exit-val (popen:close-pipe output-pipe)))))
+     ((zfs-native-encryption-supported?)
+      (zero?
+       (apply system*
+        "zpool" "create" "-f" "-o" "ashift=12"
+        (append
+         zfs-encryption-options
+         zfs-filesystem-options
+         (cons name vdevs)))))
+     (else
+      (zero?
+       (apply system*
+        "zpool" "create" "-f" "-o" "ashift=12"
+        (append
+         zfs-filesystem-options
+         (cons name vdevs))))))))
 
 (define* (init-zfsroot zpool zroot #:key swap-size zdirs)
   (reimport-and-check-pool zpool)
@@ -832,13 +854,14 @@ Valid options are:
        accept-openzfs-license?)
       (load-zfs-kernel-module)
       (let ((args (hash-ref options '())))
-	(cond
-	 ((not (nil? args))
-	  (let ((name (car args))
-		(vdevs (cdr args)))
-	    (init-zpool name vdevs)))
-	 (else
-	  (utils:println "Finished installing all package dependencies!")))))
+	(if (not (null? args))
+	 (let ((name (car args))
+	       (vdevs (cdr args)))
+	   (if (init-zpool name vdevs
+                #:passphrase passphrase)
+	       (utils:println "Finished creating ZFS pool:" name)
+	       (error "Failed to create ZFS pool:" name)))
+	 (utils:println "Finished installing and loading ZFS kernel modules!"))))
      ((not swap-size)
       (error "Swap size must be specified!"))
      ((and dev-list (not keyfile))
