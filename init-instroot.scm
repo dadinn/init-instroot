@@ -585,9 +585,8 @@
     (zpool
      (single-char #\z)
      (description
-      "ZFS pool to use as root device, if no root device is specified (separate boot device must be specified too).
-      Alternatively, if a separate root device is specified too, the pool is used for additional system directories and swap device.")
-     (value-arg "zpool")
+      "ZFS pool to use for root filesystem and swap volume, if no root device for LUKS encryption is specified. A separate boot device must be specified when using ZFS for root filesystem! Alternatively, if used together with LUKS encrypted root device, the pool is used only for additional system directories and swap volume.")
+     (value-arg "pool")
      (value #t))
     (zroot
      (single-char #\f)
