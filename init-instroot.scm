@@ -640,8 +640,8 @@ using a key which can unlock the devices in the list!")
     (swapfiles
      (single-char #\S)
      (description
-      "Number of swapfiles to use to break total swap-space up into. Swapfiles are created
-in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.")
+      "Number of swapfiles to use to break total swap-space up into. Swapfiles are created in equally sized chunks.
+COUNT zero means to use LVM volumes instead of swapfiles.")
      (default "0")
      (value-arg "count")
      (value #t))
