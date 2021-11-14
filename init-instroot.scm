@@ -835,6 +835,14 @@ https://github.com/openzfs/zfs/blob/master/LICENSE"))
   (chmod filename #o400)
   (utils:println "Finished creating keyfile:" filename))
 
+(define (cryptroot-label root-dev boot-dev)
+  (string-append
+   (basename
+    (if boot-dev
+     (partdev root-dev "1")
+     (partdev root-dev "3")))
+   "_crypt"))
+
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
@@ -842,7 +850,9 @@ https://github.com/openzfs/zfs/blob/master/LICENSE"))
 	 (boot-dev (and boot-dev (canonicalize-path boot-dev)))
 	 (root-dev (hash-ref options 'rootdev))
 	 (root-dev (and root-dev (canonicalize-path root-dev)))
-	 (luks-label (hash-ref options 'luks-label))
+	 (luks-label
+	  (hash-ref options 'luks-label
+	   (and root-dev (cryptroot-label root-dev boot-dev))))
 	 (zpool (hash-ref options 'zpool))
 	 (zroot (hash-ref options 'zroot))
 	 (zdirs (hash-ref options 'zdirs))
@@ -935,6 +945,7 @@ Valid options are:
         (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))))
      (else
       (hash-remove! options 'passphrase)
+      (hash-set! options 'luks-label luks-label)
       (utils:write-config utils:config-filename options)
       (init-instroot target
        #:boot-dev boot-dev
