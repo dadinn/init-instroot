@@ -626,9 +626,9 @@ Specifying a keyfile is necessary for this feature!")
     (genkey
      (single-char #\K)
      (description
-      "Generate new keyfile with the given value as filename")
+      "Generate new keyfile with given name in current directory.")
      (predicate
-      ,(lambda (s) (not (file-exists? s))))
+      ,(lambda (s) (equal? s (basename s))))
      (value-arg "filename")
      (value #t))
     (swapsize
@@ -664,16 +664,12 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
       "This usage help...")
      (single-char #\h))))
 
-(define (create-keyfile f)
-  (let* ((fname (basename f))
-	 (fname (utils:path ".keys" fname)))
-    (when (file-exists? fname)
-      (error "Cannot create keyfile! File already exists:" fname))
-    (when (not (file-exists? ".keys"))
-      (mkdir ".keys"))
-    (system* "dd" "if=/dev/random" (string-append "of=" fname) "bs=1024" "count=4")
-    (chmod fname #o400)
-    (utils:println "Finished creating keyfile:" fname)))
+(define (create-keyfile filename)
+  (when (file-exists? filename)
+    (error "Cannot create keyfile! File already exists:" filename))
+  (system* "dd" "if=/dev/random" (string-append "of=" filename) "bs=1024" "count=4")
+  (chmod filename #o400)
+  (utils:println "Finished creating keyfile:" filename))
 
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
