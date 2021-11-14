@@ -170,13 +170,13 @@
 
 (define (init-cryptdevs keyfile dev-list)
   (for-each
-   (lambda (s)
-     (let* ((m (string-split s #\:))
-	    (device (car m))
-	    (label (cadr m)))
-       (when (not (file-exists? (string-append "/dev/mapper/" label)))
-	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
-   (string-split dev-list #\,)))
+   (lambda (item)
+     (when (pair? item)
+       (let ((device (car item))
+	     (label (cdr item)))
+	 (when (not (file-exists? (string-append "/dev/mapper/" label)))
+	   (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label)))))
+   dev-list))
 
 (define (modprobe? module)
   (zero? (utils:system->devnull* "modprobe" module)))
@@ -311,11 +311,6 @@
       (newline)
       (utils:println "tmpfs" "/tmp" "tmpfs" "defaults" "0" "0"))))
 
-(define (parse-dev-list dev-list)
-  (map
-   (lambda (s) (string-split s #\:))
-   (string-split dev-list #\,)))
-
 (define (backup-header headers-dir device label)
   (let ((file (utils:path headers-dir label)))
     (with-output-to-file "/dev/null"
@@ -328,13 +323,12 @@
 (define* (backup-headers headers-dir #:key luks-partdev luks-label dev-list)
   (when luks-label
    (backup-header headers-dir luks-partdev luks-label))
-  (when dev-list
-   (for-each
-    (lambda (args)
-      (let ((device (car args))
-	    (label (cadr args)))
+  (for-each
+   (lambda (item)
+     (let ((device (car item))
+	   (label (cdr item)))
        (backup-header headers-dir device label)))
-    (parse-dev-list dev-list))))
+   (or dev-list '())))
 
 (define* (print-crypttab output-file luks-partdev luks-label #:key keyfile dev-list)
   (with-output-to-file output-file
@@ -348,11 +342,11 @@
 	(utils:println "# LUKS devices containing encrypted ZFS vdevs")
 	(newline)
 	(for-each
-	 (lambda (args)
-	   (let ((device (car args))
-		 (label (cadr args)))
+	 (lambda (item)
+	   (let ((device (car item))
+		 (label (cdr item)))
 	     (utils:println label (string-append "UUID=" (fsuuid device)) keyfile "luks")))
-	 (parse-dev-list dev-list))))))
+	 dev-list)))))
 
 (define*
   (init-instroot
@@ -682,7 +676,11 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'luks-devs))
-	 (dev-list (and dev-list (utils:parse-pairs dev-list)))
+	 (dev-list
+	  (and dev-list
+	   (utils:parse-arg-alist dev-list
+	    #:list-separator #\,
+	    #:pair-separator #\:)))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (and swapfiles (string->number swapfiles)))
