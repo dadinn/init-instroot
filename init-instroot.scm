@@ -700,15 +700,6 @@
      (default "/mnt/instroot")
      (value-arg "path")
      (value #t))
-    (luks-label
-     (single-char #\l)
-     (description
-      "LUKS encrypted device name for root")
-     (predicate
-      ,(lambda (s) (regex:string-match "^[[:alnum:]_]+$" s)))
-     (default "crypt_root")
-     (value-arg "label")
-     (value #t))
     (bootdev
      (single-char #\b)
      (description
@@ -742,6 +733,15 @@
       "Coma separated list of root directories to mount as ZFS datasets")
      (default "home,var,var/lib")
      (value-arg "dirs")
+     (value #t))
+    (luks-label
+     (single-char #\l)
+     (description
+      "Device name to use to open the LUKS encrypted root partition.
+By default the label is generated based on the name of the root partition device.")
+     (predicate
+      ,(lambda (s) (regex:string-match "^[[:alnum:]_]+$" s)))
+     (value-arg "name")
      (value #t))
     (luks-devs
      (single-char #\v)
