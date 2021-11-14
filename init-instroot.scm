@@ -174,8 +174,11 @@
      (when (pair? item)
        (let ((device (car item))
 	     (label (cdr item)))
-	 (when (not (file-exists? (string-append "/dev/mapper/" label)))
-	   (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label)))))
+	 (cond
+	  ((not (file-exists? (string-append "/dev/mapper/" label)))
+	   (format #t "Opening LUKS device ~A as ~A...\n" device label)
+	   (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))
+	  (else (error "Some LUKS device is already open with this name!" label))))))
    dev-list))
 
 (define (modprobe? module)
