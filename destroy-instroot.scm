@@ -141,16 +141,16 @@ Valid options are:
 	  (system* "vgremove" "-f" (string-append luks-label "_vg")))
 	(system* "cryptsetup" "luksClose" luks-label)
 	(utils:system->devnull* "sgdisk" "-Z" root-dev)
-	(utils:system->devnull* "partprobe" root-dev))))
-    (when (utils:directory? target)
-      (catch #t
-       (lambda () (rmdir target))
-       (lambda* (key #:rest args)
-	(let ((resp (readline (string-append "Directory " target " is not empty. Would you still like te remove it? [y/N]"))))
-	  (cond
-	   ((regex:string-match "[yY]" resp)
-	    (utils:println "Removing directory" target " with its content...")
-	    (system* "rm" "-rf" target))
-	   (else
-	    (utils:println "Skipped removing" target "directory.")))))))
-    (utils:println "Finished destroying initialized root structure:" target)))
+	(utils:system->devnull* "partprobe" root-dev))
+      (when (utils:directory? target)
+	(catch #t
+	  (lambda () (rmdir target))
+	  (lambda* (key #:rest args)
+	    (let ((resp (readline (string-append "Directory " target " is not empty. Would you still like te remove it? [y/N]"))))
+	      (cond
+	       ((regex:string-match "[yY]" resp)
+		(utils:println "Removing directory" target " with its content...")
+		(system* "rm" "-rf" target))
+	       (else
+		(utils:println "Skipped removing" target "directory.")))))))
+      (utils:println "Finished destroying initialized root structure:" target)))))
