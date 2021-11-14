@@ -672,8 +672,6 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
     (chmod fname #o400)
     (utils:println "Finished creating keyfile:" fname)))
 
-(define lastrun-file (utils:path ".defaults.scm"))
-
 (define (main args)
   (let* ((options (utils:getopt-extra args options-spec))
 	 (target (hash-ref options 'target))
