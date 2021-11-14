@@ -730,7 +730,7 @@ Valid options are:
      ((not swap-size)
       (error "Swap size must be specified!"))
      ((and dev-list (not keyfile))
-      (error "Keyfile must be specified to unlock encrypted devices!"))
+      (error "Keyfile must be specified to unlock additional LUKS encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      ((and uefiboot? (not (modprobe? "efivars")))
