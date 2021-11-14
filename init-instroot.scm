@@ -603,17 +603,16 @@
      (default "home,var,var/lib")
      (value-arg "dirs")
      (value #t))
-    (devlst
+    (luks-devs
      (single-char #\v)
      (description
-      "Coma separeted list of colon separated pairs of other encrypted devices
-\(e.g. members of ZFS pool), and their repsective LUKS labels.
-\(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
-These device mappings are used to:
- a) unlock these devices before importing ZFS pools
- b) create crypttab entries for automatic unlocking during boot
-Specifying a keyfile is necessary for this feature!")
-     (value-arg "devlist")
+      "Coma separated list of colon separated pairs of additional LUKS encrypted devices, and their respective LUKS labels.
+(e.g. /dev/sda:foo,/dev/sdb:bar,/dev/sdc:baz) These mappings are then used to:
+  1) unlock these devices (potentially to import a ZFS pool without native encryption on top of them)
+  2) create crypttab entries for the devices to automatically unlock them during system boot
+It is necessary to specify these mappings together with the keyfile option,
+using a key which can unlock the devices in the list!")
+     (value-arg "pairs")
      (value #t))
     (keyfile
      (single-char #\k)
@@ -683,7 +682,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (zdirs (and zdirs (string-split zdirs #\,)))
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
-	 (dev-list (hash-ref options 'devlst))
+	 (dev-list (hash-ref options 'luks-devs))
 	 (dev-list (and dev-list (utils:parse-pairs dev-list)))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
