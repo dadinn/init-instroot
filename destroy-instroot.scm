@@ -51,17 +51,11 @@
       "Name of the system root dataset in the ZFS pool")
      (value-arg "NAME")
      (value #t))
-    (devlst
+    (luks-devs
      (single-char #\v)
      (description
-      "Coma separeted list of colon separated pairs of other encrypted devices
-\(e.g. members of ZFS pool), and their repsective LUKS labels.
-\(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
-These device mappings are used to:
- a) unlock these devices before importing ZFS pools
- b) create crypttab entries for automatic unlocking during boot
-Specifying a keyfile is necessary for this feature!")
-     (value-arg "DEVLIST")
+      "Coma separeted list of colon separated pairs of additional LUKS encrypted devices, and their respective LUKS labels. (e.g. /dev/sda:foo,/dev/sdb:bar,/dev/sdc:baz)")
+     (value-arg "pairs")
      (value #t))
     (swapfiles
      (single-char #\S)
@@ -89,7 +83,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (luks-label (options-ref 'label))
 	 (zpool (options-ref 'zpool))
 	 (zroot (options-ref 'zroot))
-	 (dev-list (options-ref 'devlst))
+	 (dev-list (options-ref 'luks-devs))
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swapfiles (options-ref 'swapfiles))
 	 (swapfiles (if swapfiles (string->number swapfiles)))
