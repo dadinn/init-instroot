@@ -230,6 +230,34 @@
   (when (not (modprobe? "zfs"))
     (error "ZFS kernel modules are not loaded!")))
 
+(define (read-zfs-version)
+  (if (file-exists? "/sys/module/zfs/version")
+   (call-with-input-file "/sys/module/zfs/version"
+     (lambda (port)
+       (let* ((content (rdelim:read-string port))
+	      (matches
+	       (regex:string-match
+	        "([0-9]+)\\.([0-9]+)\\.([0-9]+)(:?-(.*))?"
+	        content))
+	      (major-version (regex:match:substring matches 1))
+	      (major-version (string->number major-version))
+	      (minor-version (regex:match:substring matches 2))
+	      (minor-version (string->number minor-version))
+	      (patch-version (regex:match:substring matches 3))
+	      (patch-version (string->number patch-version))
+              (build-label (regex:match:substring matches 4))
+              (build-label (and build-label (substring build-label 1))))
+	 (list
+	  major-version
+	  minor-version
+	  patch-version
+          build-label))))
+   #f))
+
+(define (zfs-native-encryption-available?)
+  (let ((version (read-zfs-version)))
+    (and version (<= 2 (car version)))))
+
 (define (reimport-and-check-pool zpool)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
