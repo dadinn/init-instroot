@@ -178,8 +178,11 @@
 	 (system* "cryptsetup" "luksOpen" "--key-file" keyfile device label))))
    (string-split dev-list #\,)))
 
+(define (modprobe? module)
+  (zero? (utils:system->devnull* "modprobe" module)))
+
 (define (load-zfs-kernel-module)
-  (when (not (zero? (system* "modprobe" "zfs")))
+  (when (not (modprobe? "zfs"))
     (error "ZFS kernel modules are not loaded!")))
 
 (define (reimport-and-check-pool zpool)
@@ -734,7 +737,7 @@ Valid options are:
       (error "Keyfile must be specified to unlock encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
-     ((and uefiboot? (not (zero? (system* "modprobe" "efivars"))))
+     ((and uefiboot? (not (modprobe? "efivars")))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      (else
       (utils:write-config utils:config-filename options)
