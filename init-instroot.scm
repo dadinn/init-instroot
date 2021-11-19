@@ -330,12 +330,13 @@
 (define* (init-zfsroot zpool zroot #:key swap-size zdirs)
   (let* ((root-dataset (utils:path zpool zroot))
 	 (swap-dataset (utils:path root-dataset "swap"))
-	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
+	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset))
+	 (comp-type (if (<= 2 (car (read-zfs-version))) "zstd" "lz4")))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
       (error "root dataset already exists!" root-dataset))
     (utils:println "Creating root ZFS dataset" root-dataset "...")
     (when (not (zero?
-    (system* "zfs" "create" "-o" "compression=lz4" root-dataset)))
+    (system* "zfs" "create" "-o" (string-append "compression=" comp-type) root-dataset)))
       (error "Failed creating dataset" root-dataset))
     (for-each
      (lambda (dir-name)
