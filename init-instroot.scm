@@ -596,12 +596,12 @@
      (default "system")
      (value-arg "name")
      (value #t))
-    (dirlst
+    (zdirs
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
      (default "home,var,var/lib")
-     (value-arg "dirlist")
+     (value-arg "dirs")
      (value #t))
     (devlst
      (single-char #\v)
@@ -679,8 +679,8 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (luks-label (hash-ref options 'label))
 	 (zpool (hash-ref options 'zpool))
 	 (rootfs (hash-ref options 'rootfs))
-	 (dir-list (hash-ref options 'dirlst))
-	 (dir-list (and dir-list (string-split dir-list #\,)))
+	 (zdirs (hash-ref options 'zdirs))
+	 (zdirs (and zdirs (string-split zdirs #\,)))
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
 	 (dev-list (hash-ref options 'devlst))
@@ -747,7 +747,7 @@ Valid options are:
        #:keyfile keyfile
        #:zpool zpool
        #:rootfs rootfs
-       #:dir-list dir-list
+       #:dir-list zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
