@@ -589,7 +589,7 @@
       Alternatively, if a separate root device is specified too, the pool is used for additional system directories and swap device.")
      (value-arg "zpool")
      (value #t))
-    (rootfs
+    (zroot
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
@@ -678,7 +678,7 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (root-dev (hash-ref options 'rootdev))
 	 (luks-label (hash-ref options 'label))
 	 (zpool (hash-ref options 'zpool))
-	 (rootfs (hash-ref options 'rootfs))
+	 (zroot (hash-ref options 'zroot))
 	 (zdirs (hash-ref options 'zdirs))
 	 (zdirs (and zdirs (string-split zdirs #\,)))
 	 (keyfile (hash-ref options 'keyfile))
@@ -746,7 +746,7 @@ Valid options are:
        #:dev-list dev-list
        #:keyfile keyfile
        #:zpool zpool
-       #:rootfs rootfs
+       #:rootfs zroot
        #:zdirs zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles)

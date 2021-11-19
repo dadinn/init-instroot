@@ -45,7 +45,7 @@
       "ZFS pool name for system directories and swap device")
      (value-arg "ZPOOL")
      (value #t))
-    (rootfs
+    (zroot
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
@@ -88,7 +88,7 @@ Specifying a keyfile is necessary for this feature!")
 	 (root-dev (options-ref 'rootdev))
 	 (luks-label (options-ref 'label))
 	 (zpool (options-ref 'zpool))
-	 (rootfs (options-ref 'rootfs))
+	 (zroot (options-ref 'zroot))
 	 (dev-list (options-ref 'devlst))
 	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
 	 (swapfiles (options-ref 'swapfiles))
@@ -128,8 +128,8 @@ Valid options are:
 	(utils:system->devnull* "partprobe" boot-dev))
       (when zpool
 	(deps:install-deps-zfs)
-	(format #t "Destroying ZFS dataset ~A/~A...\n" zpool rootfs)
-	(system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
+	(format #t "Destroying ZFS dataset ~A/~A...\n" zpool zroot)
+	(system* "zfs" "destroy" "-r" (utils:path zpool zroot))
 	(system* "zpool" "export" zpool))
       (for-each
        (lambda (spec)
