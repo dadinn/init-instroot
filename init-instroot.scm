@@ -937,7 +937,9 @@ Valid options are:
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
      ((and luks-shred? (not force-format-luks?))
       (error "Shredding LUKS device option must be only used together with the --force-format-luks option."))
-     ((and uefiboot? (not (modprobe? "efivars")))
+     ((and uefiboot? (not (modprobe? "efivars"))
+           ;; efivars module might be built into the kernel directly
+           (not (utils:directory? (utils:path "" "sys" "firmware" "efi"))))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
      ((and unattended? (not passphrase))
       (cond
