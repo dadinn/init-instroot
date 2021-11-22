@@ -223,11 +223,11 @@
    dev-list))
 
 (define (modprobe? module)
-  (zero? (utils:system->devnull* "modprobe" module)))
+  (zero? (system* "modprobe" "-q" module)))
 
 (define (load-zfs-kernel-module)
   (when (not (modprobe? "zfs"))
-    (error "ZFS kernel modules are not loaded!")))
+    (error "Failed to load ZFS kernel module!")))
 
 (define (read-zfs-version)
   (if (file-exists? "/sys/module/zfs/version")
