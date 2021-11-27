@@ -932,6 +932,7 @@ Valid options are:
          (not without-zfs-native-encryption?))
         (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))))
      (else
+      (hash-remove! options 'passphrase)
       (utils:write-config utils:config-filename options)
       (init-instroot target
        #:boot-dev boot-dev
