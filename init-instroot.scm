@@ -188,7 +188,6 @@
 	      #:luks-v2? luks-v2?
 	      #:force? force?))
     (error "Failed formatting of LUKS device" partdev))
-  (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
   (utils:println "Opening LUKS device" partdev "as" label "...")
   (when (not (luks-open partdev label passphrase))
