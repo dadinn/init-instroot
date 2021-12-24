@@ -696,23 +696,9 @@
   `((target
      (single-char #\t)
      (description
-      "Root mountpoint for installation")
+      "Root mountpoint for installation.")
      (default "/mnt/instroot")
      (value-arg "path")
-     (value #t))
-    (bootdev
-     (single-char #\b)
-     (description
-      "Use separate boot device for /boot and insalling GRUB")
-     (predicate ,utils:block-device?)
-     (value-arg "device")
-     (value #t))
-    (rootdev
-     (single-char #\r)
-     (description
-      "Device to use for LUKS encrypted root filesystem")
-     (predicate ,utils:block-device?)
-     (value-arg "device")
      (value #t))
     (zpool
      (single-char #\z)
@@ -723,16 +709,30 @@
     (zroot
      (single-char #\f)
      (description
-      "Name of the system root dataset in the ZFS pool")
+      "Name of the system root dataset in the ZFS pool.")
      (default "system")
      (value-arg "name")
      (value #t))
     (zdirs
      (single-char #\d)
      (description
-      "Coma separated list of root directories to mount as ZFS datasets")
+      "Coma separated list of root directories to mount as ZFS datasets.")
      (default "home,var,var/lib")
      (value-arg "dirs")
+     (value #t))
+    (bootdev
+     (single-char #\b)
+     (description
+      "Use separate boot device for /boot filesystem.")
+     (predicate ,utils:block-device?)
+     (value-arg "device")
+     (value #t))
+    (rootdev
+     (single-char #\r)
+     (description
+      "Device to use for LUKS encrypted root filesystem.")
+     (predicate ,utils:block-device?)
+     (value-arg "device")
      (value #t))
     (luks-label
      (single-char #\l)
@@ -757,7 +757,7 @@ using a key which can unlock the devices in the list!")
     (keyfile
      (single-char #\k)
      (description
-      "Keyfile used to decrypt other encrypted devices (i.e. ZFS pool members)")
+      "Keyfile used to decrypt additional LUKS encrypted devices.")
      (predicate
       ,(lambda (s) (file-exists? s)))
      (value-arg "keyfile")
@@ -778,7 +778,7 @@ using a key which can unlock the devices in the list!")
     (swapsize
      (single-char #\s)
      (description
-      "Size of the total swap space to use (KMGTPEZY binary unit suffixes allowed)")
+      "Size of the total swap space to use. (KMGTPEZY binary unit suffixes allowed)")
      (predicate
       ,(lambda (s) (regex:string-match "^[0-9]+[KMGTPEZY]?$" s)))
      (value-arg "size")
