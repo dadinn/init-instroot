@@ -273,7 +273,7 @@
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
       (error "Failed to export ZFS pool:" zpool)))
-  (when (not (zero? (utils:system->devnull* "zpool" "import" zpool)))
+  (when (not (zero? (utils:system->devnull* "zpool" "import" "-d" "/dev/disk/by-id" zpool)))
     (error "Failed to import ZFS pool:" zpool))
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "Cannot find ZFS pool:" zpool))
