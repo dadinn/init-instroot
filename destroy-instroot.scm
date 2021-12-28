@@ -83,8 +83,12 @@
 	 (luks-label (options-ref 'label))
 	 (zpool (options-ref 'zpool))
 	 (zroot (options-ref 'zroot))
-	 (dev-list (options-ref 'luks-devs))
-	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
+	 (luks-devs (options-ref 'luks-devs))
+	 (luks-devs
+	  (and luks-devs
+	   (utils:parse-arg-alist luks-devs
+	    #:list-separator #\,
+	    #:pair-separator #\:)))
 	 (swapfiles (options-ref 'swapfiles))
 	 (swapfiles (if swapfiles (string->number swapfiles)))
 	 (uefiboot? (options-ref 'uefiboot))
@@ -126,12 +130,14 @@ Valid options are:
 	(system* "zfs" "destroy" "-r" (utils:path zpool zroot))
 	(system* "zpool" "export" zpool))
       (for-each
-       (lambda (spec)
-	 (let* ((device (car spec))
-		(label (cdr spec)))
-	   (format #t "Closing LUKS device ~A...\n" label)
-	   (system* "cryptsetup" "luksClose" label)))
-       (or dev-specs '()))
+       (lambda (item)
+	 (when (pair? item)
+	   (let ((device (car item))
+		 (label (cdr item)))
+	     (format #t "Closing LUKS device ~A...\n" label)
+	     (when (not (zero? (system* "cryptsetup" "luksClose" label)))
+	       (format #t "WARNING: Failed to close LUKS device ~A named ~A!" device label)))))
+       (or luks-devs '()))
       (when root-dev
 	(system* "umount" target)
 	(when (not (< 0 swapfiles))
