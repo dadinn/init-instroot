@@ -927,6 +927,8 @@ Valid options are:
 	 (utils:println "Finished installing and loading ZFS kernel modules!"))))
      ((not swap-size)
       (error "Swap size must be specified!"))
+     ((and zpool (< 0 swapfiles))
+      (error "Using swap files with ZFS is not supported!"))
      ((and dev-list (not keyfile))
       (error "Keyfile must be specified to unlock additional LUKS encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
