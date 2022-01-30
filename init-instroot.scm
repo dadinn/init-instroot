@@ -530,6 +530,7 @@
 	    (when (not (zero? (system* "mount" luks-dev target)))
 	      (error "Failed to mount" luks-dev "as" target))
 	    (utils:println "Mounting all ZFS root directories...")
+	    (system* "zfs" "set" "canmount=off" systemfs)
 	    (system* "zfs" "set" (string-append "mountpoint=" target) systemfs)
 	    (mkdir boot-dir)
 	    (when (not (zero? (system* "mount" boot-partdev boot-dir)))
