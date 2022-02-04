@@ -216,7 +216,7 @@
    (utils:println "Finished creating ZFS pool:" name)
    (error "Failed to create ZFS pool:" name)))
 
-(define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
+(define* (init-zfsroot zpool rootfs #:key swap-size zdirs)
   (reimport-and-check-pool zpool)
   (let* ((root-dataset (utils:path zpool rootfs))
 	 (swap-dataset (utils:path root-dataset "swap"))
@@ -230,7 +230,7 @@
     (for-each
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
-     dir-list)
+     zdirs)
     (when swap-size
       (utils:println "Creating ZFS volume for swap device...")
       (utils:system->devnull*
@@ -386,7 +386,7 @@
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool rootfs #:dir-list zdirs)
+	  (init-zfsroot zpool rootfs #:zdirs zdirs)
 	  (let* ((systemfs (utils:path zpool rootfs))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
@@ -529,7 +529,7 @@
 	(init-zfsroot
 	 zpool rootfs
 	 #:swap-size swap-size
-	 #:dir-list zdirs)
+	 #:zdirs zdirs)
 	(utils:println "Mounting ZFS root...")
 	(system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
 	(system* "zfs" "umount" "-a")
