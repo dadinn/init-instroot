@@ -216,9 +216,9 @@
    (utils:println "Finished creating ZFS pool:" name)
    (error "Failed to create ZFS pool:" name)))
 
-(define* (init-zfsroot zpool rootfs #:key swap-size dir-list)
+(define* (init-zfsroot zpool zroot #:key swap-size zdirs)
   (reimport-and-check-pool zpool)
-  (let* ((root-dataset (utils:path zpool rootfs))
+  (let* ((root-dataset (utils:path zpool zroot))
 	 (swap-dataset (utils:path root-dataset "swap"))
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
@@ -230,7 +230,7 @@
     (for-each
      (lambda (dir-name)
        (utils:system->devnull* "zfs" "create" (utils:path root-dataset dir-name)))
-     dir-list)
+     zdirs)
     (when swap-size
       (utils:println "Creating ZFS volume for swap device...")
       (utils:system->devnull*
@@ -361,7 +361,7 @@
    boot-dev uefiboot?
    root-dev luks-label luks-v2?
    dev-list keyfile
-   zpool rootfs dir-list
+   zpool zroot zdirs
    swap-size swapfiles)
   (deps:install-deps-base)
   (when (file-exists? target)
@@ -386,8 +386,8 @@
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool rootfs #:dir-list dir-list)
-	  (let* ((systemfs (utils:path zpool rootfs))
+	  (init-zfsroot zpool zroot #:zdirs zdirs)
+	  (let* ((systemfs (utils:path zpool zroot))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
 	    (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
@@ -428,14 +428,14 @@
 	     (utils:path etc-dir "fstab")
 	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
 	     (print-fstab-entry-boot boot-partdev uefi-partdev)
-	     (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	     (utils:println (utils:path "/dev/zvol" zpool zroot "swap") "none" "swap" "sw" "0" "0")
 	     (newline)
 	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
 	     (newline)
 	     (for-each
-	      (lambda (dirfs)
-		(utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
-	      dir-list))))
+	      (lambda (zdir)
+		(utils:println "#" (utils:path zpool zroot zdir) (utils:path "" zdir) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
+	      zdirs))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
 	  (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
@@ -525,11 +525,11 @@
       (let* ((parts (init-boot-parts boot-dev uefiboot?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
-	     (systemfs (utils:path zpool rootfs)))
+	     (systemfs (utils:path zpool zroot)))
 	(init-zfsroot
-	 zpool rootfs
+	 zpool zroot
 	 #:swap-size swap-size
-	 #:dir-list dir-list)
+	 #:zdirs zdirs)
 	(utils:println "Mounting ZFS root...")
 	(system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
 	(system* "zfs" "umount" "-a")
@@ -546,7 +546,7 @@
 	(mkdir etc-dir)
 	(print-fstab*
 	 (utils:path etc-dir "fstab")
-	 (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	 (utils:println (utils:path "/dev/zvol" zpool zroot "swap") "none" "swap" "sw" "0" "0")
 	 (print-fstab-entry-boot boot-partdev uefi-partdev))))
      (else
       (error "Either block device (for using LUKS encryption), or a ZFS pool (using native ZFS encrption) must be specified for root!")))))
@@ -585,35 +585,33 @@
     (zpool
      (single-char #\z)
      (description
-      "ZFS pool to use as root device, if no root device is specified (separate boot device must be specified too).
-      Alternatively, if a separate root device is specified too, the pool is used for additional system directories and swap device.")
-     (value-arg "zpool")
+      "ZFS pool to use for root filesystem and swap volume, if no root device for LUKS encryption is specified. A separate boot device must be specified when using ZFS for root filesystem! Alternatively, if used together with LUKS encrypted root device, the pool is used only for additional system directories and swap volume.")
+     (value-arg "pool")
      (value #t))
-    (rootfs
+    (zroot
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
      (default "system")
      (value-arg "name")
      (value #t))
-    (dirlst
+    (zdirs
      (single-char #\d)
      (description
       "Coma separated list of root directories to mount as ZFS datasets")
-     (default "home,root,gnu,var,var/lib")
-     (value-arg "dirlist")
+     (default "home,var,var/lib")
+     (value-arg "dirs")
      (value #t))
-    (devlst
+    (luks-devs
      (single-char #\v)
      (description
-      "Coma separeted list of colon separated pairs of other encrypted devices
-\(e.g. members of ZFS pool), and their repsective LUKS labels.
-\(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
-These device mappings are used to:
- a) unlock these devices before importing ZFS pools
- b) create crypttab entries for automatic unlocking during boot
-Specifying a keyfile is necessary for this feature!")
-     (value-arg "devlist")
+      "Coma separated list of colon separated pairs of additional LUKS encrypted devices, and their respective LUKS labels.
+(e.g. /dev/sda:foo,/dev/sdb:bar,/dev/sdc:baz) These mappings are then used to:
+  1) unlock these devices (potentially to import a ZFS pool without native encryption on top of them)
+  2) create crypttab entries for the devices to automatically unlock them during system boot
+It is necessary to specify these mappings together with the keyfile option,
+using a key which can unlock the devices in the list!")
+     (value-arg "pairs")
      (value #t))
     (keyfile
      (single-char #\k)
@@ -642,8 +640,8 @@ Specifying a keyfile is necessary for this feature!")
     (swapfiles
      (single-char #\S)
      (description
-      "Number of swapfiles to use to break total swap-space up into. Swapfiles are created
-in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfiles.")
+      "Number of swapfiles to use to break total swap-space up into. Swapfiles are created in equally sized chunks.
+COUNT zero means to use LVM volumes instead of swapfiles.")
      (default "0")
      (value-arg "count")
      (value #t))
@@ -678,12 +676,12 @@ in equally sized chunks. COUNT zero means to use LVM volumes instead of swapfile
 	 (root-dev (hash-ref options 'rootdev))
 	 (luks-label (hash-ref options 'label))
 	 (zpool (hash-ref options 'zpool))
-	 (rootfs (hash-ref options 'rootfs))
-	 (dir-list (hash-ref options 'dirlst))
-	 (dir-list (and dir-list (string-split dir-list #\,)))
+	 (zroot (hash-ref options 'zroot))
+	 (zdirs (hash-ref options 'zdirs))
+	 (zdirs (and zdirs (string-split zdirs #\,)))
 	 (keyfile (hash-ref options 'keyfile))
 	 (new-keyfile (hash-ref options 'genkey))
-	 (dev-list (hash-ref options 'devlst))
+	 (dev-list (hash-ref options 'luks-devs))
 	 (dev-list (and dev-list (utils:parse-pairs dev-list)))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
@@ -746,8 +744,8 @@ Valid options are:
        #:dev-list dev-list
        #:keyfile keyfile
        #:zpool zpool
-       #:rootfs rootfs
-       #:dir-list dir-list
+       #:zroot zroot
+       #:zdirs zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
