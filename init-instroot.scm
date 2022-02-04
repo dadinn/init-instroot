@@ -216,9 +216,9 @@
    (utils:println "Finished creating ZFS pool:" name)
    (error "Failed to create ZFS pool:" name)))
 
-(define* (init-zfsroot zpool rootfs #:key swap-size zdirs)
+(define* (init-zfsroot zpool zroot #:key swap-size zdirs)
   (reimport-and-check-pool zpool)
-  (let* ((root-dataset (utils:path zpool rootfs))
+  (let* ((root-dataset (utils:path zpool zroot))
 	 (swap-dataset (utils:path root-dataset "swap"))
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
     (when (zero? (utils:system->devnull* "zfs" "list" root-dataset))
