@@ -361,7 +361,7 @@
    boot-dev uefiboot?
    root-dev luks-label luks-v2?
    dev-list keyfile
-   zpool rootfs dir-list
+   zpool rootfs zdirs
    swap-size swapfiles)
   (deps:install-deps-base)
   (when (file-exists? target)
@@ -386,7 +386,7 @@
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool rootfs #:dir-list dir-list)
+	  (init-zfsroot zpool rootfs #:dir-list zdirs)
 	  (let* ((systemfs (utils:path zpool rootfs))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
@@ -435,7 +435,7 @@
 	     (for-each
 	      (lambda (dirfs)
 		(utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
-	      dir-list))))
+	      zdirs))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
 	  (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
@@ -529,7 +529,7 @@
 	(init-zfsroot
 	 zpool rootfs
 	 #:swap-size swap-size
-	 #:dir-list dir-list)
+	 #:dir-list zdirs)
 	(utils:println "Mounting ZFS root...")
 	(system* "zpool" "set" (string-append "bootfs=" systemfs) zpool)
 	(system* "zfs" "umount" "-a")
@@ -747,7 +747,7 @@ Valid options are:
        #:keyfile keyfile
        #:zpool zpool
        #:rootfs rootfs
-       #:dir-list zdirs
+       #:zdirs zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
