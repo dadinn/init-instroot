@@ -433,8 +433,8 @@
 	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
 	     (newline)
 	     (for-each
-	      (lambda (dirfs)
-		(utils:println "#" (utils:path zpool rootfs dirfs) (utils:path "" dirfs) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
+	      (lambda (zdir)
+		(utils:println "#" (utils:path zpool rootfs zdir) (utils:path "" zdir) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	      zdirs))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
