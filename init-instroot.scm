@@ -361,7 +361,7 @@
    boot-dev uefiboot?
    root-dev luks-label luks-v2?
    dev-list keyfile
-   zpool rootfs zdirs
+   zpool zroot zdirs
    swap-size swapfiles)
   (deps:install-deps-base)
   (when (file-exists? target)
@@ -386,8 +386,8 @@
 	    (init-cryptdevs keyfile dev-list))
 	  (deps:install-deps-zfs)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool rootfs #:zdirs zdirs)
-	  (let* ((systemfs (utils:path zpool rootfs))
+	  (init-zfsroot zpool zroot #:zdirs zdirs)
+	  (let* ((systemfs (utils:path zpool zroot))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
 	    (utils:println "Formatting LUKS device" luks-label "with ext4 to be used as root filesystem...")
@@ -428,13 +428,13 @@
 	     (utils:path etc-dir "fstab")
 	     (print-fstab-entry-root (utils:path "/dev/mapper" luks-label))
 	     (print-fstab-entry-boot boot-partdev uefi-partdev)
-	     (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	     (utils:println (utils:path "/dev/zvol" zpool zroot "swap") "none" "swap" "sw" "0" "0")
 	     (newline)
 	     (utils:println "# systemd specific legacy mounts of ZFS datasets")
 	     (newline)
 	     (for-each
 	      (lambda (zdir)
-		(utils:println "#" (utils:path zpool rootfs zdir) (utils:path "" zdir) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
+		(utils:println "#" (utils:path zpool zroot zdir) (utils:path "" zdir) "zfs" "defaults,x-systemd.after=zfs.target" "0" "0"))
 	      zdirs))))
 	 ((< 0 swapfiles)
 	  (utils:println "Setting up installation root with swapfile for swap space...")
@@ -525,9 +525,9 @@
       (let* ((parts (init-boot-parts boot-dev uefiboot?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
-	     (systemfs (utils:path zpool rootfs)))
+	     (systemfs (utils:path zpool zroot)))
 	(init-zfsroot
-	 zpool rootfs
+	 zpool zroot
 	 #:swap-size swap-size
 	 #:zdirs zdirs)
 	(utils:println "Mounting ZFS root...")
@@ -546,7 +546,7 @@
 	(mkdir etc-dir)
 	(print-fstab*
 	 (utils:path etc-dir "fstab")
-	 (utils:println (utils:path "/dev/zvol" zpool rootfs "swap") "none" "swap" "sw" "0" "0")
+	 (utils:println (utils:path "/dev/zvol" zpool zroot "swap") "none" "swap" "sw" "0" "0")
 	 (print-fstab-entry-boot boot-partdev uefi-partdev))))
      (else
       (error "Either block device (for using LUKS encryption), or a ZFS pool (using native ZFS encrption) must be specified for root!")))))
@@ -746,7 +746,7 @@ Valid options are:
        #:dev-list dev-list
        #:keyfile keyfile
        #:zpool zpool
-       #:rootfs zroot
+       #:zroot zroot
        #:zdirs zdirs
        #:swap-size swap-size
        #:swapfiles swapfiles)
