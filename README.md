@@ -74,7 +74,7 @@ This is equivalent to creating the pool manually, with the following command:
 	-O encryption=aes-128-gcm -O pbkdf2iters=1000000 \
 	-O keyformat=passphrase -O keylocation=prompt \
 	-O normalization=formD -O atime=off -O devices=off \
-	-O acltype=posixacl -O xattr=sa -O \
+	-O acltype=posixacl -O xattr=sa \
 	$ZPOOL_NAME $VDEV_SPECS
 
 Refer to the [manual](https://zfsonlinux.org/manpages/0.8.1/man8/zpool.8.html#lbAE) for more details about the `zpool` command, its available options, and details of the VDEV specification format.
