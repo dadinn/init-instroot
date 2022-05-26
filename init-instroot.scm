@@ -653,7 +653,7 @@
 	     (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
      (zpool
       (when (not boot-dev)
-	(error "Separate boot device must be specified when using ZFS as root!"))
+	(error "Separate boot device must be specified when using ZFS as root filesystem!"))
       (deps:install-deps-zfs
        accept-openzfs-license?)
       (load-zfs-kernel-module)
@@ -690,7 +690,7 @@
 	 (utils:println (utils:path "/dev/zvol" zpool zroot "swap") "none" "swap" "sw" "0" "0")
 	 (print-fstab-entry-boot boot-partdev uefi-partdev))))
      (else
-      (error "Either block device (for using LUKS encryption), or a ZFS pool (using native ZFS encrption) must be specified for root!")))))
+      (error "Either block device (when using LUKS encryption), or a ZFS pool (when using native ZFS encrption) must be specified for the root filesystem!")))))
 
 (define options-spec
   `((target
