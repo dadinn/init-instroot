@@ -875,6 +875,8 @@ https://github.com/openzfs/zfs/blob/master/LICENSE"))
 	 (init-zpool? (hash-ref options 'init-zpool))
          (without-zfs-native-encryption?
           (hash-ref options 'without-zfs-native-encryption))
+         (without-zfs-native-encryption?
+          (or without-zfs-native-encryption? root-dev))
 	 (unattended? (hash-ref options 'unattended))
 	 (accept-openzfs-license? (hash-ref options 'accept-openzfs-license))
 	 (accept-openzfs-license? (not (equal? accept-openzfs-license? unattended?)))
