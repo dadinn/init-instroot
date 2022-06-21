@@ -54,7 +54,7 @@
   ;; needs some delay to avoid timing issues
   (sleep 1))
 
-(define (init-boot-parts-bios boot-dev)
+(define* (init-boot-parts-bios boot-dev #:optional force?)
   (system* "sgdisk" boot-dev "-Z"
 	   "-n" "1:0:+2M"
 	   "-t" "1:ef02"
@@ -64,7 +64,9 @@
   (let ((boot-partdev (partdev boot-dev "2"))
 	(result (make-hash-table 3)))
     (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-    (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+    (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+				      (if force? "-F" "")
+				      boot-partdev))))
       (error "Failed to create EXT4 filesystem on:" boot-partdev))
     (hash-set! result 'boot boot-partdev)
     result))
@@ -88,20 +90,23 @@
     (hash-set! result 'boot boot-partdev)
     result))
 
-(define* (init-boot-parts boot-dev #:optional uefiboot?)
+(define* (init-boot-parts boot-dev #:key uefiboot? force?)
   (let ((result
 	 (if uefiboot?
 	     (init-boot-parts-uefi boot-dev)
-	     (init-boot-parts-bios boot-dev))))
+	     (init-boot-parts-bios boot-dev force?))))
     (utils:println "Finished setting up partitions on:" boot-dev)
     result))
 
-(define* (init-root-parts root-dev #:key boot-dev uefiboot?)
+(define* (init-root-parts root-dev #:key boot-dev uefiboot? force?)
   (cond
    (boot-dev
     (system* "sgdisk" root-dev "-Z" "-N" "1" "-t" "1:8300")
     (part-probe root-dev)
-    (let ((result (init-boot-parts boot-dev uefiboot?)))
+    (let ((result
+	   (init-boot-parts boot-dev
+	    #:uefiboot? uefiboot?
+	    #:force? force?)))
       (hash-set! result 'root (partdev root-dev "1"))
       result))
    (uefiboot?
@@ -121,7 +126,9 @@
       (when (not (zero? (system* "mkfs.fat" "-F32" uefi-partdev)))
 	(error "Failed to create FAT32 filesystem on:" uefi-partdev))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+					(if force? "-F" "")
+					boot-partdev))))
 	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (hash-set! result 'uefi uefi-partdev)
       (hash-set! result 'boot boot-partdev)
@@ -140,25 +147,60 @@
 	  (root-partdev (partdev root-dev "3"))
 	  (result (make-hash-table 2)))
       (utils:println "Formatting boot partition device as EXT4:" boot-partdev)
-      (when (not (zero? (system* "mkfs.ext4" "-q" "-m" "0" boot-partdev)))
+      (when (not (zero? (system (format #f "mkfs.ext4 -q -m 0 ~A ~A"
+					(if force? "-F" "")
+					boot-partdev))))
 	(error "Failed to create EXT4 filesystem on:" boot-partdev))
       (hash-set! result 'boot boot-partdev)
       (hash-set! result 'root root-partdev)
       result))))
 
-(define* (init-cryptroot partdev label #:key luks-v2?)
+(define* (luks-format partdev #:key passphrase luks-v2? force?)
   (utils:println "Formatting" partdev "to be used as LUKS device...")
-  (when (not (zero? (system* "cryptsetup" "luksFormat" "--type" (if luks-v2? "luks2" "luks1") partdev)))
+  (if passphrase
+   (let ((output-port
+	  (popen:open-output-pipe
+	   (format #f "cryptsetup luksFormat --type ~A ~A ~A -"
+	    (if luks-v2? "luks2" "luks1")
+	    (if force? "--batch-mode" "")
+	    partdev))))
+     (display passphrase output-port)
+     (zero? (status:exit-val (popen:close-pipe output-port))))
+   (zero? (system (format #f "cryptsetup luksFormat --type ~A ~A ~A"
+		   (if luks-v2? "luks2" "luks1")
+		   (if force? "--batch-mode" "")
+		   partdev)))))
+
+(define (luks-open partdev label passphrase)
+  (if passphrase
+   (let ((output-port
+	  (popen:open-output-pipe
+	   (format #f "cryptsetup luksOpen ~A ~A ~A"
+		   (if passphrase (string-append "--key-file -") "")
+		   partdev label))))
+     (display passphrase output-port)
+     (zero? (status:exit-val (popen:close-pipe output-port))))
+   (zero? (system* "cryptsetup" "luksOpen" partdev label))))
+
+(define* (init-cryptroot partdev label #:key passphrase luks-shred? luks-v2? force?)
+  (when (not (luks-format partdev
+	      #:passphrase passphrase
+	      #:luks-v2? luks-v2?
+	      #:force? force?))
     (error "Failed formatting of LUKS device" partdev))
   (newline)
   (utils:println "Finished formatting device" partdev "for LUKS encryption!")
   (utils:println "Opening LUKS device" partdev "as" label "...")
-  (when (not (zero? (system* "cryptsetup" "luksOpen" partdev label)))
+  (when (not (luks-open partdev label passphrase))
     (error "Failed to open LUKS device:" label))
-  (newline)
-  (utils:println "It is recommended to overwrite a new LUKS device with random data.")
-  (utils:println "WARNING: This can take quite a long time!")
-  (let ((resp (readline "Would you like to overwrite LUKS device with random data? [y/N]")))
+  (let ((resp
+	 (cond
+	  ((not force?)
+	   (newline)
+	   (utils:println "It is recommended to overwrite a new LUKS device with random data.")
+	   (utils:println "WARNING: This can take quite a long time!")
+	   (readline "Would you like to overwrite LUKS device with random data? [y/N]"))
+	  (else (if luks-shred? "Y" "N")))))
     (cond
      ((regex:string-match "[yY]" resp)
       (utils:println "Shredding LUKS device...")
@@ -188,7 +230,47 @@
   (when (not (modprobe? "zfs"))
     (error "ZFS kernel modules are not loaded!")))
 
-(define (reimport-and-check-pool zpool)
+(define (read-zfs-version)
+  (if (file-exists? "/sys/module/zfs/version")
+   (call-with-input-file "/sys/module/zfs/version"
+     (lambda (port)
+       (let* ((content (rdelim:read-string port))
+	      (matches
+	       (regex:string-match
+	        "([0-9]+)\\.([0-9]+)\\.([0-9]+)(:?-(.*))?"
+	        content))
+	      (major-version (regex:match:substring matches 1))
+	      (major-version (string->number major-version))
+	      (minor-version (regex:match:substring matches 2))
+	      (minor-version (string->number minor-version))
+	      (patch-version (regex:match:substring matches 3))
+	      (patch-version (string->number patch-version))
+              (build-label (regex:match:substring matches 4))
+              (build-label (and build-label (substring build-label 1))))
+	 (list
+	  major-version
+	  minor-version
+	  patch-version
+          build-label))))
+   #f))
+
+(define (zfs-native-encryption-available?)
+  (let ((version (read-zfs-version)))
+    (and version (<= 2 (car version)))))
+
+(define* (load-zfs-encryption-keys dataset #:optional passphrase)
+  (cond
+   (passphrase
+    (let ((output-pipe
+	   (popen:open-pipe* OPEN_WRITE
+	    "zfs" "load-key" dataset)))
+      (rdelim:write-line passphrase output-pipe)
+      (zero? (status:exit-val (popen:close-pipe output-pipe)))))
+   (else ; When passphrase is not provided, prompt for it!
+    (zero? (system* "zfs" "load-key" dataset)))))
+
+(define* (reimport-and-check-pool zpool #:key passphrase
+          without-zfs-native-encryption?)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
       (error "Failed to export ZFS pool:" zpool)))
@@ -197,30 +279,56 @@
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "Cannot find ZFS pool:" zpool))
   ;; force loading encryption keys for root dataset
-  (system* "zfs" "load-key" zpool))
+  (when (and (zfs-native-encryption-available?)
+             (not without-zfs-native-encryption?))
+    (when (not (load-zfs-encryption-keys zpool passphrase))
+      (error "Failed to load encryption keys for ZFS pool:" zpool))))
 
-(define (init-zpool name vdevs)
+(define* (init-zpool name vdevs #:key passphrase
+          without-zfs-native-encryption?)
   (utils:println "Creating ZFS pool:" name)
-  (if (zero? (apply system*
-     "zpool" "create" "-f"
-     "-o" "ashift=12"
-     ;; encryption options
-     "-O" "encryption=aes-128-gcm"
-     "-O" "pbkdf2iters=1000000"
-     "-O" "keyformat=passphrase"
-     "-O" "keylocation=prompt"
-     ;; filesystem options
-     "-O" "normalization=formD"
-     "-O" "atime=off"
-     "-O" "devices=off"
-     "-O" "acltype=posixacl"
-     "-O" "xattr=sa"
-     name vdevs))
-   (utils:println "Finished creating ZFS pool:" name)
-   (error "Failed to create ZFS pool:" name)))
+  (let ((zfs-encryption-options
+         (list
+          "-O" "encryption=aes-128-gcm"
+          "-O" "pbkdf2iters=1000000"
+          "-O" "keyformat=passphrase"
+          "-O" "keylocation=prompt"))
+        (zfs-filesystem-options
+         (list
+          "-O" "normalization=formD"
+          "-O" "atime=off"
+          "-O" "devices=off"
+          "-O" "acltype=posixacl"
+          "-O" "xattr=sa")))
+    (cond
+     ((and (zfs-native-encryption-available?) passphrase)
+      (let ((output-pipe
+             (apply popen:open-pipe* OPEN_WRITE
+                    "zpool" "create" "-f" "-o" "ashift=12"
+                    (append
+                     zfs-encryption-options
+                     zfs-filesystem-options
+                     (cons name vdevs)))))
+        (rdelim:write-line passphrase output-pipe)
+        (zero? (status:exit-val (popen:close-pipe output-pipe)))))
+     ((and (zfs-native-encryption-available?)
+           (not without-zfs-native-encryption?))
+      (zero?
+       (apply system*
+        "zpool" "create" "-f" "-o" "ashift=12"
+        (append
+         zfs-encryption-options
+         zfs-filesystem-options
+         (cons name vdevs)))))
+     (else
+      (zero?
+       (apply system*
+        "zpool" "create" "-f" "-o" "ashift=12"
+        (append
+         zfs-filesystem-options
+         (cons name vdevs))))))))
 
 (define* (init-zfsroot zpool zroot #:key swap-size zdirs)
-  (reimport-and-check-pool zpool)
   (let* ((root-dataset (utils:path zpool zroot))
 	 (swap-dataset (utils:path root-dataset "swap"))
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
@@ -356,10 +464,17 @@
    target
    #:key
    boot-dev uefiboot?
-   root-dev luks-label luks-v2?
+   root-dev luks-label
+   luks-v2? luks-shred?
    dev-list keyfile
+   accept-openzfs-license?
    zpool zroot zdirs
-   swap-size swapfiles)
+   swap-size swapfiles
+   force-format-ext4?
+   force-format-luks?
+   without-zfs-native-encryption?
+   unattended?
+   passphrase)
   (deps:install-deps-base)
   (when (file-exists? target)
     (error "Target" target "already exists!"))
@@ -372,18 +487,38 @@
 	 (headers-dir (utils:path crypt-dir "headers")))
     (cond
      (root-dev
-      (let* ((parts (init-root-parts root-dev #:uefiboot? uefiboot? #:boot-dev boot-dev))
+      (let* ((parts
+	      (init-root-parts
+	       root-dev
+	       #:uefiboot? uefiboot?
+	       #:boot-dev boot-dev
+	       #:force? force-format-ext4?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (luks-partdev (hash-ref parts 'root)))
-	(init-cryptroot luks-partdev luks-label #:luks-v2? luks-v2?)
+	(init-cryptroot
+	 luks-partdev luks-label
+	 #:force? force-format-luks?
+	 #:luks-shred? luks-shred?
+	 #:passphrase passphrase
+	 #:luks-v2? luks-v2?)
 	(cond
 	 (zpool
 	  (when (and keyfile dev-list)
 	    (init-cryptdevs keyfile dev-list))
-	  (deps:install-deps-zfs)
+	  (deps:install-deps-zfs
+	   accept-openzfs-license?)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool zroot #:zdirs zdirs)
+          (when (and unattended? (not passphrase)
+                     (zfs-native-encryption-available?)
+                     (not without-zfs-native-encryption?))
+            (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
+          (reimport-and-check-pool zpool
+           #:without-zfs-native-encryption?
+           without-zfs-native-encryption?
+           #:passphrase passphrase)
+	  (init-zfsroot zpool zroot
+           #:zdirs zdirs)
 	  (let* ((systemfs (utils:path zpool zroot))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
@@ -517,14 +652,23 @@
      (zpool
       (when (not boot-dev)
 	(error "Separate boot device must be specified when using ZFS as root!"))
-      (deps:install-deps-zfs)
+      (deps:install-deps-zfs
+       accept-openzfs-license?)
       (load-zfs-kernel-module)
-      (let* ((parts (init-boot-parts boot-dev uefiboot?))
+      (when (and unattended? (not passphrase)
+                 (zfs-native-encryption-available?)
+                 (not without-zfs-native-encryption?))
+        (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
+      (let* ((parts
+	      (init-boot-parts boot-dev
+	       #:uefiboot? uefiboot?
+	       #:force? force-format-ext4?))
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (systemfs (utils:path zpool zroot)))
-	(init-zfsroot
-	 zpool zroot
+        (reimport-and-check-pool zpool
+         #:passphrase passphrase)
+	(init-zfsroot zpool zroot
 	 #:swap-size swap-size
 	 #:zdirs zdirs)
 	(utils:println "Mounting ZFS root...")
@@ -556,7 +700,7 @@
      (default "/mnt/instroot")
      (value-arg "path")
      (value #t))
-    (label
+    (luks-label
      (single-char #\l)
      (description
       "LUKS encrypted device name for root")
@@ -626,6 +770,11 @@ using a key which can unlock the devices in the list!")
       ,(lambda (s) (equal? s (basename s))))
      (value-arg "filename")
      (value #t))
+    (passphrase
+     (single-char #\p)
+     (description "Passphrase used with LUKS or ZFS encryption for root filesystem and swap space.")
+     (value-arg "text")
+     (value #t))
     (swapsize
      (single-char #\s)
      (description
@@ -650,10 +799,30 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
      (description
       "Use LUKS format version 2 to encrypt root filesystem")
      (single-char #\L))
+    (luks-shred
+     (description
+      "Shred LUKS device with random data after formatting."))
     (init-zpool
      (description
       "Install and configure necessary ZFS dependencies only, then exit.")
      (single-char #\Z))
+    (force-format-ext4
+     (description
+      "Force formatting devices (i.e. root and boot) with ext4 filesystems.
+Normally the process would ask for confirmation before formatting, if it found existing filesystem headers on the device."))
+    (force-format-luks
+     (description
+      "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation. Also, by default this automatically skips shredding the LUKS device after formatting, unless used together with the --luks-shred flag, in which case it automatically shreds the LUKS device after formatting."))
+    (without-zfs-native-encryption
+     (description
+      "Do not use ZFS native encryption, even when it is available."))
+    (accept-openzfs-license
+     (description "Confirm OpenZFS License (CDDL) automatically:
+https://github.com/openzfs/zfs/blob/master/LICENSE"))
+    (unattended
+     (description
+      "Runs script in unattended mode, toggling options force-format-ext4, force-format-luks, and accept-openzfs-license. This option guarantees that the script will not prompt for any user imput. Requires passphrase to be specified when using LUKS root device or ZFS pool with native encryption support enabled.")
+     (single-char #\A))
     (help
      (description
       "This usage help...")
@@ -671,7 +840,7 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
 	 (target (hash-ref options 'target))
 	 (boot-dev (hash-ref options 'bootdev))
 	 (root-dev (hash-ref options 'rootdev))
-	 (luks-label (hash-ref options 'label))
+	 (luks-label (hash-ref options 'luks-label))
 	 (zpool (hash-ref options 'zpool))
 	 (zroot (hash-ref options 'zroot))
 	 (zdirs (hash-ref options 'zdirs))
@@ -684,12 +853,23 @@ COUNT zero means to use LVM volumes instead of swapfiles.")
 	   (utils:parse-arg-alist dev-list
 	    #:list-separator #\,
 	    #:pair-separator #\:)))
+	 (passphrase (hash-ref options 'passphrase))
 	 (swap-size (hash-ref options 'swapsize))
 	 (swapfiles (hash-ref options 'swapfiles))
 	 (swapfiles (and swapfiles (string->number swapfiles)))
 	 (luks-v2? (hash-ref options 'luksv2))
+	 (luks-shred? (hash-ref options 'luks-shred))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
+         (without-zfs-native-encryption?
+          (hash-ref options 'without-zfs-native-encryption))
+	 (unattended? (hash-ref options 'unattended))
+	 (accept-openzfs-license? (hash-ref options 'accept-openzfs-license))
+	 (accept-openzfs-license? (not (equal? accept-openzfs-license? unattended?)))
+	 (force-format-ext4? (hash-ref options 'force-format-ext4))
+	 (force-format-ext4? (not (equal? force-format-ext4? unattended?)))
+	 (force-format-luks? (hash-ref options 'force-format-luks))
+         (force-format-luks? (not (equal? force-format-luks? unattended?)))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
@@ -715,25 +895,42 @@ Valid options are:
      ((not (utils:root-user?))
       (error "This script must be run as root!"))
      (init-zpool?
-      (deps:install-deps-base)
-      (deps:install-deps-zfs)
+      (deps:install-deps-zfs
+       accept-openzfs-license?)
       (load-zfs-kernel-module)
       (let ((args (hash-ref options '())))
-	(cond
-	 ((not (nil? args))
-	  (let ((name (car args))
-		(vdevs (cdr args)))
-	    (init-zpool name vdevs)))
-	 (else
-	  (utils:println "Finished installing all package dependencies!")))))
+	(if (not (null? args))
+	 (let ((name (car args))
+	       (vdevs (cdr args)))
+           (when (and unattended? (not passphrase)
+                      (zfs-native-encryption-available?)
+                      (not without-zfs-native-encryption?))
+             (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
+           (if (init-zpool name vdevs
+                #:without-zfs-native-encryption?
+                without-zfs-native-encryption?
+                #:passphrase passphrase)
+	       (utils:println "Finished creating ZFS pool:" name)
+	       (error "Failed to create ZFS pool:" name)))
+	 (utils:println "Finished installing and loading ZFS kernel modules!"))))
      ((not swap-size)
       (error "Swap size must be specified!"))
      ((and dev-list (not keyfile))
       (error "Keyfile must be specified to unlock additional LUKS encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
       (error "LUKS format version 2 is only supported in Debian Buster or later!"))
+     ((and luks-shred? (not force-format-luks?))
+      (error "Shredding LUKS device option must be only used together with the --force-format-luks option."))
      ((and uefiboot? (not (modprobe? "efivars")))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
+     ((and unattended? (not passphrase))
+      (cond
+       (root-dev
+        (error "Encryption passphrase for LUKS root device must be specified when using unattended mode!"))
+       ((and zpool
+         (zfs-native-encryption-available?)
+         (not without-zfs-native-encryption?))
+        (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))))
      (else
       (utils:write-config utils:config-filename options)
       (init-instroot target
@@ -741,13 +938,21 @@ Valid options are:
        #:uefiboot? uefiboot?
        #:root-dev root-dev
        #:luks-label luks-label
+       #:luks-shred? luks-shred?
        #:luks-v2? luks-v2?
        #:dev-list dev-list
        #:keyfile keyfile
+       #:accept-openzfs-license?
+       accept-openzfs-license?
        #:zpool zpool
        #:zroot zroot
        #:zdirs zdirs
        #:swap-size swap-size
-       #:swapfiles swapfiles)
+       #:swapfiles swapfiles
+       #:passphrase passphrase
+       #:unattended? unattended?
+       #:without-zfs-native-encryption? without-zfs-native-encryption?
+       #:force-format-ext4? force-format-ext4?
+       #:force-format-luks? force-format-luks?)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
       (utils:println "Finished setting up installation root" target)))))
