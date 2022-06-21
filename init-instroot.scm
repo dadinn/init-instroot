@@ -258,7 +258,18 @@
   (let ((version (read-zfs-version)))
     (and version (<= 2 (car version)))))
 
-(define (reimport-and-check-pool zpool)
+(define* (load-zfs-encryption-keys dataset #:optional passphrase)
+  (cond
+   (passphrase
+    (let ((output-pipe
+	   (popen:open-pipe* OPEN_WRITE
+	    "zfs" "load-key" dataset)))
+      (rdelim:write-line passphrase output-pipe)
+      (zero? (status:exit-val (popen:close-pipe output-pipe)))))
+   (else ; When passphrase is not provided, prompt for it!
+    (zero? (system* "zfs" "load-key" dataset)))))
+
+(define* (reimport-and-check-pool zpool #:key passphrase)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
       (error "Failed to export ZFS pool:" zpool)))
@@ -267,7 +278,9 @@
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "Cannot find ZFS pool:" zpool))
   ;; force loading encryption keys for root dataset
-  (system* "zfs" "load-key" zpool))
+  (when (zfs-native-encryption-supported?)
+    (when (not (load-zfs-encryption-keys zpool passphrase))
+      (error "Failed to load encryption keys for ZFS pool:" zpool))))
 
 (define* (init-zpool name vdevs #:key passphrase)
   (utils:println "Creating ZFS pool:" name)
@@ -312,7 +325,6 @@
          (cons name vdevs))))))))
 
 (define* (init-zfsroot zpool zroot #:key swap-size zdirs)
-  (reimport-and-check-pool zpool)
   (let* ((root-dataset (utils:path zpool zroot))
 	 (swap-dataset (utils:path root-dataset "swap"))
 	 (swap-zvol (utils:path "" "dev" "zvol" swap-dataset)))
@@ -491,7 +503,10 @@
 	  (deps:install-deps-zfs
 	   accept-openzfs-license?)
 	  (load-zfs-kernel-module)
-	  (init-zfsroot zpool zroot #:zdirs zdirs)
+          (reimport-and-check-pool zpool
+           #:passphrase passphrase)
+	  (init-zfsroot zpool zroot
+           #:zdirs zdirs)
 	  (let* ((systemfs (utils:path zpool zroot))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
 		 (keyfile-stored (if keyfile (utils:path crypt-dir (basename keyfile)) #f)))
@@ -635,8 +650,9 @@
 	     (uefi-partdev (hash-ref parts 'uefi))
 	     (boot-partdev (hash-ref parts 'boot))
 	     (systemfs (utils:path zpool zroot)))
-	(init-zfsroot
-	 zpool zroot
+        (reimport-and-check-pool zpool
+         #:passphrase passphrase)
+	(init-zfsroot zpool zroot
 	 #:swap-size swap-size
 	 #:zdirs zdirs)
 	(utils:println "Mounting ZFS root...")
