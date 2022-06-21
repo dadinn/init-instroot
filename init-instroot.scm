@@ -509,6 +509,10 @@
 	  (deps:install-deps-zfs
 	   accept-openzfs-license?)
 	  (load-zfs-kernel-module)
+          (when (and unattended? (not passphrase)
+                     (zfs-native-encryption-available?)
+                     (not without-zfs-native-encryption?))
+            (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
           (reimport-and-check-pool zpool
            #:without-zfs-native-encryption?
            without-zfs-native-encryption?
@@ -651,6 +655,10 @@
       (deps:install-deps-zfs
        accept-openzfs-license?)
       (load-zfs-kernel-module)
+      (when (and unattended? (not passphrase)
+                 (zfs-native-encryption-available?)
+                 (not without-zfs-native-encryption?))
+        (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
       (let* ((parts
 	      (init-boot-parts boot-dev
 	       #:uefiboot? uefiboot?
@@ -894,6 +902,10 @@ Valid options are:
 	(if (not (null? args))
 	 (let ((name (car args))
 	       (vdevs (cdr args)))
+           (when (and unattended? (not passphrase)
+                      (zfs-native-encryption-available?)
+                      (not without-zfs-native-encryption?))
+             (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))
            (if (init-zpool name vdevs
                 #:without-zfs-native-encryption?
                 without-zfs-native-encryption?
@@ -911,6 +923,14 @@ Valid options are:
       (error "Shredding LUKS device option must be only used together with the --force-format-luks option."))
      ((and uefiboot? (not (modprobe? "efivars")))
       (error "Cannot use UEFI boot, when efivars module is not loaded!"))
+     ((and unattended? (not passphrase))
+      (cond
+       (root-dev
+        (error "Encryption passphrase for LUKS root device must be specified when using unattended mode!"))
+       ((and zpool
+         (zfs-native-encryption-available?)
+         (not without-zfs-native-encryption?))
+        (error "Encryption passphrase for ZFS pool must be specified when using unattended mode!"))))
      (else
       (utils:write-config utils:config-filename options)
       (init-instroot target
