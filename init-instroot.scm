@@ -473,6 +473,7 @@
    force-format-ext4?
    force-format-luks?
    without-zfs-native-encryption?
+   unattended?
    passphrase)
   (deps:install-deps-base)
   (when (file-exists? target)
@@ -810,6 +811,10 @@ Normally the process would ask for confirmation before formatting, if it found e
     (accept-openzfs-license
      (description "Confirm OpenZFS License (CDDL) automatically:
 https://github.com/openzfs/zfs/blob/master/LICENSE"))
+    (unattended
+     (description
+      "Runs script in unattended mode, toggling options force-format-ext4, force-format-luks, and accept-openzfs-license. This option guarantees that the script will not prompt for any user imput. Requires passphrase to be specified when using LUKS root device or ZFS pool with native encryption support enabled.")
+     (single-char #\A))
     (help
      (description
       "This usage help...")
@@ -850,9 +855,13 @@ https://github.com/openzfs/zfs/blob/master/LICENSE"))
 	 (init-zpool? (hash-ref options 'init-zpool))
          (without-zfs-native-encryption?
           (hash-ref options 'without-zfs-native-encryption))
+	 (unattended? (hash-ref options 'unattended))
 	 (accept-openzfs-license? (hash-ref options 'accept-openzfs-license))
+	 (accept-openzfs-license? (not (equal? accept-openzfs-license? unattended?)))
 	 (force-format-ext4? (hash-ref options 'force-format-ext4))
+	 (force-format-ext4? (not (equal? force-format-ext4? unattended?)))
 	 (force-format-luks? (hash-ref options 'force-format-luks))
+         (force-format-luks? (not (equal? force-format-luks? unattended?)))
 	 (help? (hash-ref options 'help)))
     (cond
      (help?
@@ -921,6 +930,7 @@ Valid options are:
        #:swap-size swap-size
        #:swapfiles swapfiles
        #:passphrase passphrase
+       #:unattended? unattended?
        #:without-zfs-native-encryption? without-zfs-native-encryption?
        #:force-format-ext4? force-format-ext4?
        #:force-format-luks? force-format-luks?)
