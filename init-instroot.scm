@@ -269,7 +269,8 @@
    (else ; When passphrase is not provided, prompt for it!
     (zero? (system* "zfs" "load-key" dataset)))))
 
-(define* (reimport-and-check-pool zpool #:key passphrase)
+(define* (reimport-and-check-pool zpool #:key passphrase
+          without-zfs-native-encryption?)
   (when (zero? (utils:system->devnull* "zpool" "list" zpool))
     (when (not (zero? (utils:system->devnull* "zpool" "export" zpool)))
       (error "Failed to export ZFS pool:" zpool)))
@@ -278,11 +279,13 @@
   (when (not (zero? (utils:system->devnull* "zpool" "list" zpool)))
     (error "Cannot find ZFS pool:" zpool))
   ;; force loading encryption keys for root dataset
-  (when (zfs-native-encryption-supported?)
+  (when (and (zfs-native-encryption-available?)
+             (not without-zfs-native-encryption?))
     (when (not (load-zfs-encryption-keys zpool passphrase))
       (error "Failed to load encryption keys for ZFS pool:" zpool))))
 
-(define* (init-zpool name vdevs #:key passphrase)
+(define* (init-zpool name vdevs #:key passphrase
+          without-zfs-native-encryption?)
   (utils:println "Creating ZFS pool:" name)
   (let ((zfs-encryption-options
          (list
@@ -298,7 +301,7 @@
           "-O" "acltype=posixacl"
           "-O" "xattr=sa")))
     (cond
-     ((and (zfs-native-encryption-supported?) passphrase)
+     ((and (zfs-native-encryption-available?) passphrase)
       (let ((output-pipe
              (apply popen:open-pipe* OPEN_WRITE
                     "zpool" "create" "-f" "-o" "ashift=12"
@@ -308,7 +311,8 @@
                      (cons name vdevs)))))
         (rdelim:write-line passphrase output-pipe)
         (zero? (status:exit-val (popen:close-pipe output-pipe)))))
-     ((zfs-native-encryption-supported?)
+     ((and (zfs-native-encryption-available?)
+           (not without-zfs-native-encryption?))
       (zero?
        (apply system*
         "zpool" "create" "-f" "-o" "ashift=12"
@@ -468,6 +472,7 @@
    swap-size swapfiles
    force-format-ext4?
    force-format-luks?
+   without-zfs-native-encryption?
    passphrase)
   (deps:install-deps-base)
   (when (file-exists? target)
@@ -504,6 +509,8 @@
 	   accept-openzfs-license?)
 	  (load-zfs-kernel-module)
           (reimport-and-check-pool zpool
+           #:without-zfs-native-encryption?
+           without-zfs-native-encryption?
            #:passphrase passphrase)
 	  (init-zfsroot zpool zroot
            #:zdirs zdirs)
@@ -797,6 +804,9 @@ Normally the process would ask for confirmation before formatting, if it found e
     (force-format-luks
      (description
       "Force formatting root device with LUKS, and automatically confirm the prompt asking for confirmation. Also, by default this automatically skips shredding the LUKS device after formatting, unless used together with the --luks-shred flag, in which case it automatically shreds the LUKS device after formatting."))
+    (without-zfs-native-encryption
+     (description
+      "Do not use ZFS native encryption, even when it is available."))
     (accept-openzfs-license
      (description "Confirm OpenZFS License (CDDL) automatically:
 https://github.com/openzfs/zfs/blob/master/LICENSE"))
@@ -838,6 +848,8 @@ https://github.com/openzfs/zfs/blob/master/LICENSE"))
 	 (luks-shred? (hash-ref options 'luks-shred))
 	 (uefiboot? (hash-ref options 'uefiboot))
 	 (init-zpool? (hash-ref options 'init-zpool))
+         (without-zfs-native-encryption?
+          (hash-ref options 'without-zfs-native-encryption))
 	 (accept-openzfs-license? (hash-ref options 'accept-openzfs-license))
 	 (force-format-ext4? (hash-ref options 'force-format-ext4))
 	 (force-format-luks? (hash-ref options 'force-format-luks))
@@ -873,7 +885,9 @@ Valid options are:
 	(if (not (null? args))
 	 (let ((name (car args))
 	       (vdevs (cdr args)))
-	   (if (init-zpool name vdevs
+           (if (init-zpool name vdevs
+                #:without-zfs-native-encryption?
+                without-zfs-native-encryption?
                 #:passphrase passphrase)
 	       (utils:println "Finished creating ZFS pool:" name)
 	       (error "Failed to create ZFS pool:" name)))
@@ -907,6 +921,7 @@ Valid options are:
        #:swap-size swap-size
        #:swapfiles swapfiles
        #:passphrase passphrase
+       #:without-zfs-native-encryption? without-zfs-native-encryption?
        #:force-format-ext4? force-format-ext4?
        #:force-format-luks? force-format-luks?)
       (utils:move-file utils:config-filename (utils:path target utils:config-filename))
