@@ -518,6 +518,7 @@
            without-zfs-native-encryption?
            #:passphrase passphrase)
 	  (init-zfsroot zpool zroot
+           #:swap-size swap-size
            #:zdirs zdirs)
 	  (let* ((systemfs (utils:path zpool zroot))
 		 (luks-dev (utils:path "/dev/mapper" luks-label))
