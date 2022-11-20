@@ -652,8 +652,6 @@
 	     (print-fstab-entry-boot boot-partdev uefi-partdev)
 	     (utils:println (string-append "UUID=" (fsuuid lv-swap)) "none" "swap" "sw" "0" "0")))))))
      (zpool
-      (when (not boot-dev)
-	(error "Separate boot device must be specified when using ZFS as root filesystem!"))
       (deps:install-deps-zfs
        accept-openzfs-license?)
       (load-zfs-kernel-module)
@@ -931,6 +929,8 @@ Valid options are:
       (error "Swap size must be specified!"))
      ((and zpool (< 0 swapfiles))
       (error "Using swap files with ZFS is not supported!"))
+     ((and zpool (not (or boot-dev root-dev)))
+       (error "Separate boot device must be specified when using ZFS as root filesystem!"))
      ((and dev-list (not keyfile))
       (error "Keyfile must be specified to unlock additional LUKS encrypted devices!"))
      ((and luks-v2? (<= 10 (or (deps:read-debian-version) 0)))
