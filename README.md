@@ -63,7 +63,7 @@ Configures ZFS pool `tank` using dataset `system` as root filesystem, and 4G ZFS
 
 To create a ZFS pool, first make sure that the ZFS kernel modules are installed on the system. This can be done easily with the `-Z` option alone, without supplying further arguments:
 
-	init-instroot.scm -Z
+    init-instroot.scm -Z
 
 This will install all the package dependencies, and compiles and loads the kernel modules.
 
@@ -73,16 +73,16 @@ It is highly recommended to use `/dev/disk/by-id/*` or `/dev/disk/by-path/*` dev
 
 Use the following command to create a ZFS pool with encrypted root dataset using prompted passphrase, UTF-8 filenames, and 4Kb sector size:
 
-	init-instroot -Z $ZPOOL_NAME $VDEV_SPECS
+    init-instroot -Z $ZPOOL_NAME $VDEV_SPECS
 
 This is equivalent to creating the pool manually, with the following command:
 
-	zpool create -f -o ashift=12 \
-	-O encryption=aes-128-gcm -O pbkdf2iters=1000000 \
-	-O keyformat=passphrase -O keylocation=prompt \
-	-O normalization=formD -O atime=off -O devices=off \
-	-O acltype=posixacl -O xattr=sa \
-	${ZPOOL_NAME} ${VDEV_SPECS}
+    zpool create -f -o ashift=12 \
+    -O encryption=aes-128-gcm -O pbkdf2iters=1000000 \
+    -O keyformat=passphrase -O keylocation=prompt \
+    -O normalization=formD -O atime=off -O devices=off \
+    -O acltype=posixacl -O xattr=sa \
+    ${ZPOOL_NAME} ${VDEV_SPECS}
 
 The options specific to ZFS native encryption are only applied if the installed ZFS version supports it.
 
