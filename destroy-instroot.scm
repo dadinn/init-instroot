@@ -19,7 +19,7 @@
      (default "/mnt/instroot")
      (value-arg "PATH")
      (value #t))
-    (label
+    (luks-label
      (single-char #\l)
      (description
       "LUKS encrypted root device name")
@@ -45,23 +45,17 @@
       "ZFS pool name for system directories and swap device")
      (value-arg "ZPOOL")
      (value #t))
-    (rootfs
+    (zroot
      (single-char #\f)
      (description
       "Name of the system root dataset in the ZFS pool")
      (value-arg "NAME")
      (value #t))
-    (devlst
+    (luks-devs
      (single-char #\v)
      (description
-      "Coma separeted list of colon separated pairs of other encrypted devices
-\(e.g. members of ZFS pool), and their repsective LUKS labels.
-\(e.g. /dev/sdb:foo,/dev/sdc:bar,/dev/sdd:baz)
-These device mappings are used to:
- a) unlock these devices before importing ZFS pools
- b) create crypttab entries for automatic unlocking during boot
-Specifying a keyfile is necessary for this feature!")
-     (value-arg "DEVLIST")
+      "Coma separeted list of colon separated pairs of additional LUKS encrypted devices, and their respective LUKS labels. (e.g. /dev/sda:foo,/dev/sdb:bar,/dev/sdc:baz)")
+     (value-arg "pairs")
      (value #t))
     (swapfiles
      (single-char #\S)
@@ -86,11 +80,15 @@ Specifying a keyfile is necessary for this feature!")
 	 (options-ref (lambda (key) (or (hash-ref options key) (hash-ref defaults key))))
 	 (boot-dev (options-ref 'bootdev))
 	 (root-dev (options-ref 'rootdev))
-	 (luks-label (options-ref 'label))
+	 (luks-label (options-ref 'luks-label))
 	 (zpool (options-ref 'zpool))
-	 (rootfs (options-ref 'rootfs))
-	 (dev-list (options-ref 'devlst))
-	 (dev-specs (if dev-list (utils:parse-pairs dev-list) #f))
+	 (zroot (options-ref 'zroot))
+	 (luks-devs (options-ref 'luks-devs))
+	 (luks-devs
+	  (and luks-devs
+	   (utils:parse-arg-alist luks-devs
+	    #:list-separator #\,
+	    #:pair-separator #\:)))
 	 (swapfiles (options-ref 'swapfiles))
 	 (swapfiles (if swapfiles (string->number swapfiles)))
 	 (uefiboot? (options-ref 'uefiboot))
@@ -120,37 +118,46 @@ Valid options are:
 	  (utils:println "Unmounting /boot/efi...")
 	  (system* "umount" efi-dir))
 	(when (utils:directory? boot-dir)
+	  (utils:println "Unmounting /boot...")
 	  (system* "umount" boot-dir)))
       (when boot-dev
+	(format #t "Destroying partition layout on ~A...\n" boot-dev)
 	(utils:system->devnull* "sgdisk" "-Z" boot-dev)
 	(utils:system->devnull* "partprobe" boot-dev))
       (when zpool
 	(deps:install-deps-zfs)
-	(system* "zfs" "destroy" "-r" (utils:path zpool rootfs))
+	(format #t "Destroying ZFS dataset ~A/~A...\n" zpool zroot)
+	(system* "zfs" "destroy" "-r" (utils:path zpool zroot))
 	(system* "zpool" "export" zpool))
-      (when dev-specs
-	(map
-	 (lambda (spec)
-	   (let* ((device (car spec))
-		  (label (cdr spec)))
-	     (system* "cryptsetup" "luksClose" label)))
-	 dev-specs))
+      (for-each
+       (lambda (item)
+	 (when (pair? item)
+	   (let ((device (car item))
+		 (label (cdr item)))
+	     (format #t "Closing LUKS device ~A...\n" label)
+	     (when (not (zero? (system* "cryptsetup" "luksClose" label)))
+	       (format #t "WARNING: Failed to close LUKS device ~A named ~A!" device label)))))
+       (or luks-devs '()))
       (when root-dev
 	(system* "umount" target)
-	(when (< 0 swapfiles)
-	  (system* "vgremove" "-f" (string-append luks-label "_vg")))
+	(when (not (< 0 swapfiles))
+	  (let ((lvm-vg (string-append luks-label "_vg")))
+	    (format #t "Destroying LVM volume group ~A...\n" lvm-vg)
+	    (system* "vgremove" "-f" lvm-vg)))
+	(format #t "Closing LUKS device ~A...\n" luks-label)
 	(system* "cryptsetup" "luksClose" luks-label)
+	(format #t "Destroying partition layout on ~A...\n" root-dev)
 	(utils:system->devnull* "sgdisk" "-Z" root-dev)
-	(utils:system->devnull* "partprobe" root-dev))))
-    (when (utils:directory? target)
-      (catch #t
-       (lambda () (rmdir target))
-       (lambda* (key #:rest args)
-	(let ((resp (readline (string-append "Directory " target " is not empty. Would you still like te remove it? [y/N]"))))
-	  (cond
-	   ((regex:string-match "[yY]" resp)
-	    (utils:println "Removing directory" target " with its content...")
-	    (system* "rm" "-rf" target))
-	   (else
-	    (utils:println "Skipped removing" target "directory.")))))))
-    (utils:println "Finished destroying initialized root structure:" target)))
+	(utils:system->devnull* "partprobe" root-dev))
+      (when (utils:directory? target)
+	(catch #t
+	  (lambda () (rmdir target))
+	  (lambda* (key #:rest args)
+	    (let ((resp (readline (string-append "Directory " target " is not empty. Would you still like te remove it? [y/N]"))))
+	      (cond
+	       ((regex:string-match "[yY]" resp)
+		(utils:println "Removing directory" target " with its content...")
+		(system* "rm" "-rf" target))
+	       (else
+		(utils:println "Skipped removing" target "directory.")))))))
+      (utils:println "Finished destroying initialized root structure:" target)))))
